@@ -1,0 +1,152 @@
+name: Release
+
+# Tag a commit to publish:  git tag v1.0.0 && git push origin v1.0.0
+# workflow_dispatch builds the same artifacts without publishing, for a dry run.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write # required to create the release and upload assets
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            name: linux-amd64
+            ext: ""
+          - goos: linux
+            goarch: arm64
+            name: linux-arm64
+            ext: ""
+          - goos: windows
+            goarch: amd64
+            name: windows-amd64
+            ext: ".exe"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Determine version
+        id: v
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0-dev+${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # CGO_ENABLED=0 keeps the binary static: it runs on any glibc/musl host with no runtime
+      # deps, which matters because the target machines are locked-down corporate laptops where
+      # installing anything is a request ticket. mDNS uses the pure-Go zeroconf provider, so
+      # nothing here needs Avahi at build time.
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          out="eebus-testbench${{ matrix.ext }}"
+          go build -mod=vendor -trimpath \
+            -ldflags "-s -w -X github.com/marck-brusa/eebuster/internal/httpapi.Version=${{ steps.v.outputs.version }}" \
+            -o "$out" ./cmd/eebus-testbench
+          ls -la "$out"
+
+      - name: Assemble distribution
+        run: |
+          set -eu
+          V="${{ steps.v.outputs.version }}"
+          D="eebus-testbench-${V}-${{ matrix.name }}"
+          mkdir -p "$D/scenarios" "$D/examples"
+
+          cp "eebus-testbench${{ matrix.ext }}" "$D/"
+          cp QUICKSTART.md README.md "$D/"
+          # Shipped as eebus.yaml, ready to edit -- the binary looks for exactly this name.
+          cp config/eebus.example.yaml "$D/eebus.yaml"
+          cp scenarios/*.yaml "$D/scenarios/"
+          cp examples/lpc-set-limit.sh examples/lpc-set-limit.ps1 \
+             examples/mpc-watch.sh    examples/mpc-watch.ps1 \
+             examples/README.md "$D/examples/" 2>/dev/null || true
+          chmod +x "$D/eebus-testbench" 2>/dev/null || true
+
+          zip -qr "${D}.zip" "$D"
+          echo "--- ${D}.zip ---"
+          unzip -l "${D}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eebus-testbench-${{ matrix.name }}
+          path: eebus-testbench-*.zip
+          if-no-files-found: error
+
+  publish:
+    # Only publishes for a real tag; a workflow_dispatch run stops after build.
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # gh is preinstalled on the runner, so no third-party release action is needed.
+      #
+      # Creation and upload are separate calls on purpose. Passing assets straight to
+      # `gh release create` intermittently fails with `HTTP 404` from the uploads endpoint: the
+      # release is created but is not yet consistent when the first asset upload starts, and gh
+      # then rolls the whole release back. Creating first and uploading with retries makes the
+      # step idempotent, so a re-run of a partially-published tag completes instead of erroring.
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Any tag carrying a pre-release suffix (v1.0.0-rc1, -beta.2, ...) is published as a
+          # prerelease, so it is not offered as "Latest" to someone landing on the repository.
+          prerelease=""
+          case "${GITHUB_REF_NAME}" in
+            *-*) prerelease="--prerelease" ;;
+          esac
+
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "release ${GITHUB_REF_NAME} already exists; uploading into it"
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "${GITHUB_REF_NAME}" \
+              --generate-notes \
+              --verify-tag \
+              ${prerelease}
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if gh release upload "${GITHUB_REF_NAME}" dist/*.zip dist/SHA256SUMS.txt --clobber; then
+              echo "assets uploaded on attempt ${attempt}"
+              gh release view "${GITHUB_REF_NAME}" --json assets \
+                --jq '.assets[] | "  \(.name)  \(.size) bytes"'
+              exit 0
+            fi
+            echo "upload attempt ${attempt} failed; retrying in 10s"
+            sleep 10
+          done
+          echo "asset upload did not succeed after 5 attempts" >&2
+          exit 1

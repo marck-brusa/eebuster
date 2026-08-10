@@ -1,0 +1,41 @@
+From 5975fa321e8f44fc17c5b77b1172166532c8113a Mon Sep 17 00:00:00 2001
+From: scratch <scratch@local>
+Date: Tue, 28 Jul 2026 16:04:23 +0200
+Subject: [PATCH] stage 1: service mdns hook
+
+---
+ service/service.go | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/service/service.go b/service/service.go
+index e41a1ee..282ca97 100644
+--- a/service/service.go
++++ b/service/service.go
+@@ -160,6 +160,24 @@ func (s *Service) Setup() error {
+ 	return nil
+ }
+ 
++// SetMdnsProvider injects a custom mDNS provider into the mDNS manager created by Setup.
++//
++// This is a passthrough to ship-go's MdnsManager.SetMdnsProvider, which that package
++// documents as "mainly used for testing". It is not otherwise reachable from Service because
++// s.mdns is stored as the shipapi.MdnsInterface abstraction, which does not expose
++// SetMdnsProvider -- only the concrete *mdns.MdnsManager does. Call after Setup (so s.mdns
++// exists) and before Start (so the hub has not yet called mdns.Start and read the provider).
++// Configuration.SetMdnsProviderSelection(mdns.MdnsProviderSelectionTestSetup) must be set
++// before Setup for this to take effect; see eebus-testbench's staticmdns package.
++func (s *Service) SetMdnsProvider(provider shipapi.MdnsProviderInterface) error {
++	manager, ok := s.mdns.(*mdns.MdnsManager)
++	if !ok || manager == nil {
++		return fmt.Errorf("eebus-testbench: mdns manager not initialized or not a *mdns.MdnsManager (was Setup called?)")
++	}
++	manager.SetMdnsProvider(provider)
++	return nil
++}
++
+ // Starts the service
+ //
+ // Returns error with description of the error that cannot be recovered from
+-- 
+2.43.0
+

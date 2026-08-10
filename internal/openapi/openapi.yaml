@@ -1,0 +1,412 @@
+openapi: 3.0.3
+info:
+  title: EEBUS Testbench
+  description: >
+    Reference-peer control plane for testing an EEBUS device under test. Every panel in
+    the dashboard at /ui is a thin wrapper over this REST API -- anything the UI can do,
+    a script can do too (see examples/*.py for standalone httpx clients with no facade
+    imports).
+  version: 0.1.0-go
+tags:
+  - name: misc
+  - name: config
+  - name: stacks
+  - name: peers
+  - name: use-cases
+  - name: energy
+  - name: events
+  - name: scenarios
+  - name: templates
+  - name: discover
+
+paths:
+  /api/v1/health:
+    get:
+      tags: [misc]
+      summary: Liveness check
+      responses: { "200": { description: OK } }
+
+  /api/v1/version:
+    get:
+      tags: [misc]
+      summary: Binary name and version
+      responses: { "200": { description: OK } }
+
+  /api/v1/identity:
+    get:
+      tags: [misc]
+      summary: Local SKI to trust in the device under test's own configuration
+      responses: { "200": { description: OK } }
+
+  /api/v1/config:
+    get:
+      tags: [config]
+      summary: The effective, currently loaded config
+      responses: { "200": { description: OK } }
+
+  /api/v1/config/validate:
+    post:
+      tags: [config]
+      summary: Validate the config file on disk without reloading it
+      responses: { "200": { description: OK } }
+
+  /api/v1/config/reload:
+    post:
+      tags: [config]
+      summary: Re-read config/eebus.yaml and push the new peer list to the running stack (static mode only)
+      responses:
+        "200": { description: reloaded }
+        "400": { description: invalid config, not reloaded }
+
+  /api/v1/config/active-stack:
+    put:
+      tags: [config]
+      summary: Start the named counterparty (there is only one -- eebus-go-remote)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stack: { type: string, example: eebus-go-remote }
+                persist: { type: boolean, default: false }
+      responses:
+        "200": { description: OK }
+        "404": { description: unknown stack }
+        "501": { description: "persist:true requested but config write-back isn't built yet" }
+
+  /api/v1/stacks:
+    get:
+      tags: [stacks]
+      summary: List stacks (just eebus-go-remote in this rewrite) with status and capabilities
+      responses: { "200": { description: OK } }
+
+  /api/v1/stacks/{id}:
+    get:
+      tags: [stacks]
+      summary: One stack's status
+      parameters: [{ $ref: "#/components/parameters/StackId" }]
+      responses: { "200": { description: OK }, "404": { description: unknown stack } }
+
+  /api/v1/stacks/{id}/start:
+    post:
+      tags: [stacks]
+      summary: (Re-)start the embedded EEBUS stack
+      parameters: [{ $ref: "#/components/parameters/StackId" }]
+      responses: { "200": { description: OK }, "404": { description: unknown stack } }
+
+  /api/v1/stacks/{id}/stop:
+    post:
+      tags: [stacks]
+      summary: Stop the embedded EEBUS stack (SHIP/SPINE only -- the dashboard HTTP API stays up)
+      parameters: [{ $ref: "#/components/parameters/StackId" }]
+      responses: { "200": { description: OK }, "404": { description: unknown stack } }
+
+  /api/v1/stacks/{id}/logs:
+    get:
+      tags: [stacks]
+      summary: Tail this process's own console log (in-memory ring buffer, not a file)
+      parameters:
+        - { $ref: "#/components/parameters/StackId" }
+        - name: tail
+          in: query
+          schema: { type: integer, default: 200 }
+      responses: { "200": { description: OK } }
+
+  /api/v1/peers:
+    get:
+      tags: [peers]
+      summary: Connected remote devices
+      responses: { "200": { description: OK } }
+
+  /api/v1/peers/pending:
+    get:
+      tags: [peers]
+      summary: Incoming pairing requests awaiting approve/deny
+      responses: { "200": { description: OK } }
+
+  /api/v1/peers/visible:
+    get:
+      tags: [peers]
+      summary: SKIs the mDNS manager currently sees but hasn't connected
+      responses: { "200": { description: OK } }
+
+  /api/v1/peers/{ski}/usecases:
+    get:
+      tags: [peers]
+      summary: Use cases this peer itself advertises
+      parameters: [{ $ref: "#/components/parameters/Ski" }]
+      responses: { "200": { description: OK } }
+
+  /api/v1/peers/{ski}/profile:
+    get:
+      tags: [peers]
+      summary: Connected state, entity types, and advertised use cases for one peer
+      parameters: [{ $ref: "#/components/parameters/Ski" }]
+      responses: { "200": { description: OK }, "404": { description: not connected } }
+
+  /api/v1/peers/{ski}/trust:
+    post:
+      tags: [peers]
+      summary: Trust (connect to) a peer -- also how you approve a pending pairing request
+      parameters: [{ $ref: "#/components/parameters/Ski" }]
+      responses: { "200": { description: OK } }
+    delete:
+      tags: [peers]
+      summary: Untrust and disconnect a peer
+      parameters: [{ $ref: "#/components/parameters/Ski" }]
+      responses: { "200": { description: OK } }
+
+  /api/v1/peers/{ski}/deny:
+    post:
+      tags: [peers]
+      summary: Deny an incoming pairing request
+      parameters: [{ $ref: "#/components/parameters/Ski" }]
+      responses: { "200": { description: OK } }
+
+  /api/v1/discover:
+    post:
+      tags: [discover]
+      summary: Real zeroconf mDNS scan for _ship._tcp devices on the network (read-only, a few seconds)
+      parameters:
+        - name: timeout_s
+          in: query
+          schema: { type: number, default: 5 }
+      responses: { "200": { description: OK } }
+
+  /api/v1/diagnostics/network:
+    get:
+      tags: [discover]
+      summary: Which local addresses this host publishes in its mDNS record, and why the others were dropped
+      description: >
+        Answers "the device can see me, so why can't it connect?". Both halves of that failure are
+        invisible from this side: the published addresses live in our own mDNS records, and inbound
+        reachability cannot be probed from inside the host, because binding the SHIP port succeeds
+        whether or not a firewall drops packets arriving on it. Returns the announced address list
+        in the order a peer will dial it, every rejected address with a human-readable reason, all
+        host interfaces, plain-language warnings, and the firewall command for this platform.
+      responses: { "200": { description: OK } }
+
+  /api/v1/lpc/{ski}/limit:
+    get:
+      tags: [use-cases]
+      summary: Read the LPC consumption limit
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      responses: { "200": { description: OK }, "404": { description: peer/entity not found }, "409": { description: "ambiguous entity, needs ?entity=" } }
+    put:
+      tags: [use-cases]
+      summary: Write the LPC consumption limit
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      requestBody: { $ref: "#/components/requestBodies/LoadLimit" }
+      responses: { "200": { description: OK }, "404": { description: peer/entity not found }, "409": { description: ambiguous entity } }
+
+  /api/v1/lpc/{ski}/failsafe:
+    get:
+      tags: [use-cases]
+      summary: Read the LPC failsafe value and minimum hold duration
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      responses: { "200": { description: OK } }
+    put:
+      tags: [use-cases]
+      summary: Write the LPC failsafe value and/or minimum hold duration (either field alone is fine)
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      requestBody: { $ref: "#/components/requestBodies/FailsafeLimit" }
+      responses: { "200": { description: OK } }
+
+  /api/v1/lpc/{ski}/nominal-max:
+    get:
+      tags: [use-cases]
+      summary: Read the LPC nameplate maximum consumption
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      responses: { "200": { description: OK } }
+
+  /api/v1/lpc/heartbeat/start:
+    post:
+      tags: [use-cases]
+      summary: Start the LPC heartbeat
+      responses: { "200": { description: OK } }
+
+  /api/v1/lpc/heartbeat/stop:
+    post:
+      tags: [use-cases]
+      summary: Stop the LPC heartbeat (watch the device fall back to its failsafe value)
+      responses: { "200": { description: OK } }
+
+  /api/v1/lpc/{ski}/heartbeat:
+    get:
+      tags: [use-cases]
+      summary: Whether the peer is within the heartbeat's expected duration
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      responses: { "200": { description: OK } }
+
+  /api/v1/lpp/{ski}/limit:
+    get:
+      tags: [use-cases]
+      summary: Read the LPP production limit
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      responses: { "200": { description: OK } }
+    put:
+      tags: [use-cases]
+      summary: Write the LPP production limit
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      requestBody: { $ref: "#/components/requestBodies/LoadLimit" }
+      responses: { "200": { description: OK } }
+
+  /api/v1/lpp/{ski}/failsafe:
+    get:
+      tags: [use-cases]
+      summary: Read the LPP failsafe value and minimum hold duration
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      responses: { "200": { description: OK } }
+    put:
+      tags: [use-cases]
+      summary: Write the LPP failsafe value and/or minimum hold duration
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      requestBody: { $ref: "#/components/requestBodies/FailsafeLimit" }
+      responses: { "200": { description: OK } }
+
+  /api/v1/lpp/{ski}/nominal-max:
+    get:
+      tags: [use-cases]
+      summary: Read the LPP nameplate maximum production
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      responses: { "200": { description: OK } }
+
+  /api/v1/mpc/{ski}:
+    get:
+      tags: [use-cases]
+      summary: Read MPC power/energy/current/voltage/frequency measurements
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      responses: { "200": { description: OK } }
+
+  /api/v1/mgcp/{ski}:
+    get:
+      tags: [use-cases]
+      summary: Read grid connection point measurements
+      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      responses: { "200": { description: OK } }
+
+  /api/v1/energy/{ski}/snapshot:
+    get:
+      tags: [energy]
+      summary: Aggregated live snapshot across LPC/LPP/MPC/MGCP/EV/PV/battery for one peer
+      parameters: [{ $ref: "#/components/parameters/Ski" }]
+      responses: { "200": { description: OK }, "404": { description: not connected } }
+
+  /api/v1/energy/{ski}/history:
+    get:
+      tags: [energy]
+      summary: Recorded snapshot history (in-memory, up to 12h)
+      parameters:
+        - { $ref: "#/components/parameters/Ski" }
+        - name: seconds
+          in: query
+          schema: { type: number, default: 3600 }
+      responses: { "200": { description: OK } }
+    delete:
+      tags: [energy]
+      summary: Clear recorded history for one peer
+      parameters: [{ $ref: "#/components/parameters/Ski" }]
+      responses: { "200": { description: OK } }
+
+  /api/v1/events/recent:
+    get:
+      tags: [events]
+      summary: Ring buffer of recent lifecycle/usecase/spine events
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 200 }
+        - name: level
+          in: query
+          schema: { type: string, enum: [lifecycle, usecase, spine] }
+        - name: ski
+          in: query
+          schema: { type: string }
+      responses: { "200": { description: OK } }
+
+  /api/v1/events:
+    delete:
+      tags: [events]
+      summary: Clear the event ring buffer
+      responses: { "200": { description: OK } }
+
+  /api/v1/events/stream:
+    get:
+      tags: [events]
+      summary: Server-Sent Events live feed (text/event-stream) -- open this in a browser tab, not Swagger's Try-it-out
+      responses: { "200": { description: OK } }
+
+  /api/v1/scenarios:
+    get:
+      tags: [scenarios]
+      summary: List scenario IDs found in the scenarios directory
+      responses: { "200": { description: OK } }
+
+  /api/v1/scenarios/catalog:
+    get:
+      tags: [scenarios]
+      summary: Scenario metadata (name, description, category, risk, requires, step_count)
+      responses: { "200": { description: OK } }
+
+  /api/v1/scenarios/{name}/run:
+    post:
+      tags: [scenarios]
+      summary: Run one scenario by ID
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses: { "200": { description: OK }, "404": { description: no such scenario } }
+
+  /api/v1/scenarios/run-all:
+    post:
+      tags: [scenarios]
+      summary: Run every scenario in the directory, smoke/discovery tests first
+      responses: { "200": { description: OK } }
+
+  /api/v1/templates:
+    get:
+      tags: [templates]
+      summary: Named request-body examples (e.g. lpc.limit.dim_4200w_2h) used by the dashboard's quick-send buttons and scenario put.template steps
+      responses: { "200": { description: OK } }
+
+components:
+  parameters:
+    Ski:
+      name: ski
+      in: path
+      required: true
+      schema: { type: string }
+      description: 40 hex character SKI
+    StackId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, example: eebus-go-remote }
+    Entity:
+      name: entity
+      in: query
+      schema: { type: string }
+      description: "Disambiguates a multi-entity peer, e.g. '1' or '1,2'"
+  requestBodies:
+    LoadLimit:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              value_w: { type: number, example: 4200 }
+              is_active: { type: boolean, example: true }
+              is_changeable: { type: boolean, example: true }
+              duration: { type: string, example: PT2H, description: "ISO-8601 duration, omit for no expiry" }
+              delete_duration: { type: boolean }
+    FailsafeLimit:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              value_w: { type: number, example: 2000 }
+              duration: { type: string, example: PT2H }

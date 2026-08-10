@@ -1,0 +1,13 @@
+name: device-profile-discovery
+description: Reads entity types, advertised use cases, and the raw SPINE discovery model.
+category: Discovery
+risk: read-only
+requires:
+  capabilities: [device_profile]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/peers/{peer.ski}/profile"
+      length_greater_than: {entities: 0, use_cases: 0}
+      not_null: [device_address]

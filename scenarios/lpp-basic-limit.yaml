@@ -1,0 +1,16 @@
+name: lpp-basic-limit
+description: Applies a short production limit and verifies readback.
+category: LPP
+risk: live-control
+requires:
+  capabilities: [lpp.write, lpp.read]
+  use_cases: [limitationOfPowerProduction]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/lpp/{peer.ski}/limit"
+      body: {value_w: 1500, is_active: true, is_changeable: true, duration: "PT1M"}
+  - assert:
+      get: "/api/v1/lpp/{peer.ski}/limit"
+      equals: {value_w: 1500, is_active: true}

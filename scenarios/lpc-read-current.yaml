@@ -1,0 +1,13 @@
+name: lpc-read-current
+description: Reads the active consumption-limit state without changing it.
+category: LPC
+risk: read-only
+requires:
+  capabilities: [lpc.read]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      not_null: [value_w, is_active, is_changeable]

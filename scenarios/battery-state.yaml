@@ -1,0 +1,13 @@
+name: battery-state
+description: Reads aggregate battery power and state data.
+category: Storage
+risk: read-only
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [visualizationOfAggregatedBatteryData]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      not_null: [power.battery_w, battery]

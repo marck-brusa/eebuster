@@ -1,0 +1,17 @@
+name: lpc-basic-limit
+description: Applies a 4.2 kW consumption limit, observes the update, and verifies readback.
+category: LPC
+risk: live-control
+requires:
+  capabilities: [lpc.write, lpc.read]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.dim_4200w_2h
+  - expect_event: {event: eg-lpc-DataUpdateLimit, within: 5s}
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      equals: {value_w: 4200, is_active: true}

@@ -1,0 +1,100 @@
+# EEBUS testbench configuration.
+#
+# You do not need this file at all: with no config present the binary starts in real mDNS mode
+# on every interface with one simulated device, which is enough to click around and see it
+# work. Copy this to eebus.yaml only when you want to change something.
+
+identity:
+  vendor_code: "LAB"
+  brand: "EEBUS testbench"
+  model: "eebus-testbench"
+  serial: "testbench-01"
+  country: "DE"
+
+api:
+  bind: 0.0.0.0
+  port: 8080
+
+network:
+  # mdns: real multicast discovery -- devices on the same link are found automatically and
+  #       this testbench announces itself so they can find it too. This is the default and
+  #       what you want against real hardware.
+  # static: also does real mDNS, and additionally injects the peers: list below (useful for a
+  #       device on another subnet that multicast cannot reach, or for the simulator).
+  mode: mdns
+  # "*" (or blank) = every usable interface. Otherwise one name or a comma-separated list,
+  # e.g. "eth0" or "eth0,wlan0". Pin this to the interface facing your devices if the host is
+  # multi-homed -- announcing on the wrong link is a common reason a device never sees you.
+  interface: "*"
+  mdns_provider: zeroconf
+
+  # --- What this host publishes as its own address -----------------------------------------
+  # A device that discovers us reads these addresses out of our mDNS record and dials them ONE
+  # AT A TIME, waiting for a full TCP connect timeout on each unreachable one. Publishing junk
+  # is therefore not harmless: a Windows host with WSL2 installed used to publish eight
+  # addresses of which exactly one was reachable, costing the device over a minute per attempt.
+  #
+  # announce_filter drops the addresses no peer can ever route to: IPv6 link-local (fe80::/10,
+  # which loses its scope zone in a DNS record and so always fails), IPv6 unique-local
+  # (fc00::/7), IPv4 169.254/16, and the addresses of virtual/NAT adapters (Hyper-V, WSL2,
+  # Docker Desktop, VPN tunnels). Leave it on unless you are testing what upstream does.
+  announce_filter: true
+  # Publish IPv6 at all. Global IPv6 is genuinely reachable, so this stays on; the addresses
+  # that caused trouble are already excluded above. Set false if IPv6 is present but broken.
+  announce_ipv6: true
+  # Force the exact addresses to publish, skipping detection. The escape hatch for a multi-homed
+  # host where only you know which address the device under test can reach. Also available as
+  # --announce-address 192.168.9.100 on the command line.
+  announce_addresses: []
+  #  - 192.168.9.100
+
+# auto_accept advertises register=true ("available for pairing", SHIP 7.3.2) in our mDNS record.
+# Leave it on. Devices commonly list ONLY peers advertising register=true, so with it off this
+# testbench can be perfectly correct on the wire and still be missing from the device's pairing
+# list -- you see the built-in simulated device and not the energy manager, which looks like a
+# broken tool. Set false only to test how a device treats a peer that declares itself
+# unavailable. Default true.
+auto_accept: true
+
+# require_approval keeps the advertisement above, but stops each incoming pairing request for an
+# approve/deny decision in the dashboard (or POST /api/v1/peers/{ski}/trust and /deny) instead of
+# accepting it silently. Use it when the pairing dialogue is the thing under test. Default false.
+require_approval: false
+
+# Injected as synthetic discovery records in static mode. In BOTH modes an entry's `host`, when
+# it is an IPv4 literal, also pins the dial address for that ski: discovery can then never
+# redirect it to a different device.
+#
+# Pin a device if it shares its announced serial number or SHIP id with another device on the
+# same network. Identical ids collide in the mDNS namespace and their records get cross-linked,
+# so one device's ski ends up carrying another device's address and the dial target becomes a
+# coin flip -- with each wrong guess costing a full TCP timeout. `docs/10-eebus-go.md` has the
+# detail. Symptom in the log: `trying to connect to <ski> at <an address that is not that device>`.
+#
+# Deliberately empty: a placeholder peer here would be dialled forever and fill the log with
+# "i/o timeout" for an address that was never real. Add a real device when you have one -- ski
+# must be exactly 40 hex characters.
+peers: []
+#  - name: device-under-test
+#    label: "EV charging system"
+#    ski: "0123456789abcdef0123456789abcdef01234567"
+#    host: 192.0.2.13   # an IPv4 literal here also pins the dial address (see above)
+#    port: 4712
+#    path: /ship/
+#    trust: auto        # auto = connect at startup; manual = only when you click Trust
+
+stacks:
+  eebus-go-remote:
+    enabled: true
+    ship_port: 4712
+
+# Simulated devices: their own identity, their own SHIP port, accepting an LPC limit and
+# reporting MPC power. Always trusted automatically, because they are simulated. Set
+# enabled: false (or pass -simulator=false) to test purely against real hardware.
+simulator:
+  enabled: true
+  devices:
+    - id: sim-load-1
+      type: generic        # generic | ev | heat_pump
+      ship_port: 4713
+      baseline_w: 11000    # reports this until an LPC limit pulls it lower

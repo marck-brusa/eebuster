@@ -1,0 +1,13 @@
+name: ev-inventory
+description: Counts connected and actively charging EV entities reported by the peer.
+category: EV charging
+risk: read-only
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [evCommissioningAndConfiguration]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      not_null: [ev.connected_count, ev.charging_count, ev.vehicles]

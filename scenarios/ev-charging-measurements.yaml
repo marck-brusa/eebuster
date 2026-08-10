@@ -1,0 +1,14 @@
+name: ev-charging-measurements
+description: Reads per-phase charging measurements for each EV entity.
+category: EV charging
+risk: read-only
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [measurementOfElectricityDuringEvCharging]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      length_greater_than: {ev.vehicles: 0}
+      not_null: [power.ev_w]

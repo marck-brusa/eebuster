@@ -1,0 +1,14 @@
+name: mpc-electrical-quality
+description: Reads phase currents, phase voltages, and grid frequency.
+category: MPC
+risk: read-only
+requires:
+  capabilities: [mpc.read]
+  use_cases: [monitoringOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      not_null: [current_per_phase_a, voltage_per_phase_v, frequency_hz]
+      length_greater_than: {current_per_phase_a: 0, voltage_per_phase_v: 0}

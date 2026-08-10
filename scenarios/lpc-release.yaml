@@ -1,0 +1,16 @@
+name: lpc-release
+description: Releases the active consumption limit and verifies the inactive state.
+category: LPC
+risk: live-control
+requires:
+  capabilities: [lpc.write, lpc.read]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      equals: {is_active: false}

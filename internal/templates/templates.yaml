@@ -1,0 +1,55 @@
+# Named message templates. One definition, three consumers: FastAPI's openapi_examples (the
+# Swagger UI dropdown), GET /api/v1/templates (so the CLI's --template and the live view's
+# quick-send buttons use the same set), and nothing else -- see docs/03-control-plane.md
+# "Templates -- the Swagger dropdown". Values are in REST DTO shape: snake_case,
+# ISO-8601 durations. The adapter converts to eebus-go's wire format (nanoseconds).
+
+lpc.limit:
+  dim_4200w_2h:
+    summary: "§14a dim to 4.2 kW for 2 h"
+    description: "The standard grid-operator curtailment case."
+    value: {value_w: 4200, is_active: true, is_changeable: true, duration: "PT2H"}
+  dim_4200w_indefinite:
+    summary: "Dim to 4.2 kW, no expiry"
+    value: {value_w: 4200, is_active: true, is_changeable: true, delete_duration: true}
+  release:
+    summary: "Release the limit (is_active false)"
+    description: "Normal end of a curtailment window."
+    value: {value_w: 4200, is_active: false, is_changeable: true}
+  zero:
+    summary: "0 W -- hard stop"
+    description: "Edge case. Some stacks mishandle a zero limit."
+    value: {value_w: 0, is_active: true, is_changeable: true}
+  non_round:
+    summary: "4237 W -- scaling bug hunt"
+    description: "Not a round kW. Catches ScaledNumberType number/scale errors."
+    value: {value_w: 4237, is_active: true, is_changeable: true, duration: "PT30M"}
+  short_expiry:
+    summary: "4.2 kW for 60 s -- expiry test"
+    description: "Watch the CS release the limit when the duration elapses."
+    value: {value_w: 4200, is_active: true, is_changeable: true, duration: "PT1M"}
+
+lpc.failsafe:
+  typical:
+    summary: "Typical failsafe: 2 kW, 2 h minimum duration"
+    value: {value_w: 2000, duration: "PT2H"}
+  zero_failsafe:
+    summary: "0 W failsafe -- edge case"
+    description: "Some devices cannot safely go to zero; worth testing on purpose."
+    value: {value_w: 0}
+
+lpp.limit:
+  dim_3000w_2h:
+    summary: "Dim production to 3.0 kW for 2 h"
+    value: {value_w: 3000, is_active: true, is_changeable: true, duration: "PT2H"}
+  release:
+    summary: "Release the production limit"
+    value: {value_w: 3000, is_active: false, is_changeable: true}
+
+raw.jsonrpc:
+  local_ski:
+    summary: "remote/LocalSKI -- no params"
+    value: {method: "remote/LocalSKI", params: []}
+  connected_devices:
+    summary: "remote/ConnectedDevices -- no params"
+    value: {method: "remote/ConnectedDevices", params: []}

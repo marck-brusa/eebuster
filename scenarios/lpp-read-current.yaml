@@ -1,0 +1,13 @@
+name: lpp-read-current
+description: Reads the active production-limit state without changing it.
+category: LPP
+risk: read-only
+requires:
+  capabilities: [lpp.read]
+  use_cases: [limitationOfPowerProduction]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/lpp/{peer.ski}/limit"
+      not_null: [value_w, is_active, is_changeable]

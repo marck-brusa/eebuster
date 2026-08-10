@@ -1,0 +1,13 @@
+name: mpc-live-power
+description: Reads total power and proves that the peer exposes a numeric measurement.
+category: MPC
+risk: read-only
+requires:
+  capabilities: [mpc.read]
+  use_cases: [monitoringOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      not_null: [power_w]

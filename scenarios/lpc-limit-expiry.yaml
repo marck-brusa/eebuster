@@ -1,0 +1,21 @@
+name: lpc-limit-expiry
+description: Applies a five-second limit and verifies that the device releases it after expiry.
+category: LPC
+risk: live-control
+requires:
+  capabilities: [lpc.write, lpc.read]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      body: {value_w: 2000, is_active: true, is_changeable: true, duration: "PT5S"}
+  - expect_event: {event: eg-lpc-DataUpdateLimit, within: 5s}
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      equals: {value_w: 2000, is_active: true}
+  - sleep: 8
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      equals: {is_active: false}

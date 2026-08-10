@@ -1,0 +1,2057 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EEBUS Network Intelligence</title>
+<script>
+  /* Applies a stored explicit theme before the first paint. Without this, a machine set to
+     light that has chosen "dark" shows one frame of light while the main script is still
+     parsing. "system" deliberately stores nothing to apply -- the stylesheet's own
+     prefers-color-scheme rule handles it with no scripting at all. */
+  try {
+    var stored = localStorage.getItem("eebus-theme");
+    if (stored === "light" || stored === "dark") {
+      document.documentElement.setAttribute("data-theme", stored);
+    }
+  } catch (e) { /* storage can be blocked; the stylesheet default still renders */ }
+</script>
+<style>
+  /* Theme: light is the bare :root default, so a page with no JS and no stored preference
+     still renders correctly. The dark palette is applied in two places -- under
+     prefers-color-scheme for "follow the system", and under [data-theme="dark"] for an
+     explicit choice. Those two dark blocks MUST be kept in sync; CSS has no way to share
+     them, and defining dark only inside the media query would make the toggle a one-way
+     trip on a machine set to light. Every opaque colour is a token -- a literal hex further
+     down is a bug, because it cannot follow the theme. Low-alpha accent tints
+     (rgba(<accent>, .3-.55) used for badge and toast borders) are left inline: they read
+     correctly over either ground, so giving each one two definitions buys nothing. */
+  :root {
+    color-scheme: light;
+    --bg: #eef3f7;
+    --sidebar: #ffffff;
+    --panel: #ffffff;
+    --panel-2: #f5f8fb;
+    --line: #d5e0e8;
+    --line-bright: #b4c7d5;
+    --text: #14232e;
+    --muted: #546e7e;
+    --quiet: #7a92a1;
+    --cyan: #0d8fa2;
+    --cyan-soft: rgba(13, 143, 162, .10);
+    --cyan-bright: #0a7686;
+    --green: #2c8f43;
+    --green-soft: rgba(44, 143, 67, .10);
+    --amber: #9a6c0a;
+    --amber-soft: rgba(154, 108, 10, .10);
+    --red: #c93a43;
+    --red-soft: rgba(201, 58, 67, .10);
+    --purple: #6b4de0;
+    --shadow: 0 18px 55px rgba(20, 35, 46, .12);
+    --radius: 12px;
+
+    /* Surfaces derived from the palette, previously hardcoded. */
+    --sidebar-solid: rgba(255, 255, 255, .96);
+    --topbar: rgba(255, 255, 255, .88);
+    --panel-grad-a: rgba(245, 248, 251, .9);
+    --panel-grad-b: rgba(255, 255, 255, .96);
+    --inset: #f2f6f9;
+    --inset-deep: #f7fafc;
+    --tooltip: rgba(255, 255, 255, .97);
+    --toast: rgba(255, 255, 255, .98);
+    --flow: rgba(242, 246, 249, .8);
+    --row-hover: rgba(13, 143, 162, .05);
+    --chip-border: rgba(13, 143, 162, .28);
+    --code-text: #3c5464;
+    --on-accent: #ffffff;
+    --glow: rgba(13, 143, 162, .05);
+    --grid-line: #dbe5ec;
+  }
+
+  /* Dark, block 1 of 2: "follow the system". Skipped when the user explicitly chose light. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #071018;
+      --sidebar: #09141e;
+      --panel: #0d1a25;
+      --panel-2: #112230;
+      --line: #1c3342;
+      --line-bright: #2b5064;
+      --text: #e9f1f5;
+      --muted: #8ba2b0;
+      --quiet: #607b8b;
+      --cyan: #43d5e8;
+      --cyan-soft: rgba(67, 213, 232, .12);
+      --cyan-bright: #75e5f2;
+      --green: #79d888;
+      --green-soft: rgba(121, 216, 136, .12);
+      --amber: #f1bd5d;
+      --amber-soft: rgba(241, 189, 93, .12);
+      --red: #ff737b;
+      --red-soft: rgba(255, 115, 123, .12);
+      --purple: #a78bfa;
+      --shadow: 0 18px 55px rgba(0, 0, 0, .22);
+      --sidebar-solid: rgba(9, 20, 30, .96);
+      --topbar: rgba(7, 16, 24, .88);
+      --panel-grad-a: rgba(17, 34, 48, .8);
+      --panel-grad-b: rgba(13, 26, 37, .94);
+      --inset: #091721;
+      --inset-deep: #050c12;
+      --tooltip: rgba(6, 14, 21, .94);
+      --toast: rgba(13, 26, 37, .97);
+      --flow: rgba(7, 16, 24, .45);
+      --row-hover: rgba(67, 213, 232, .04);
+      --chip-border: rgba(67, 213, 232, .22);
+      --code-text: #b8c8d1;
+      --on-accent: #041216;
+      --glow: rgba(67, 213, 232, .08);
+      --grid-line: #19313f;
+    }
+  }
+
+  /* Dark, block 2 of 2: explicit choice. Keep identical to block 1. */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #071018;
+    --sidebar: #09141e;
+    --panel: #0d1a25;
+    --panel-2: #112230;
+    --line: #1c3342;
+    --line-bright: #2b5064;
+    --text: #e9f1f5;
+    --muted: #8ba2b0;
+    --quiet: #607b8b;
+    --cyan: #43d5e8;
+    --cyan-soft: rgba(67, 213, 232, .12);
+    --cyan-bright: #75e5f2;
+    --green: #79d888;
+    --green-soft: rgba(121, 216, 136, .12);
+    --amber: #f1bd5d;
+    --amber-soft: rgba(241, 189, 93, .12);
+    --red: #ff737b;
+    --red-soft: rgba(255, 115, 123, .12);
+    --purple: #a78bfa;
+    --shadow: 0 18px 55px rgba(0, 0, 0, .22);
+    --sidebar-solid: rgba(9, 20, 30, .96);
+    --topbar: rgba(7, 16, 24, .88);
+    --panel-grad-a: rgba(17, 34, 48, .8);
+    --panel-grad-b: rgba(13, 26, 37, .94);
+    --inset: #091721;
+    --inset-deep: #050c12;
+    --tooltip: rgba(6, 14, 21, .94);
+    --toast: rgba(13, 26, 37, .97);
+    --flow: rgba(7, 16, 24, .45);
+    --row-hover: rgba(67, 213, 232, .04);
+    --chip-border: rgba(67, 213, 232, .22);
+    --code-text: #b8c8d1;
+    --on-accent: #041216;
+    --glow: rgba(67, 213, 232, .08);
+    --grid-line: #19313f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-width: 1120px; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(circle at 85% -10%, var(--glow), transparent 28rem),
+      var(--bg);
+    color: var(--text);
+    font: 13px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  button, input, select, textarea { font: inherit; }
+  button, select, input, textarea { color: var(--text); }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+  code, pre, .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+  a { color: inherit; }
+
+  .shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100vh; }
+  .sidebar {
+    position: sticky; top: 0; height: 100vh; z-index: 5;
+    display: flex; flex-direction: column;
+    background: var(--sidebar-solid);
+    border-right: 1px solid var(--line);
+  }
+  .brand { padding: 24px 20px 20px; border-bottom: 1px solid var(--line); }
+  .brand-mark {
+    display: inline-flex; align-items: center; gap: 9px;
+    color: var(--cyan); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  }
+  .brand-mark::before {
+    content: ""; width: 9px; height: 9px; border: 2px solid var(--cyan);
+    border-radius: 2px; box-shadow: 8px 8px 0 -3px var(--green);
+  }
+  .brand h1 { margin: 14px 0 2px; font-size: 18px; letter-spacing: -.02em; }
+  .brand p { margin: 0; color: var(--muted); font-size: 12px; }
+  .nav { flex: 1; padding: 16px 12px; }
+  .nav-label, .eyebrow {
+    color: var(--quiet); font-size: 10px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .nav-label { padding: 0 10px 8px; }
+  .nav button {
+    width: 100%; display: grid; grid-template-columns: 28px 1fr; align-items: center;
+    margin: 2px 0; padding: 10px 10px; border: 1px solid transparent;
+    border-radius: 8px; background: transparent; color: var(--muted); text-align: left;
+    cursor: pointer;
+  }
+  .nav button:hover { background: var(--panel); color: var(--text); }
+  .nav button.active {
+    color: var(--text); background: var(--cyan-soft); border-color: var(--chip-border);
+  }
+  .nav-icon {
+    width: 20px; height: 20px; display: grid; place-items: center;
+    border: 1px solid currentColor; border-radius: 5px; font-size: 10px; font-weight: 800;
+  }
+  .sidebar-status { margin: 0 14px 14px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+  .sidebar-status .status-line { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--quiet); }
+  .pulse.ok { background: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
+  .pulse.warn { background: var(--amber); }
+  .pulse.err { background: var(--red); box-shadow: 0 0 0 4px var(--red-soft); }
+  /* A 40-character SKI has to stay readable in a 236px sidebar, so it wraps mid-string rather
+     than being truncated -- an elided SKI is useless for the one job it has, being compared
+     against what the device shows. */
+  .ski-copy {
+    display: block; width: 100%; margin-top: 6px; padding: 6px 7px;
+    border: 1px solid var(--line-bright); border-radius: 7px; background: var(--inset);
+    color: var(--text); font-size: 11px; line-height: 1.35; letter-spacing: .02em;
+    text-align: left; word-break: break-all; cursor: pointer;
+  }
+  .ski-copy:hover { border-color: var(--cyan); color: var(--cyan); }
+  .ski-copy.copied { border-color: var(--green); color: var(--green); }
+  .sidebar-links { padding: 14px 18px 20px; border-top: 1px solid var(--line); }
+  .sidebar-links a { display: block; padding: 4px 0; color: var(--muted); font-size: 12px; text-decoration: none; }
+  .sidebar-links a:hover { color: var(--cyan); }
+
+  .main { min-width: 0; }
+  .topbar {
+    position: sticky; top: 0; z-index: 4; height: 66px;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding: 0 28px; background: var(--topbar); backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--line);
+  }
+  .target { display: flex; align-items: center; gap: 10px; }
+  .target label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  select, input[type=text], input[type=number], textarea {
+    border: 1px solid var(--line-bright); border-radius: 7px; background: var(--inset);
+    padding: 7px 9px;
+  }
+  select { min-width: 220px; }
+  .top-actions { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+  .sync-status { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+  .content { padding: 26px 28px 60px; max-width: 1680px; margin: 0 auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+  .page-head h2 { margin: 3px 0 0; font-size: 24px; letter-spacing: -.03em; }
+  .page-head p { margin: 5px 0 0; color: var(--muted); }
+  .page-actions { display: flex; gap: 8px; align-items: center; }
+
+  .grid { display: grid; gap: 14px; }
+  .grid.metrics { grid-template-columns: repeat(4, 1fr); margin-bottom: 14px; }
+  .grid.dashboard-main { grid-template-columns: minmax(0, 2.05fr) minmax(320px, .95fr); }
+  .grid.two { grid-template-columns: 1fr 1fr; }
+  .grid.device-layout { grid-template-columns: 340px minmax(0, 1fr); align-items: start; }
+  .grid.diagnostics { grid-template-columns: 1fr 1fr; align-items: start; }
+  .panel {
+    position: relative; min-width: 0;
+    background: linear-gradient(180deg, var(--panel-grad-a), var(--panel-grad-b));
+    border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  .panel-pad { padding: 17px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .panel-head h3 { margin: 0; font-size: 14px; }
+  .panel-head .sub { color: var(--muted); font-size: 11px; }
+
+  .metric { padding: 16px 17px; min-height: 112px; }
+  .metric::after {
+    content: ""; position: absolute; left: 16px; right: 16px; bottom: 0; height: 2px;
+    background: linear-gradient(90deg, var(--metric-color, var(--cyan)), transparent);
+  }
+  .metric-top { display: flex; justify-content: space-between; color: var(--muted); }
+  .metric-icon { color: var(--metric-color, var(--cyan)); font-weight: 800; }
+  .metric-value { margin-top: 15px; font-size: 27px; font-weight: 720; letter-spacing: -.04em; }
+  .metric-value small { font-size: 12px; color: var(--muted); letter-spacing: 0; }
+  .metric-note { margin-top: 2px; color: var(--muted); font-size: 11px; }
+
+  button {
+    border: 1px solid var(--line-bright); border-radius: 7px; background: var(--panel-2);
+    padding: 7px 11px; cursor: pointer; font-weight: 650;
+  }
+  button:hover:not(:disabled) { border-color: var(--cyan); background: var(--cyan-soft); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { color: var(--on-accent); background: var(--cyan); border-color: var(--cyan); }
+  button.primary:hover:not(:disabled) { background: var(--cyan-bright); }
+  button.danger { color: var(--red); border-color: rgba(255, 115, 123, .45); background: var(--red-soft); }
+  button.warn { color: var(--amber); border-color: rgba(241, 189, 93, .45); background: var(--amber-soft); }
+  button.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+  button.small { padding: 5px 8px; font-size: 11px; }
+  .button-row { display: flex; flex-wrap: wrap; gap: 7px; }
+
+  .chart-wrap { height: 330px; position: relative; }
+  #power-chart { display: block; width: 100%; height: 100%; }
+  .chart-toolbar { display: flex; align-items: center; gap: 7px; }
+  .segmented { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 7px; background: var(--inset); }
+  .segmented button { padding: 4px 8px; border: 0; background: transparent; color: var(--muted); }
+  .segmented button.active { color: var(--text); background: var(--panel-2); }
+  .chart-legend { display: flex; gap: 16px; color: var(--muted); font-size: 11px; }
+  .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .chart-tooltip {
+    position: absolute; display: none; pointer-events: none; z-index: 2;
+    padding: 8px 9px; border: 1px solid var(--line-bright); border-radius: 7px;
+    background: var(--tooltip); box-shadow: var(--shadow); font-size: 11px;
+  }
+  .empty-chart { position: absolute; inset: 0; display: grid; place-items: center; color: var(--quiet); pointer-events: none; }
+
+  .control-live { border-color: rgba(241, 189, 93, .3); }
+  .live-warning {
+    display: flex; align-items: center; gap: 8px; padding: 9px 10px; margin-bottom: 14px;
+    color: var(--amber); background: var(--amber-soft); border-radius: 7px; font-size: 11px;
+  }
+  .field { margin-bottom: 12px; }
+  .field label { display: flex; justify-content: space-between; margin-bottom: 6px; color: var(--muted); font-size: 11px; }
+  .field input, .field select, .field textarea { width: 100%; }
+  input[type=range] {
+    width: 100%; accent-color: var(--amber); height: 18px; cursor: grab;
+  }
+  .limit-number { display: grid; grid-template-columns: 1fr 92px; gap: 8px; align-items: center; }
+  .limit-scale { display: flex; justify-content: space-between; color: var(--quiet); font-size: 10px; }
+  .action-result {
+    min-height: 34px; margin-top: 12px; padding: 8px 9px; border-radius: 7px;
+    background: var(--inset); color: var(--muted); font-size: 11px;
+  }
+  .action-result.ok { color: var(--green); }
+  .action-result.err { color: var(--red); }
+
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+  .flow-node { padding: 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--flow); }
+  .flow-node span { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+  .flow-node strong { display: block; margin-top: 5px; font-size: 17px; }
+
+  /* minmax(0, 1fr), not 1fr: a grid item defaults to min-width:auto, so a long unbroken
+     string (a device announcing nine IPv4+IPv6 addresses) forces the track wider than its
+     share and overflows the card instead of ellipsising. Same reason .runtime-row below. */
+  .device-card {
+    display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    padding: 12px 13px; border-top: 1px solid var(--line); cursor: pointer;
+  }
+  .device-card > *, .runtime-row > * { min-width: 0; }
+  .device-card:first-child { border-top: 0; }
+  .device-card:hover, .device-card.selected { background: var(--cyan-soft); }
+  .device-card.selected { box-shadow: inset 2px 0 var(--cyan); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--quiet); }
+  .dot.ok { background: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
+  .dot.warn { background: var(--amber); }
+  .dot.err { background: var(--red); box-shadow: 0 0 0 4px var(--red-soft); }
+  .device-title { font-weight: 680; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .device-meta { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px;
+    border: 1px solid var(--line-bright); border-radius: 999px; color: var(--muted); font-size: 10px;
+  }
+  .badge.ok { color: var(--green); border-color: rgba(121, 216, 136, .42); background: var(--green-soft); }
+  .badge.warn { color: var(--amber); border-color: rgba(241, 189, 93, .42); background: var(--amber-soft); }
+  .badge.err { color: var(--red); border-color: rgba(255, 115, 123, .42); background: var(--red-soft); }
+  .badge.purple { color: var(--purple); border-color: rgba(167, 139, 250, .42); }
+
+  .device-detail-head { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .device-detail-head h3 { margin: 0 0 3px; font-size: 19px; }
+  .ski { color: var(--muted); font-size: 11px; }
+  .capability-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin: 14px 0; }
+  .capability {
+    padding: 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--inset);
+    color: var(--quiet); text-align: center; font-size: 10px; font-weight: 750;
+  }
+  .capability.yes { color: var(--green); border-color: rgba(121, 216, 136, .35); background: var(--green-soft); }
+  .entity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .entity-card { padding: 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--inset); }
+  .entity-card strong { display: block; }
+  .entity-card .mono { color: var(--muted); font-size: 10px; }
+  .entity-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 9px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { color: var(--quiet); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+  tbody tr:hover { background: var(--row-hover); }
+  .raw {
+    max-height: 360px; overflow: auto; margin: 0; padding: 12px;
+    background: var(--inset-deep); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--code-text); font-size: 11px; white-space: pre-wrap; word-break: break-word;
+  }
+  details { margin-top: 12px; }
+  summary { color: var(--muted); cursor: pointer; }
+  details[open] summary { margin-bottom: 8px; }
+
+  .usecase-toolbar {
+    display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end;
+    margin-bottom: 14px;
+  }
+  .uc-card { padding: 16px; }
+  .uc-card h3 { margin: 0; }
+  .uc-code { color: var(--cyan); font-size: 11px; letter-spacing: .06em; }
+  .uc-output { min-height: 72px; max-height: 260px; overflow: auto; margin-top: 10px; }
+  .template-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+
+  .tests-summary { display: flex; gap: 8px; align-items: center; }
+  .test-row { padding: 13px 14px; border-top: 1px solid var(--line); }
+  .test-row:first-child { border-top: 0; }
+  .test-head { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; }
+  .test-name { font-weight: 700; }
+  .test-description { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .test-result { margin-top: 9px; display: none; }
+  .test-result.show { display: block; }
+  .step { display: grid; grid-template-columns: 62px 1fr auto; gap: 8px; padding: 5px 0; font-size: 11px; }
+  .status-passed { color: var(--green); }
+  .status-failed { color: var(--red); }
+  .status-skipped { color: var(--amber); }
+
+  .runtime-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .runtime-row:first-child { border-top: 0; }
+  .log-toolbar, .event-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .log-toolbar select { min-width: 180px; }
+  #event-table-wrap { max-height: 350px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+  .event-payload td { padding: 0; }
+  .event-payload pre { max-height: 220px; border: 0; border-radius: 0; }
+  .event-row { cursor: pointer; }
+  .event-level-usecase { color: var(--cyan); }
+  .event-level-lifecycle { color: var(--amber); }
+  .event-level-spine { color: var(--purple); }
+
+  .notice { padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--inset); color: var(--muted); }
+  .notice strong { color: var(--text); }
+  .notice + .notice { margin-top: 8px; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .kv:last-child { border-bottom: none; }
+  .kv > span:first-child { color: var(--muted); }
+  .empty { padding: 28px 14px; color: var(--quiet); text-align: center; }
+  .muted { color: var(--muted); }
+  .hidden { display: none !important; }
+  .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 30; display: grid; gap: 8px; width: 390px; }
+  .toast {
+    padding: 11px 13px; border: 1px solid var(--line-bright); border-radius: 9px;
+    background: var(--toast); box-shadow: var(--shadow);
+  }
+  .toast.ok { border-color: rgba(121, 216, 136, .48); }
+  .toast.err { border-color: rgba(255, 115, 123, .55); }
+  .toast-title { font-weight: 720; }
+  .toast-detail { color: var(--muted); font-size: 11px; margin-top: 2px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">EEBUS</div>
+      <h1>Network Intelligence</h1>
+      <p data-i18n="brand.tagline">Live engineering testbench</p>
+    </div>
+    <nav class="nav" aria-label="Primary navigation">
+      <div class="nav-label" data-i18n="nav.label">Workspace</div>
+      <button data-page="dashboard" class="active"><span class="nav-icon">D</span><span data-i18n="nav.dashboard">Dashboard</span></button>
+      <button data-page="devices"><span class="nav-icon">N</span><span data-i18n="nav.devices">Devices &amp; network</span></button>
+      <button data-page="usecases"><span class="nav-icon">U</span><span data-i18n="nav.usecases">Use cases</span></button>
+      <button data-page="tests"><span class="nav-icon">T</span><span data-i18n="nav.tests">Test runner</span></button>
+      <button data-page="diagnostics"><span class="nav-icon">X</span><span data-i18n="nav.diagnostics">Diagnostics</span></button>
+    </nav>
+    <div class="sidebar-status">
+      <div class="eyebrow" data-i18n="side.state">Testbench state</div>
+      <div class="status-line"><span class="pulse" id="sidebar-pulse"></span><span id="sidebar-state">Connecting…</span></div>
+      <div class="muted" id="sidebar-stack" style="font-size:11px;margin-top:5px">No active counterparty</div>
+    </div>
+    <!-- Our own SKI, always on screen. The device under test needs this exact value to pair,
+         and it changes whenever the identity is regenerated -- hunting for it in the startup
+         log or via /api/v1/identity was the single most common cause of pairing the wrong
+         identity by mistake. -->
+    <div class="sidebar-status" id="local-identity">
+      <div class="eyebrow" data-i18n="side.ski">This testbench's SKI</div>
+      <button class="ski-copy mono" id="local-ski" type="button"
+              title="Click to copy" data-i18n-title="side.ski.copy">…</button>
+      <div class="muted" id="local-ski-hint" style="font-size:11px;margin-top:5px" data-i18n="side.ski.hint">Pair this value on the device</div>
+    </div>
+    <div class="sidebar-links">
+      <label for="theme-select" class="eyebrow" style="display:block;margin-bottom:4px" data-i18n="theme.label">Appearance</label>
+      <select id="theme-select" style="width:100%;margin-bottom:10px">
+        <option value="system" data-i18n="theme.system">Match system</option>
+        <option value="light" data-i18n="theme.light">Light</option>
+        <option value="dark" data-i18n="theme.dark">Dark</option>
+      </select>
+      <label for="lang-select" class="eyebrow" style="display:block;margin-bottom:4px" data-i18n="lang.label">Language</label>
+      <select id="lang-select" style="width:100%;margin-bottom:10px">
+        <option value="en">English</option>
+        <option value="de">Deutsch</option>
+        <option value="zh-Hans">中文（简体）</option>
+      </select>
+      <a href="/docs" target="_blank" rel="noreferrer">OpenAPI / Swagger ↗</a>
+      <a href="/redoc" target="_blank" rel="noreferrer">API reference ↗</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="target">
+        <label for="global-peer" data-i18n="top.target">Target device</label>
+        <select id="global-peer"><option value="">No connected device</option></select>
+        <span class="badge" id="global-peer-state">offline</span>
+      </div>
+      <div class="top-actions">
+        <span class="sync-status"><span class="pulse" id="api-pulse"></span><span id="sync-text">Starting</span></span>
+        <button class="small" id="refresh-all" data-i18n="top.refresh">Refresh now</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="page active" id="page-dashboard">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow" data-i18n="page.dash.eyebrow">Live state</div>
+            <h2 data-i18n="page.dash.title">Home energy and charging</h2>
+            <p data-i18n="page.dash.sub">Measurements, limits, vehicles, generation, and storage from the selected EEBUS peer.</p>
+          </div>
+          <div class="page-actions">
+            <span class="badge" id="snapshot-age">waiting for data</span>
+          </div>
+        </div>
+
+        <div class="grid metrics">
+          <div class="panel metric" style="--metric-color:var(--cyan)">
+            <div class="metric-top"><span>Total consumption</span><span class="metric-icon">P</span></div>
+            <div class="metric-value" id="metric-power">—</div>
+            <div class="metric-note" id="metric-power-note">No MPC value</div>
+          </div>
+          <div class="panel metric" style="--metric-color:var(--purple)">
+            <div class="metric-top"><span>EV charging</span><span class="metric-icon">EV</span></div>
+            <div class="metric-value" id="metric-ev">—</div>
+            <div class="metric-note" id="metric-ev-note">No EV entities</div>
+          </div>
+          <div class="panel metric" style="--metric-color:var(--green)">
+            <div class="metric-top"><span>PV production</span><span class="metric-icon">PV</span></div>
+            <div class="metric-value" id="metric-pv">—</div>
+            <div class="metric-note" id="metric-pv-note">No VAPD value</div>
+          </div>
+          <div class="panel metric" style="--metric-color:var(--amber)">
+            <div class="metric-top"><span>Consumption limit</span><span class="metric-icon">L</span></div>
+            <div class="metric-value" id="metric-limit">—</div>
+            <div class="metric-note" id="metric-limit-note">No active LPC limit</div>
+          </div>
+        </div>
+
+        <div class="grid dashboard-main">
+          <div class="panel panel-pad">
+            <div class="panel-head">
+              <div>
+                <h3 data-i18n="panel.history">Power and limits over time</h3>
+                <div class="sub">Hover or click the chart to inspect a sample</div>
+              </div>
+              <div class="chart-toolbar">
+                <div class="chart-legend">
+                  <span><i class="legend-dot" style="background:var(--cyan)"></i>Consumption</span>
+                  <span><i class="legend-dot" style="background:var(--green)"></i>PV</span>
+                  <span><i class="legend-dot" style="background:var(--amber)"></i>Limit</span>
+                </div>
+                <div class="segmented" id="range-buttons">
+                  <button data-range="300">5m</button>
+                  <button data-range="900" class="active">15m</button>
+                  <button data-range="3600">1h</button>
+                  <button data-range="43200">12h</button>
+                </div>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="power-chart"></canvas>
+              <div class="chart-tooltip" id="chart-tooltip"></div>
+              <div class="empty-chart" id="chart-empty">Select a connected peer to begin collecting history.</div>
+            </div>
+            <div class="flow">
+              <div class="flow-node"><span>Grid</span><strong id="flow-grid">—</strong></div>
+              <div class="flow-node"><span>EV charging</span><strong id="flow-ev">—</strong></div>
+              <div class="flow-node"><span>Photovoltaic</span><strong id="flow-pv">—</strong></div>
+              <div class="flow-node"><span>Battery</span><strong id="flow-battery">—</strong></div>
+            </div>
+          </div>
+
+          <div class="panel panel-pad control-live">
+            <div class="panel-head">
+              <div><h3 data-i18n="panel.limit">Live consumption limit</h3><div class="sub">LPC · Energy Guard → Controllable System</div></div>
+              <span class="badge warn">LIVE</span>
+            </div>
+            <div class="live-warning"><strong>!</strong><span>Apply sends the value to the selected device immediately.</span></div>
+            <div class="field">
+              <label for="limit-entity"><span>Target entity</span><span>SPINE address</span></label>
+              <select id="limit-entity"><option value="">Automatic</option></select>
+            </div>
+            <div class="field">
+              <label for="limit-range"><span>Active power</span><strong id="limit-display">4.2 kW</strong></label>
+              <div class="limit-number">
+                <input id="limit-range" type="range" min="0" max="22000" step="100" value="4200">
+                <input id="limit-value" type="number" min="0" max="1000000" step="100" value="4200" aria-label="Limit in watts">
+              </div>
+              <div class="limit-scale"><span>0 W</span><span id="limit-max-label">22 kW</span></div>
+            </div>
+            <div class="field">
+              <label for="limit-duration"><span>Duration</span><span>ISO-8601 on the API</span></label>
+              <select id="limit-duration">
+                <option value="PT1M">1 minute</option>
+                <option value="PT15M">15 minutes</option>
+                <option value="PT30M">30 minutes</option>
+                <option value="PT1H">1 hour</option>
+                <option value="PT2H" selected>2 hours</option>
+                <option value="">No expiry</option>
+              </select>
+            </div>
+            <div class="button-row">
+              <button class="primary" id="apply-limit">Apply live</button>
+              <button id="release-limit">Release limit</button>
+              <button id="read-limit">Read current</button>
+            </div>
+            <div class="action-result" id="limit-result">Waiting for a connected LPC-capable device.</div>
+          </div>
+        </div>
+
+        <div class="grid two" style="margin-top:14px">
+          <div class="panel">
+            <div class="panel-pad panel-head" style="margin:0">
+              <div><h3 data-i18n="panel.connected">Connected devices</h3><div class="sub" data-i18n="panel.connected.sub">Click a device to inspect it</div></div>
+              <button class="small" data-open-page="devices">Open network</button>
+            </div>
+            <div id="dashboard-devices"><div class="empty">No device data yet.</div></div>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-head"><div><h3 data-i18n="panel.intel">Selected device intelligence</h3><div class="sub" data-i18n="panel.intel.sub">Live capability and asset summary</div></div></div>
+            <div id="dashboard-intelligence" class="empty">Select a connected device.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-devices">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow" data-i18n="page.dev.eyebrow">SHIP + SPINE discovery</div>
+            <h2 data-i18n="page.dev.title">Devices and network</h2>
+            <p data-i18n="page.dev.sub">Discover, trust, explore, and inspect the complete advertised device model.</p>
+          </div>
+          <div class="page-actions">
+            <button id="scan-network">Scan mDNS (5s)</button>
+          </div>
+        </div>
+        <div class="grid device-layout">
+          <div>
+            <div class="panel">
+              <div class="panel-pad panel-head" style="margin:0"><h3 data-i18n="panel.known">Known peers</h3><span class="badge" id="peer-count">0</span></div>
+              <div id="device-list"><div class="empty">Loading peers…</div></div>
+            </div>
+            <div class="panel panel-pad" style="margin-top:14px">
+              <div class="panel-head"><h3 data-i18n="panel.pending">Pending pairing</h3><span class="badge" id="pending-count">0</span></div>
+              <div id="pending-list" class="muted">No pending requests.</div>
+            </div>
+            <div class="panel panel-pad" style="margin-top:14px">
+              <div class="panel-head"><h3 data-i18n="panel.scan">mDNS scan results</h3><span class="badge" id="scan-state">not run</span></div>
+              <div id="scan-results" class="muted">Run a scan to inspect real multicast visibility.</div>
+            </div>
+          </div>
+          <div class="panel panel-pad" id="device-detail">
+            <div class="empty">Select a peer to browse its entities and advertised use cases.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-usecases">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow" data-i18n="page.uc.eyebrow">Protocol operations</div>
+            <h2 data-i18n="page.uc.title">Use-case workbench</h2>
+            <p data-i18n="page.uc.sub">Typed controls for common use cases and raw JSON-RPC for the complete stack surface.</p>
+          </div>
+        </div>
+        <div class="panel panel-pad usecase-toolbar">
+          <div class="field" style="margin:0"><label for="uc-peer">Target peer</label><select id="uc-peer"></select></div>
+          <div class="field" style="margin:0"><label for="uc-entity">Target entity</label><select id="uc-entity"><option value="">Automatic by use case</option></select></div>
+          <button id="browse-usecases">Refresh advertised use cases</button>
+        </div>
+        <div class="panel panel-pad" id="usecase-browser" style="margin-bottom:14px">
+          <div class="empty">Select a connected device to browse its advertised use cases.</div>
+        </div>
+        <div class="grid two">
+          <div class="panel uc-card">
+            <div class="panel-head"><div><div class="uc-code">LPC</div><h3>Consumption limit</h3></div><span class="badge" data-support="limitationOfPowerConsumption">unknown</span></div>
+            <div class="button-row">
+              <button data-uc-read="lpc">Read limit</button>
+              <button data-uc-read="failsafe">Read failsafe</button>
+              <button data-uc-read="nominal">Read nominal max</button>
+              <button data-uc-read="heartbeat">Heartbeat state</button>
+              <button data-heartbeat="start">Start heartbeat</button>
+              <button data-heartbeat="stop" class="warn">Stop heartbeat</button>
+            </div>
+            <div class="template-list" id="lpc-templates"></div>
+            <pre class="raw uc-output" id="out-lpc">No request yet.</pre>
+          </div>
+          <div class="panel uc-card">
+            <div class="panel-head"><div><div class="uc-code">LPP</div><h3>Production limit</h3></div><span class="badge" data-support="limitationOfPowerProduction">unknown</span></div>
+            <div class="button-row"><button data-uc-read="lpp">Read limit</button></div>
+            <div class="template-list" id="lpp-templates"></div>
+            <pre class="raw uc-output" id="out-lpp">No request yet.</pre>
+          </div>
+          <div class="panel uc-card">
+            <div class="panel-head"><div><div class="uc-code">MPC / MGCP</div><h3>Measurements</h3></div><span class="badge" data-support="monitoringOfPowerConsumption">unknown</span></div>
+            <div class="button-row">
+              <button data-uc-read="mpc">Read consumption</button>
+              <button data-uc-read="mgcp">Read grid connection</button>
+              <button data-uc-read="snapshot">Read complete energy state</button>
+            </div>
+            <pre class="raw uc-output" id="out-monitoring">No request yet.</pre>
+          </div>
+          <div class="panel uc-card">
+            <div class="panel-head"><div><div class="uc-code">EV / PV / BATTERY</div><h3>Energy assets</h3></div><span class="badge purple">typed snapshot</span></div>
+            <div class="button-row">
+              <button data-uc-read="ev">Read EV inventory</button>
+              <button data-uc-read="assets">Read PV and battery</button>
+              <button data-open-page="devices">Browse device model</button>
+            </div>
+            <pre class="raw uc-output" id="out-assets">No request yet.</pre>
+          </div>
+          <div class="panel uc-card" style="grid-column:1 / -1">
+            <div class="panel-head"><div><div class="uc-code">RAW JSON-RPC</div><h3>Unmapped stack operations</h3></div><span class="badge warn">advanced</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1.5fr auto;gap:9px;align-items:end">
+              <div class="field" style="margin:0"><label for="raw-method">Method</label><input id="raw-method" type="text" placeholder="cem-cevc/ChargePlan"></div>
+              <div class="field" style="margin:0"><label for="raw-params">Positional parameters (JSON array)</label><textarea id="raw-params" rows="2">[]</textarea></div>
+              <button class="primary" id="send-raw">Send live</button>
+            </div>
+            <pre class="raw uc-output" id="out-raw">Use the device browser to copy an entity address, then call any registered upstream method.</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-tests">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow" data-i18n="page.test.eyebrow">Python + scenario DSL</div>
+            <h2 data-i18n="page.test.title">Use-case test runner</h2>
+            <p data-i18n="page.test.sub">Repeatable examples that run through the same REST paths as the dashboard.</p>
+          </div>
+          <div class="page-actions">
+            <button id="run-readonly">Run read-only</button>
+            <button class="primary" id="run-all-tests">Run complete suite</button>
+          </div>
+        </div>
+        <div class="panel panel-pad" style="margin-bottom:14px">
+          <div class="panel-head">
+            <div class="tests-summary">
+              <span class="badge" id="tests-total">0 tests</span>
+              <span class="badge ok" id="tests-passed">0 passed</span>
+              <span class="badge warn" id="tests-skipped">0 skipped</span>
+              <span class="badge err" id="tests-failed">0 failed</span>
+            </div>
+            <code class="muted">EEBUS_API_URL=http://127.0.0.1:9080 PYTHONPATH=src pytest -q usecase_tests</code>
+          </div>
+          <div class="notice"><strong>Live-control tests change the connected device.</strong> Unsupported use cases are marked skipped, not failed. A failed supported test remains a real failure.</div>
+        </div>
+        <div class="panel" id="test-list"><div class="empty">Loading test catalog…</div></div>
+      </section>
+
+      <section class="page" id="page-diagnostics">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow" data-i18n="page.diag.eyebrow">Deep inspection</div>
+            <h2 data-i18n="page.diag.title">Diagnostics</h2>
+            <p data-i18n="page.diag.sub">Runtime stacks, DLT tracing, network details, events, and process logs.</p>
+          </div>
+        </div>
+        <div class="grid diagnostics">
+          <div>
+            <div class="panel panel-pad">
+              <div class="panel-head"><div><h3>Runtime info</h3><div class="sub">Build, network mode, and capabilities</div></div></div>
+              <div id="runtime-info" class="muted">Loading…</div>
+              <div class="notice" style="margin-top:10px">
+                <strong>Scripting the API</strong> -- every panel here is a thin wrapper over the REST API at <span class="mono">/api/v1</span>.
+                Interactive docs: <a href="/docs" target="_blank" rel="noreferrer">Swagger UI ↗</a> ·
+                <a href="/redoc" target="_blank" rel="noreferrer">Redoc ↗</a><br>
+                Example (Python, <span class="mono">httpx</span>): <span class="mono">EEBUS_API_URL=http://127.0.0.1:8080 python3 examples/send_lpc_limit.py &lt;ski&gt; 4200 PT2H</span>
+              </div>
+            </div>
+            <div class="panel panel-pad" style="margin-top:14px">
+              <div class="panel-head"><h3 data-i18n="panel.stacks">Runtime stacks</h3><span class="sub">One counterparty + observers</span></div>
+              <div id="runtime-stacks"></div>
+            </div>
+            <div class="panel panel-pad" style="margin-top:14px">
+              <div class="panel-head"><h3 data-i18n="panel.namespace">Network namespace</h3><button class="small" id="refresh-network">Refresh</button></div>
+              <div id="network-info" class="muted">Loading…</div>
+            </div>
+            <div class="panel panel-pad" style="margin-top:14px">
+              <div class="panel-head">
+                <div><h3>Reachability</h3><div class="sub">What a device sees when it looks for us</div></div>
+                <button class="small" id="refresh-reach">Refresh</button>
+              </div>
+              <div id="reach-info" class="muted">Loading…</div>
+            </div>
+          </div>
+          <div>
+            <div class="panel panel-pad">
+              <div class="panel-head"><h3 data-i18n="panel.logs">Process logs</h3><span class="badge" id="log-state">live</span></div>
+              <div class="log-toolbar">
+                <select id="log-stack"></select>
+                <label class="muted"><input type="checkbox" id="log-live" checked> refresh every 3s</label>
+                <button class="small" id="refresh-logs">Refresh</button>
+              </div>
+              <pre class="raw" id="log-output" style="height:310px">No log selected.</pre>
+            </div>
+          </div>
+        </div>
+        <div class="panel panel-pad" style="margin-top:14px">
+          <div class="panel-head"><h3 data-i18n="panel.events">Live protocol events</h3><span class="badge" id="event-count">0</span></div>
+          <div class="event-toolbar">
+            <select id="event-level" style="min-width:140px"><option value="">All levels</option><option value="usecase">Use case</option><option value="lifecycle">Lifecycle</option><option value="spine">SPINE</option></select>
+            <button class="small" id="pause-events">Pause</button>
+            <button class="small" id="clear-events">Clear</button>
+            <span class="muted" id="stream-state">connecting…</span>
+          </div>
+          <div id="event-table-wrap">
+            <table><thead><tr><th>Time</th><th>Level</th><th>Stack</th><th>Event</th><th>SKI</th></tr></thead><tbody id="events-body"></tbody></table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="toast-stack" id="toasts" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+const API = "/api/v1";
+
+// ---- i18n ---------------------------------------------------------------------------
+// Covers the static chrome: nav, page titles/subtitles, panel headings, and common
+// action/status words. Deliberately NOT covering EEBUS protocol vocabulary (LPC, SPINE,
+// SKI, use-case names, JSON output, method names) -- those are the same in every language
+// and translating them would make the UI harder to match against the spec and the logs.
+// Add a key here and reference it with data-i18n (or t() inside a template literal).
+const I18N = {
+  en: {
+    "brand.tagline": "Live engineering testbench",
+    "nav.label": "Workspace", "nav.dashboard": "Dashboard", "nav.devices": "Devices &amp; network",
+    "nav.usecases": "Use cases", "nav.tests": "Test runner", "nav.diagnostics": "Diagnostics",
+    "side.state": "Testbench state",
+    "side.ski": "This testbench's SKI",
+    "side.ski.copy": "Click to copy",
+    "side.ski.hint": "Pair this value on the device",
+    "theme.label": "Appearance", "theme.system": "Match system", "theme.light": "Light", "theme.dark": "Dark",
+    "top.target": "Target device", "top.refresh": "Refresh now",
+    "page.dash.eyebrow": "Live state", "page.dash.title": "Home energy and charging",
+    "page.dash.sub": "Measurements, limits, vehicles, generation, and storage from the selected EEBUS peer.",
+    "page.dev.eyebrow": "SHIP + SPINE discovery", "page.dev.title": "Devices and network",
+    "page.dev.sub": "Discover, trust, explore, and inspect the complete advertised device model.",
+    "page.uc.eyebrow": "Protocol operations", "page.uc.title": "Use-case workbench",
+    "page.uc.sub": "Typed controls for common use cases and raw JSON-RPC for the complete stack surface.",
+    "page.test.eyebrow": "Python + scenario DSL", "page.test.title": "Use-case test runner",
+    "page.test.sub": "Repeatable examples that run through the same REST paths as the dashboard.",
+    "page.diag.eyebrow": "Deep inspection", "page.diag.title": "Diagnostics",
+    "page.diag.sub": "Runtime stacks, DLT tracing, network details, events, and process logs.",
+    "panel.history": "Power and limits over time",
+    "panel.limit": "Live consumption limit",
+    "panel.connected": "Connected devices", "panel.connected.sub": "Click a device to inspect it",
+    "panel.intel": "Selected device intelligence", "panel.intel.sub": "Live capability and asset summary",
+    "panel.known": "Known peers", "panel.pending": "Pending pairing", "panel.scan": "mDNS scan results",
+    "panel.stacks": "Runtime stacks",
+    "panel.namespace": "Network namespace", "panel.logs": "Process logs", "panel.events": "Live protocol events",
+    "lang.label": "Language",
+  },
+  de: {
+    "brand.tagline": "Live-Engineering-Testumgebung",
+    "nav.label": "Arbeitsbereich", "nav.dashboard": "Übersicht", "nav.devices": "Geräte &amp; Netzwerk",
+    "nav.usecases": "Anwendungsfälle", "nav.tests": "Testrunner", "nav.diagnostics": "Diagnose",
+    "side.state": "Status der Testumgebung",
+    "side.ski": "SKI dieser Testumgebung",
+    "side.ski.copy": "Zum Kopieren klicken",
+    "side.ski.hint": "Diesen Wert am Gerät koppeln",
+    "theme.label": "Darstellung", "theme.system": "Wie System", "theme.light": "Hell", "theme.dark": "Dunkel",
+    "top.target": "Zielgerät", "top.refresh": "Jetzt aktualisieren",
+    "page.dash.eyebrow": "Live-Zustand", "page.dash.title": "Hausenergie und Ladevorgang",
+    "page.dash.sub": "Messwerte, Limits, Fahrzeuge, Erzeugung und Speicher des ausgewählten EEBUS-Peers.",
+    "page.dev.eyebrow": "SHIP- und SPINE-Erkennung", "page.dev.title": "Geräte und Netzwerk",
+    "page.dev.sub": "Geräte erkennen, vertrauen, erkunden und das vollständige angekündigte Gerätemodell prüfen.",
+    "page.uc.eyebrow": "Protokolloperationen", "page.uc.title": "Anwendungsfall-Werkbank",
+    "page.uc.sub": "Typisierte Bedienelemente für gängige Anwendungsfälle und Raw-JSON-RPC für den gesamten Stack.",
+    "page.test.eyebrow": "Python + Szenario-DSL", "page.test.title": "Anwendungsfall-Testrunner",
+    "page.test.sub": "Wiederholbare Beispiele, die über dieselben REST-Pfade wie das Dashboard laufen.",
+    "page.diag.eyebrow": "Detailanalyse", "page.diag.title": "Diagnose",
+    "page.diag.sub": "Laufende Stacks, DLT-Tracing, Netzwerkdetails, Ereignisse und Prozessprotokolle.",
+    "panel.history": "Leistung und Limits im Zeitverlauf",
+    "panel.limit": "Live-Verbrauchsgrenze",
+    "panel.connected": "Verbundene Geräte", "panel.connected.sub": "Gerät anklicken, um es zu prüfen",
+    "panel.intel": "Details zum ausgewählten Gerät", "panel.intel.sub": "Live-Übersicht der Fähigkeiten und Anlagen",
+    "panel.known": "Bekannte Peers", "panel.pending": "Ausstehende Kopplung", "panel.scan": "mDNS-Scan-Ergebnisse",
+    "panel.stacks": "Laufende Stacks",
+    "panel.namespace": "Netzwerk-Namespace", "panel.logs": "Prozessprotokolle", "panel.events": "Live-Protokollereignisse",
+    "lang.label": "Sprache",
+  },
+  "zh-Hans": {
+    "brand.tagline": "实时工程测试平台",
+    "nav.label": "工作区", "nav.dashboard": "仪表板", "nav.devices": "设备与网络",
+    "nav.usecases": "用例", "nav.tests": "测试运行器", "nav.diagnostics": "诊断",
+    "side.state": "测试平台状态",
+    "side.ski": "本测试平台的 SKI",
+    "side.ski.copy": "点击复制",
+    "side.ski.hint": "在设备上配对此值",
+    "theme.label": "外观", "theme.system": "跟随系统", "theme.light": "浅色", "theme.dark": "深色",
+    "top.target": "目标设备", "top.refresh": "立即刷新",
+    "page.dash.eyebrow": "实时状态", "page.dash.title": "家庭用能与充电",
+    "page.dash.sub": "所选 EEBUS 对端的测量值、限值、车辆、发电与储能。",
+    "page.dev.eyebrow": "SHIP 与 SPINE 发现", "page.dev.title": "设备与网络",
+    "page.dev.sub": "发现、信任、探索并检查完整的已公告设备模型。",
+    "page.uc.eyebrow": "协议操作", "page.uc.title": "用例工作台",
+    "page.uc.sub": "常见用例的类型化控件,以及覆盖完整协议栈的原始 JSON-RPC。",
+    "page.test.eyebrow": "Python 与场景 DSL", "page.test.title": "用例测试运行器",
+    "page.test.sub": "可重复的示例,通过与仪表板相同的 REST 路径运行。",
+    "page.diag.eyebrow": "深度检查", "page.diag.title": "诊断",
+    "page.diag.sub": "运行中的协议栈、DLT 跟踪、网络详情、事件与进程日志。",
+    "panel.history": "功率与限值历史",
+    "panel.limit": "实时用电限值",
+    "panel.connected": "已连接设备", "panel.connected.sub": "点击设备以查看详情",
+    "panel.intel": "所选设备详情", "panel.intel.sub": "能力与资产实时概览",
+    "panel.known": "已知对端", "panel.pending": "待处理配对", "panel.scan": "mDNS 扫描结果",
+    "panel.stacks": "运行中的协议栈",
+    "panel.namespace": "网络命名空间", "panel.logs": "进程日志", "panel.events": "实时协议事件",
+    "lang.label": "语言",
+  },
+};
+let currentLang = localStorage.getItem("eebus-lang") || "en";
+if (!I18N[currentLang]) currentLang = "en";
+
+/* ---- Theme -------------------------------------------------------------------------------
+   Three states, not two: "system" (the default) follows the OS and must keep following it if
+   the OS flips while the page is open; "light" and "dark" are explicit and must win over the
+   OS in both directions. "system" is expressed by removing the attribute entirely so the
+   stylesheet's own prefers-color-scheme rule applies -- writing the resolved value instead
+   would freeze the choice at load time. */
+const THEMES = ["system", "light", "dark"];
+let currentTheme = localStorage.getItem("eebus-theme") || "system";
+if (!THEMES.includes(currentTheme)) currentTheme = "system";
+
+function applyTheme() {
+  const root = document.documentElement;
+  if (currentTheme === "system") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", currentTheme);
+  const select = document.getElementById("theme-select");
+  if (select) select.value = currentTheme;
+  // The canvas chart samples colours at draw time, so it needs an explicit repaint.
+  if (typeof drawChart === "function") { try { drawChart(); } catch (_) {} }
+}
+
+function setTheme(theme) {
+  currentTheme = THEMES.includes(theme) ? theme : "system";
+  localStorage.setItem("eebus-theme", currentTheme);
+  applyTheme();
+}
+
+// Reads the palette the browser actually resolved, whichever of the three states is active.
+function themeColors() {
+  const css = getComputedStyle(document.documentElement);
+  const pick = (name, fallback) => (css.getPropertyValue(name) || "").trim() || fallback;
+  return {
+    grid:  pick("--grid-line", "#19313f"),
+    quiet: pick("--quiet", "#607b8b"),
+    cyan:  pick("--cyan", "#43d5e8"),
+    green: pick("--green", "#79d888"),
+    amber: pick("--amber", "#f1bd5d"),
+  };
+}
+
+function t(key) {
+  return (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
+}
+
+function applyI18n() {
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  const select = document.getElementById("lang-select");
+  if (select) select.value = currentLang;
+  // Re-selects the theme option: translating the option labels leaves the value intact, but
+  // this also covers the first paint, where applyI18n runs before any theme render.
+  const theme = document.getElementById("theme-select");
+  if (theme) theme.value = currentTheme;
+}
+
+function setLang(lang) {
+  currentLang = I18N[lang] ? lang : "en";
+  localStorage.setItem("eebus-lang", currentLang);
+  applyI18n();
+}
+const USE_CASE_SHORT = {
+  limitationOfPowerConsumption: "LPC",
+  limitationOfPowerProduction: "LPP",
+  monitoringOfPowerConsumption: "MPC",
+  monitoringOfGridConnectionPoint: "MGCP",
+  evCommissioningAndConfiguration: "EVCC",
+  evseCommissioningAndConfiguration: "EVSECC",
+  coordinatedEvCharging: "CEVC",
+  measurementOfElectricityDuringEvCharging: "EVCEM",
+  evStateOfCharge: "EVSOC",
+  visualizationOfAggregatedPhotovoltaicData: "VAPD",
+  visualizationOfAggregatedBatteryData: "VABD"
+};
+const CORE_USE_CASES = Object.keys(USE_CASE_SHORT);
+const state = {
+  stacks: [], config: {peers: []}, peers: [], pending: [], visible: [],
+  profile: null, snapshot: null, history: [], templates: {}, tests: [],
+  selectedSki: localStorage.getItem("eebus-selected-ski") || "",
+  range: Number(localStorage.getItem("eebus-chart-range") || 900),
+  events: [], eventsPaused: false, eventSource: null,
+  logTimer: null, snapshotTimer: null, lockedChartIndex: null, polling: false
+};
+
+class ApiError extends Error {
+  constructor(path, status, body) {
+    const detail = body && (body.detail || body.error);
+    super(typeof detail === "string" ? detail : `${status} ${path}`);
+    this.path = path; this.status = status; this.body = body;
+  }
+}
+
+async function api(path, options = {}) {
+  const response = await fetch(API + path, options);
+  const text = await response.text();
+  let body = null;
+  if (text) {
+    try { body = JSON.parse(text); } catch (_) { body = {detail: text}; }
+  }
+  if (!response.ok) throw new ApiError(path, response.status, body);
+  return body;
+}
+
+async function safeApi(path, fallback) {
+  try { return await api(path); }
+  catch (error) { console.warn(path, error); return fallback; }
+}
+
+function esc(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+}
+function json(value) { return JSON.stringify(value, null, 2); }
+function shortSki(ski) { return ski ? `${ski.slice(0, 4)}…${ski.slice(-4)}` : "unknown"; }
+
+// mDNS instance names arrive DNS-SD escaped: a literal space is "\ ", and a byte can be
+// "\DDD" decimal -- so a device with spaces in its name announces as "Wallbox\ Model\ One".
+// Unescape for display; the raw value is still what we send back on the wire (we never use
+// the cleaned form as a key or identifier).
+function cleanName(value) {
+  return String(value ?? "")
+    .replace(/\\(\d{3})/g, (_, digits) => String.fromCharCode(Number(digits)))
+    .replace(/\\(.)/g, "$1")
+    .trim();
+}
+
+// Every place a friendly name is shown should also carry enough SKI to tell two same-model
+// devices apart -- five identically-named devices in a dropdown are useless
+// otherwise. Falls back to the SKI alone when there is no name.
+function displayName(name, ski) {
+  const clean = cleanName(name);
+  if (!clean) return shortSki(ski);
+  return ski ? `${clean} · ${shortSki(ski)}` : clean;
+}
+
+// IPv6-capable devices announce many addresses (one device in testing announced nine,
+// mixing IPv4, link-local, and ULA IPv6). Show the routable IPv4 first -- that is what an
+// engineer acts on -- and summarise the rest rather than letting a 200-character string
+// blow out the row.
+function formatAddresses(addresses, hostName) {
+  const list = (addresses || []).filter(Boolean);
+  if (!list.length) return cleanName(hostName) || "unknown host";
+  const v4 = list.filter(a => /^\d+\.\d+\.\d+\.\d+$/.test(a));
+  const primary = v4[0] || list[0];
+  const extra = list.length - 1;
+  return extra > 0 ? `${primary} (+${extra} more)` : primary;
+}
+function entityValue(address) { return (address && address.entity || []).join(","); }
+function withEntity(path, entity) {
+  return entity ? `${path}?entity=${encodeURIComponent(entity)}` : path;
+}
+function activeStack() {
+  return state.stacks.find(item => item.role === "counterparty" && item.status === "running");
+}
+function selectedConfigPeer() {
+  return (state.config.peers || []).find(peer => peer.ski === state.selectedSki);
+}
+function selectedLivePeer() {
+  return state.peers.find(peer => peer.ski === state.selectedSki);
+}
+function selectedConnected() { return !!selectedLivePeer()?.connected; }
+function labelForSki(ski) {
+  const configured = (state.config.peers || []).find(peer => peer.ski === ski);
+  return displayName(configured?.label || configured?.name, ski);
+}
+function formatPower(value) {
+  if (!Number.isFinite(Number(value))) return "—";
+  const n = Number(value);
+  if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(Math.abs(n) >= 10000 ? 1 : 2)} kW`;
+  return `${Math.round(n)} W`;
+}
+function formatAge(ts) {
+  if (!ts) return "waiting for data";
+  const seconds = Math.max(0, Math.round(Date.now() / 1000 - ts));
+  return seconds < 2 ? "live" : `${seconds}s ago`;
+}
+function errorDetail(error) {
+  if (error instanceof ApiError) return json(error.body || {status: error.status});
+  return error?.message || String(error);
+}
+function toast(title, detail = "", kind = "ok") {
+  const host = document.getElementById("toasts");
+  const node = document.createElement("div");
+  node.className = `toast ${kind}`;
+  node.innerHTML = `<div class="toast-title">${esc(title)}</div>${detail ? `<div class="toast-detail">${esc(detail)}</div>` : ""}`;
+  host.appendChild(node);
+  setTimeout(() => node.remove(), 5500);
+}
+async function action(button, task, success) {
+  const original = button?.textContent;
+  if (button) { button.disabled = true; button.textContent = "Working…"; }
+  try {
+    const result = await task();
+    if (success) toast(success);
+    return result;
+  } catch (error) {
+    toast("Action failed", errorDetail(error), "err");
+    throw error;
+  } finally {
+    if (button) { button.disabled = false; button.textContent = original; }
+  }
+}
+
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(page => page.classList.toggle("active", page.id === `page-${name}`));
+  document.querySelectorAll(".nav button").forEach(button => button.classList.toggle("active", button.dataset.page === name));
+  localStorage.setItem("eebus-active-page", name);
+  if (name === "diagnostics") loadLogs();
+  if (name === "devices" && state.selectedSki) loadProfile();
+}
+
+function renderRuntimeInfo() {
+  const host = document.getElementById("runtime-info");
+  const net = state.config?.network || {};
+  const version = state.version || {};
+  const caps = Object.entries((state.stacks?.[0] || {}).capabilities || {})
+    .filter(([, v]) => v).map(([k]) => k);
+  host.innerHTML = `
+    <div class="kv"><span>Version</span><span class="mono">${esc(version.name || "eebus-testbench")} ${esc(version.version || "")}</span></div>
+    <div class="kv"><span>Network mode</span><span class="mono">${esc(net.mode || "?")}</span></div>
+    <div class="kv"><span>Interface</span><span class="mono">${esc(net.interface || "(all)")}</span></div>
+    <div class="kv"><span>mDNS provider</span><span class="mono">${esc(net.mdns_provider || "?")}</span></div>
+    <div class="kv"><span>Capabilities</span><span class="mono">${esc(caps.join(", ") || "none")}</span></div>
+  `;
+}
+
+async function refreshCore({notify = false} = {}) {
+  const sync = document.getElementById("sync-text");
+  sync.textContent = "Refreshing";
+  const [stacks, config, peers, pending, visible] = await Promise.all([
+    api("/stacks"), api("/config"), api("/peers"),
+    safeApi("/peers/pending", []), safeApi("/peers/visible", [])
+  ]);
+  state.stacks = stacks; state.config = config; state.peers = peers;
+  state.pending = pending; state.visible = visible;
+
+  const knownSkis = new Set([
+    ...(config.peers || []).map(peer => peer.ski),
+    ...peers.map(peer => peer.ski),
+    ...visible.map(peer => peer.ski).filter(Boolean)
+  ]);
+  if (!knownSkis.has(state.selectedSki)) {
+    state.selectedSki = peers.find(peer => peer.connected)?.ski || (config.peers || [])[0]?.ski || "";
+  }
+  localStorage.setItem("eebus-selected-ski", state.selectedSki);
+  reportConnectionChanges(peers);
+  renderCore();
+  state.lastSyncOk = Date.now();
+  sync.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  document.getElementById("api-pulse").className = "pulse ok";
+  if (notify) toast("Dashboard refreshed");
+}
+
+// A peer dropping off is the single most important thing to notice while testing -- it
+// invalidates whatever you were measuring -- and the 5s poll used to change the badge
+// silently, with nothing to catch your eye if you were reading another panel. Announce the
+// edges, not the steady state. state.connectionState is seeded on the first poll so a peer
+// that is already offline at load does not fire a spurious "lost" toast.
+function reportConnectionChanges(peers) {
+  const now = new Map(peers.map(peer => [peer.ski, !!peer.connected]));
+  if (!state.connectionState) { state.connectionState = now; return; }
+  for (const [ski, connected] of now) {
+    const before = state.connectionState.get(ski);
+    if (before === connected) continue;
+    if (before === true && connected === false) {
+      state.lostAt = state.lostAt || new Map();
+      state.lostAt.set(ski, Date.now());
+      toast("Connection lost", `${labelForSki(ski)} is no longer connected`, "err");
+    } else if (before === false && connected === true) {
+      state.lostAt?.delete(ski);
+      toast("Connected", labelForSki(ski), "ok");
+    }
+  }
+  // A peer that vanishes from /peers entirely counts as lost too, not just one whose
+  // connected flag flipped.
+  for (const [ski, was] of state.connectionState) {
+    if (was && !now.has(ski)) {
+      state.lostAt = state.lostAt || new Map();
+      state.lostAt.set(ski, Date.now());
+      toast("Connection lost", `${labelForSki(ski)} disappeared from the peer list`, "err");
+    }
+  }
+  state.connectionState = now;
+}
+
+function knownPeers() {
+  const map = new Map();
+  for (const peer of state.config.peers || []) map.set(peer.ski, {...peer, source: "config", connected: false, trusted: false});
+  for (const peer of state.visible || []) {
+    if (!peer.ski) continue;
+    map.set(peer.ski, {...map.get(peer.ski), ...peer, source: map.has(peer.ski) ? "config + mDNS" : "mDNS", connected: false});
+  }
+  for (const peer of state.peers || []) map.set(peer.ski, {...map.get(peer.ski), ...peer, source: map.has(peer.ski) ? map.get(peer.ski).source : "live"});
+  return [...map.values()];
+}
+
+// GET /stacks already carries local_ski, so this needs no extra request. Falls back to the
+// primary stack when no counterparty is running, because the SKI is exactly what you need to
+// read while pairing is still incomplete.
+function renderLocalSKI() {
+  const el = document.getElementById("local-ski");
+  if (!el) return;
+  const ski = (activeStack() || state.stacks?.[0] || {}).local_ski || "";
+  el.textContent = ski || "unavailable";
+  el.disabled = !ski;
+  el.dataset.ski = ski;
+}
+
+async function copyLocalSKI(button) {
+  const ski = button.dataset.ski || "";
+  if (!ski) return;
+  try {
+    await navigator.clipboard.writeText(ski);
+  } catch (_) {
+    // Clipboard access needs a secure context; over plain http on a LAN address it is refused,
+    // so fall back to selecting the text and let the user copy it themselves.
+    const range = document.createRange();
+    range.selectNodeContents(button);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return;
+  }
+  button.classList.add("copied");
+  setTimeout(() => button.classList.remove("copied"), 1200);
+}
+
+function renderCore() {
+  const active = activeStack();
+  const connected = state.peers.filter(peer => peer.connected);
+  document.getElementById("sidebar-pulse").className = `pulse ${active ? "ok" : "warn"}`;
+  document.getElementById("sidebar-state").textContent = active ? `${connected.length} peer${connected.length === 1 ? "" : "s"} connected` : "No counterparty";
+  document.getElementById("sidebar-stack").textContent = active?.id || "Start a counterparty in Diagnostics";
+  renderLocalSKI();
+
+  const select = document.getElementById("global-peer");
+  const all = knownPeers();
+  select.innerHTML = all.length
+    ? all.map(peer => `<option value="${esc(peer.ski)}">${esc(displayName(peer.label || peer.name, peer.ski))}${peer.connected ? " · connected" : " · offline"}</option>`).join("")
+    : `<option value="">No known device</option>`;
+  if (all.some(peer => peer.ski === state.selectedSki)) select.value = state.selectedSki;
+  const live = selectedLivePeer();
+  const globalBadge = document.getElementById("global-peer-state");
+  // "connection lost" is a distinct, louder state from "offline": offline is a device we
+  // never had, lost is one that dropped under us and is the thing worth reacting to.
+  const lostAt = state.lostAt?.get(state.selectedSki);
+  if (live?.connected) {
+    globalBadge.textContent = "connected";
+    globalBadge.className = "badge ok";
+  } else if (lostAt) {
+    globalBadge.textContent = `connection lost ${Math.max(1, Math.round((Date.now() - lostAt) / 1000))}s ago`;
+    globalBadge.className = "badge err";
+  } else {
+    globalBadge.textContent = "offline";
+    globalBadge.className = "badge warn";
+  }
+
+  renderDeviceLists();
+  renderPending();
+  renderRuntimeStacks();
+  populateLogStacks();
+  populateUsecaseTargets();
+  renderRuntimeInfo();
+}
+
+function renderDeviceLists() {
+  const peers = knownPeers();
+  const html = peers.length ? peers.map(peer => `
+    <div class="device-card ${peer.ski === state.selectedSki ? "selected" : ""}" data-select-ski="${esc(peer.ski)}">
+      <span class="dot ${peer.connected ? "ok" : ""}"></span>
+      <div><div class="device-title">${esc(displayName(peer.label || peer.name, peer.ski))}</div>
+      <div class="device-meta">${esc(peer.device_address || peer.host || "mDNS peer")} · ${esc(shortSki(peer.ski))}</div></div>
+      <span class="badge ${peer.connected ? "ok" : "warn"}">${peer.connected ? "connected" : "offline"}</span>
+    </div>`).join("") : `<div class="empty">No peers configured or discovered.</div>`;
+  document.getElementById("device-list").innerHTML = html;
+  document.getElementById("dashboard-devices").innerHTML = html;
+  document.getElementById("peer-count").textContent = peers.length;
+}
+
+function renderPending() {
+  const host = document.getElementById("pending-list");
+  document.getElementById("pending-count").textContent = state.pending.length;
+  host.innerHTML = state.pending.length ? state.pending.map(item => `
+    <div class="runtime-row">
+      <span class="dot warn"></span>
+      <div><strong>${esc(shortSki(item.ski))}</strong><div class="device-meta">Awaiting pairing decision</div></div>
+      <div class="button-row"><button class="small primary" data-approve="${esc(item.ski)}">Approve</button><button class="small danger" data-deny="${esc(item.ski)}">Deny</button></div>
+    </div>`).join("") : `<span class="muted">No pending requests.</span>`;
+}
+
+async function selectPeer(ski) {
+  state.selectedSki = ski;
+  localStorage.setItem("eebus-selected-ski", ski);
+  state.profile = null; state.snapshot = null; state.history = [];
+  renderCore();
+  await Promise.all([loadProfile(), loadSnapshot(), loadHistory()]);
+}
+
+async function loadProfile() {
+  if (!state.selectedSki || !selectedConnected()) {
+    state.profile = null; renderProfile(); renderUsecaseSupport(); return;
+  }
+  try {
+    state.profile = await api(`/peers/${encodeURIComponent(state.selectedSki)}/profile`);
+    renderProfile(); renderUsecaseSupport(); populateEntitySelects(); renderDashboardIntelligence();
+  } catch (error) {
+    state.profile = null; renderProfile(error); renderUsecaseSupport();
+  }
+}
+
+function useCasesForEntity(entity) {
+  return (state.profile?.use_cases || []).filter(item => entityValue(item.address) === entityValue(entity));
+}
+
+function renderProfile(error = null) {
+  const host = document.getElementById("device-detail");
+  if (!state.selectedSki) { host.innerHTML = `<div class="empty">Select a peer.</div>`; return; }
+  const configured = selectedConfigPeer();
+  const live = selectedLivePeer();
+  if (!live?.connected) {
+    host.innerHTML = `
+      <div class="device-detail-head">
+        <div><h3>${esc(cleanName(configured?.label || configured?.name) || shortSki(state.selectedSki))}</h3><div class="ski mono">${esc(state.selectedSki)}</div></div>
+        <span class="badge warn">not connected</span>
+      </div>
+      <div class="notice" style="margin-top:14px">This peer cannot be explored until it is connected. Trust starts the SHIP connection; the connection may still require approval on the device.</div>
+      <div class="button-row" style="margin-top:12px"><button class="primary" data-trust="${esc(state.selectedSki)}">Trust and connect</button></div>`;
+    return;
+  }
+  if (error) { host.innerHTML = `<div class="notice"><strong>Profile request failed.</strong><br>${esc(errorDetail(error))}</div>`; return; }
+  if (!state.profile) { host.innerHTML = `<div class="empty">Loading device discovery…</div>`; return; }
+
+  const p = state.profile;
+  const supported = new Set((p.use_cases || []).filter(item => item.available).map(item => item.name));
+  const entityCards = (p.entities || []).map(entity => {
+    const useCases = useCasesForEntity(entity.address);
+    return `<div class="entity-card">
+      <strong>${esc(entity.type || "Unknown entity")}</strong>
+      <span class="mono">entity [${esc(entityValue(entity.address))}]</span>
+      <div class="entity-tags">${useCases.length ? useCases.map(item => `<span class="badge ${item.available ? "ok" : "warn"}">${esc(item.acronym || item.name)}</span>`).join("") : `<span class="muted">No use cases advertised</span>`}</div>
+    </div>`;
+  }).join("");
+  const usecaseRows = (p.use_cases || []).map(item => `
+    <tr>
+      <td><strong>${esc(item.acronym || "—")}</strong><div class="device-meta">${esc(item.title)}</div></td>
+      <td>${esc(item.actor || "—")}</td>
+      <td class="mono">[${esc(entityValue(item.address))}]</td>
+      <td>${esc(item.version || "—")} · scenarios ${esc((item.scenarios || []).join(", ") || "—")}</td>
+      <td>${(item.typed_operations || []).map(op => `<span class="badge">${esc(op)}</span>`).join(" ")}</td>
+      <td><span class="badge ${item.available ? "ok" : "warn"}">${item.available ? "available" : "unavailable"}</span></td>
+    </tr>`).join("");
+
+  host.innerHTML = `
+    <div class="device-detail-head">
+      <div><h3>${esc(configured?.label || configured?.name || p.device_type || "EEBUS peer")}</h3>
+        <div class="ski mono">${esc(p.ski)}</div>
+        <div class="muted" style="margin-top:5px">${esc(p.device_type || "Unknown device type")} · ${p.entities.length} entities · ${p.use_cases.length} advertised use cases</div>
+      </div>
+      <div class="button-row"><button data-copy="${esc(p.ski)}">Copy SKI</button><button class="danger" data-untrust="${esc(p.ski)}">Untrust</button></div>
+    </div>
+    <div class="capability-strip">${CORE_USE_CASES.map(name => `<div class="capability ${supported.has(name) ? "yes" : ""}" title="${esc(name)}">${esc(USE_CASE_SHORT[name])}<br>${supported.has(name) ? "SUPPORTED" : "NOT ADVERTISED"}</div>`).join("")}</div>
+    <div class="panel-head" style="margin-top:16px"><div><h3>Entities</h3><div class="sub">Select an entity in the workbench when a device exposes more than one for a use case.</div></div></div>
+    <div class="entity-grid">${entityCards || `<div class="empty">No entities returned.</div>`}</div>
+    <div class="panel-head" style="margin-top:22px"><div><h3>Advertised use cases</h3><div class="sub">Live NodeManagement use-case data, not a static compatibility claim.</div></div><button data-open-page="usecases">Open workbench</button></div>
+    <div style="overflow:auto"><table><thead><tr><th>Use case</th><th>Actor</th><th>Entity</th><th>Version / scenarios</th><th>Testbench access</th><th>State</th></tr></thead><tbody>${usecaseRows || `<tr><td colspan="6">No use cases reported.</td></tr>`}</tbody></table></div>
+    <details><summary>Raw protocol discovery data</summary><pre class="raw">${esc(json({device_type:p.device_type, feature_set:p.feature_set, discovery:p.raw_discovery, use_cases:p.use_cases, errors:p.errors}))}</pre></details>`;
+}
+
+function renderUsecaseSupport() {
+  const supported = new Set((state.profile?.use_cases || []).filter(item => item.available).map(item => item.name));
+  document.querySelectorAll("[data-support]").forEach(badge => {
+    const yes = supported.has(badge.dataset.support);
+    badge.textContent = state.profile ? (yes ? "advertised" : "not advertised") : "unknown";
+    badge.className = `badge ${yes ? "ok" : (state.profile ? "warn" : "")}`;
+  });
+  renderUsecaseBrowser();
+}
+
+function renderUsecaseBrowser() {
+  const host = document.getElementById("usecase-browser");
+  if (!state.profile) {
+    host.innerHTML = `<div class="empty">${selectedConnected() ? "Loading advertised use cases…" : "Select a connected device to browse its advertised use cases."}</div>`;
+    return;
+  }
+  const items = state.profile.use_cases || [];
+  host.innerHTML = `
+    <div class="panel-head">
+      <div><h3>Advertised use cases</h3><div class="sub">${esc(items.length)} live entries from NodeManagement discovery</div></div>
+      <span class="badge ok">${esc(state.profile.entities?.length || 0)} entities</span>
+    </div>
+    <div class="entity-grid">${items.map(item => `
+      <div class="entity-card">
+        <div><span class="badge ${item.available ? "ok" : "warn"}">${esc(item.acronym || "RAW")}</span>
+          <strong style="margin-left:7px">${esc(item.title)}</strong></div>
+        <span>${esc(item.description)}</span>
+        <span class="mono">entity [${esc(entityValue(item.address))}] · actor ${esc(item.actor || "—")} · version ${esc(item.version || "—")}</span>
+        <div class="entity-tags">${(item.typed_operations || []).map(operation => `<span class="badge">${esc(operation)}</span>`).join("")}</div>
+      </div>`).join("") || `<div class="empty">The peer returned no use-case information.</div>`}
+    </div>`;
+}
+
+function populateEntitySelects() {
+  const entities = (state.profile?.entities || []).filter(item => entityValue(item.address) !== "0");
+  const options = `<option value="">Automatic by use case</option>` + entities.map(item =>
+    `<option value="${esc(entityValue(item.address))}">[${esc(entityValue(item.address))}] ${esc(item.type || "entity")}</option>`
+  ).join("");
+  document.getElementById("uc-entity").innerHTML = options;
+
+  const lpcEntities = (state.profile?.use_cases || []).filter(item => item.name === "limitationOfPowerConsumption" && item.available);
+  document.getElementById("limit-entity").innerHTML = `<option value="">Automatic by use case</option>` + lpcEntities.map(item =>
+    `<option value="${esc(entityValue(item.address))}">[${esc(entityValue(item.address))}] ${esc(item.actor || "LPC")}</option>`
+  ).join("");
+}
+
+async function loadSnapshot() {
+  if (!state.selectedSki || !selectedConnected()) {
+    state.snapshot = null; renderSnapshot(); return;
+  }
+  try {
+    state.snapshot = await api(`/energy/${encodeURIComponent(state.selectedSki)}/snapshot`);
+    renderSnapshot();
+    await loadHistory(false);
+  } catch (error) {
+    console.warn("snapshot", error);
+    renderSnapshot(error);
+  }
+}
+
+async function loadHistory(render = true) {
+  if (!state.selectedSki) { state.history = []; drawChart(); return; }
+  const response = await safeApi(`/energy/${encodeURIComponent(state.selectedSki)}/history?seconds=${state.range}`, {samples: []});
+  state.history = response.samples || [];
+  if (render) drawChart();
+  else drawChart();
+}
+
+function renderSnapshot(error = null) {
+  const snapshot = state.snapshot;
+  if (!snapshot) {
+    ["metric-power","metric-ev","metric-pv","metric-limit","flow-grid","flow-ev","flow-pv","flow-battery"].forEach(id => document.getElementById(id).textContent = "—");
+    document.getElementById("snapshot-age").textContent = error ? "snapshot failed" : "waiting for data";
+    document.getElementById("dashboard-intelligence").innerHTML = `<div class="empty">${error ? esc(errorDetail(error)) : "Select a connected device."}</div>`;
+    return;
+  }
+  const power = snapshot.power || {}, limits = snapshot.limits || {}, ev = snapshot.ev || {};
+  document.getElementById("metric-power").innerHTML = `${formatPower(power.consumption_w)}`;
+  document.getElementById("metric-power-note").textContent = (snapshot.monitoring || []).length ? `${snapshot.monitoring.length} MPC entit${snapshot.monitoring.length === 1 ? "y" : "ies"}` : "MPC not advertised";
+  document.getElementById("metric-ev").innerHTML = `${ev.charging_count ?? 0} <small>charging</small>`;
+  document.getElementById("metric-ev-note").textContent = `${ev.connected_count ?? 0} connected · ${(ev.charging_stations || []).length} EVSE`;
+  document.getElementById("metric-pv").innerHTML = formatPower(power.pv_w);
+  document.getElementById("metric-pv-note").textContent = (snapshot.pv || []).length ? `${snapshot.pv.length} PV system${snapshot.pv.length === 1 ? "" : "s"}` : "VAPD not advertised";
+  document.getElementById("metric-limit").innerHTML = formatPower(limits.consumption_w);
+  document.getElementById("metric-limit-note").textContent = limits.consumption_active ? "Active on the device" : "No active LPC limit";
+  document.getElementById("flow-grid").textContent = formatPower(power.grid_w);
+  document.getElementById("flow-ev").textContent = formatPower(power.ev_w);
+  document.getElementById("flow-pv").textContent = formatPower(power.pv_w);
+  document.getElementById("flow-battery").textContent = formatPower(power.battery_w);
+  document.getElementById("snapshot-age").textContent = formatAge(snapshot.ts);
+  const max = Number(limits.nominal_max_w);
+  if (Number.isFinite(max) && max > 0) {
+    const slider = document.getElementById("limit-range");
+    slider.max = String(Math.ceil(max / 100) * 100);
+    document.getElementById("limit-value").max = slider.max;
+    document.getElementById("limit-max-label").textContent = formatPower(Number(slider.max));
+  }
+  if (limits.consumption?.value_w != null) {
+    syncLimitValue(limits.consumption.value_w);
+  }
+  renderDashboardIntelligence();
+}
+
+function renderDashboardIntelligence() {
+  const host = document.getElementById("dashboard-intelligence");
+  if (!state.profile || !state.snapshot) { host.innerHTML = `<div class="empty">No live device profile.</div>`; return; }
+  const domains = new Map();
+  for (const uc of state.profile.use_cases || []) {
+    if (!uc.available) continue;
+    domains.set(uc.domain, (domains.get(uc.domain) || 0) + 1);
+  }
+  const evs = state.snapshot.ev?.vehicles || [];
+  host.innerHTML = `
+    <div class="flow" style="grid-template-columns:repeat(3,1fr);margin:0">
+      <div class="flow-node"><span>Entities</span><strong>${state.profile.entities.length}</strong></div>
+      <div class="flow-node"><span>Use cases</span><strong>${state.profile.use_cases.filter(item => item.available).length}</strong></div>
+      <div class="flow-node"><span>Snapshot gaps</span><strong>${state.snapshot.errors.length}</strong></div>
+    </div>
+    <div class="entity-tags" style="margin-top:13px">${[...domains.entries()].map(([domain,count]) => `<span class="badge ok">${esc(domain)} · ${count}</span>`).join("") || `<span class="muted">No use cases advertised</span>`}</div>
+    <div style="margin-top:13px">${evs.map(ev => `<div class="notice"><strong>EV entity [${esc((ev.entity || []).join(","))}]</strong><br>${esc(ev.charge_state || "state unavailable")} · ${formatPower(Array.isArray(ev.power_per_phase_w) ? ev.power_per_phase_w.reduce((a,b)=>a+b,0) : null)}${ev.state_of_charge != null ? ` · ${esc(ev.state_of_charge)}% SoC` : ""}</div>`).join("") || `<div class="notice">No EV entities are currently exposed by this peer.</div>`}</div>`;
+}
+
+function syncLimitValue(value) {
+  const n = Math.max(0, Number(value) || 0);
+  const slider = document.getElementById("limit-range");
+  slider.value = String(Math.min(n, Number(slider.max)));
+  document.getElementById("limit-value").value = String(Math.round(n));
+  document.getElementById("limit-display").textContent = formatPower(n);
+}
+
+async function writeLimit(active) {
+  if (!state.selectedSki) throw new Error("Select a device first");
+  const watts = Number(document.getElementById("limit-value").value);
+  const duration = document.getElementById("limit-duration").value;
+  const entity = document.getElementById("limit-entity").value;
+  const body = {value_w: watts, is_active: active, is_changeable: true};
+  if (duration && active) body.duration = duration;
+  if (!duration && active) body.delete_duration = true;
+  const result = await api(withEntity(`/lpc/${encodeURIComponent(state.selectedSki)}/limit`, entity), {
+    method: "PUT", headers: {"content-type": "application/json"}, body: JSON.stringify(body)
+  });
+  const box = document.getElementById("limit-result");
+  box.textContent = active ? `Applied ${formatPower(watts)} live · message ${result.msg_counter ?? "accepted"}` : "Limit released on the device";
+  box.className = "action-result ok";
+  await loadSnapshot();
+  return result;
+}
+
+async function readLimit() {
+  const entity = document.getElementById("limit-entity").value;
+  const result = await api(withEntity(`/lpc/${encodeURIComponent(state.selectedSki)}/limit`, entity));
+  syncLimitValue(result.value_w);
+  const box = document.getElementById("limit-result");
+  box.textContent = result.is_active ? `Active: ${formatPower(result.value_w)}${result.duration ? ` · ${result.duration}` : ""}` : `Inactive · last value ${formatPower(result.value_w)}`;
+  box.className = "action-result ok";
+  return result;
+}
+
+function drawChart() {
+  const canvas = document.getElementById("power-chart");
+  const empty = document.getElementById("chart-empty");
+  const samples = state.history.filter(sample => Number.isFinite(sample.ts));
+  empty.style.display = samples.length ? "none" : "grid";
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  const width = rect.width, height = rect.height;
+  ctx.clearRect(0, 0, width, height);
+  if (!samples.length) return;
+
+  const pad = {left: 54, right: 12, top: 14, bottom: 28};
+  const chartW = width - pad.left - pad.right, chartH = height - pad.top - pad.bottom;
+  const numeric = samples.flatMap(sample => [sample.power_w, sample.pv_power_w, sample.consumption_limit_w]).filter(Number.isFinite);
+  const max = Math.max(1000, ...numeric.map(Math.abs)) * 1.12;
+  const minTs = samples[0].ts, maxTs = samples[samples.length - 1].ts || minTs + 1;
+  const x = ts => pad.left + ((ts - minTs) / Math.max(1, maxTs - minTs)) * chartW;
+  const y = value => pad.top + chartH - (Math.max(0, value) / max) * chartH;
+
+  // Canvas cannot use CSS variables, so read the resolved values -- otherwise the chart keeps
+  // its dark grid and dark series colours after a switch to the light theme.
+  const ink = themeColors();
+  ctx.strokeStyle = ink.grid; ctx.lineWidth = 1; ctx.fillStyle = ink.quiet; ctx.font = "10px system-ui";
+  for (let i = 0; i <= 4; i++) {
+    const yy = pad.top + chartH * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.left, yy); ctx.lineTo(width - pad.right, yy); ctx.stroke();
+    ctx.fillText(formatPower(max * (1 - i / 4)), 4, yy + 3);
+  }
+  ctx.fillText(new Date(minTs * 1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}), pad.left, height - 7);
+  const endText = new Date(maxTs * 1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  ctx.fillText(endText, width - pad.right - ctx.measureText(endText).width, height - 7);
+
+  function line(field, color, dash = []) {
+    let started = false;
+    ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash);
+    for (const sample of samples) {
+      const value = Number(sample[field]);
+      if (!Number.isFinite(value)) { started = false; continue; }
+      if (!started) { ctx.moveTo(x(sample.ts), y(value)); started = true; }
+      else ctx.lineTo(x(sample.ts), y(value));
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  line("power_w", ink.cyan);
+  line("pv_power_w", ink.green);
+  line("consumption_limit_w", ink.amber, [5,4]);
+  canvas._chart = {samples, x, pad, chartW};
+}
+
+function inspectChart(event, lock = false) {
+  const canvas = document.getElementById("power-chart");
+  const chart = canvas._chart;
+  if (!chart?.samples.length) return;
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = event.clientX - rect.left;
+  let index = chart.samples.reduce((best, sample, i) =>
+    Math.abs(chart.x(sample.ts) - mouseX) < Math.abs(chart.x(chart.samples[best].ts) - mouseX) ? i : best, 0);
+  if (state.lockedChartIndex != null && !lock) index = state.lockedChartIndex;
+  if (lock) state.lockedChartIndex = state.lockedChartIndex === index ? null : index;
+  const sample = chart.samples[index], tip = document.getElementById("chart-tooltip");
+  tip.innerHTML = `<strong>${new Date(sample.ts * 1000).toLocaleTimeString()}</strong><br>Consumption ${formatPower(sample.power_w)}<br>PV ${formatPower(sample.pv_power_w)}<br>Limit ${formatPower(sample.consumption_limit_w)}<br>EVs ${sample.ev_charging ?? 0} charging`;
+  tip.style.display = "block";
+  tip.style.left = `${Math.min(rect.width - 145, Math.max(58, chart.x(sample.ts) + 8))}px`;
+  tip.style.top = "18px";
+}
+
+function populateUsecaseTargets() {
+  const select = document.getElementById("uc-peer");
+  const peers = knownPeers();
+  select.innerHTML = peers.length ? peers.map(peer => `<option value="${esc(peer.ski)}">${esc(displayName(peer.label || peer.name, peer.ski))}</option>`).join("") : `<option value="">No peer</option>`;
+  if (peers.some(peer => peer.ski === state.selectedSki)) select.value = state.selectedSki;
+}
+
+async function usecaseRead(kind) {
+  const ski = state.selectedSki, entity = document.getElementById("uc-entity").value;
+  if (!ski) throw new Error("Select a target peer");
+  const paths = {
+    lpc: `/lpc/${ski}/limit`, failsafe: `/lpc/${ski}/failsafe`,
+    nominal: `/lpc/${ski}/nominal-max`, heartbeat: `/lpc/${ski}/heartbeat`,
+    lpp: `/lpp/${ski}/limit`, mpc: `/mpc/${ski}`, mgcp: `/mgcp/${ski}`
+  };
+  let result, output;
+  if (kind === "snapshot" || kind === "ev" || kind === "assets") {
+    const snapshot = await api(`/energy/${ski}/snapshot`);
+    result = kind === "ev" ? snapshot.ev : kind === "assets" ? {pv:snapshot.pv,battery:snapshot.battery,power:snapshot.power,errors:snapshot.errors} : snapshot;
+    output = kind === "ev" || kind === "assets" ? "out-assets" : "out-monitoring";
+    state.snapshot = snapshot; renderSnapshot(); await loadHistory();
+  } else {
+    result = await api(withEntity(paths[kind], entity));
+    output = kind === "lpc" || kind === "failsafe" || kind === "nominal" || kind === "heartbeat" ? "out-lpc" : kind === "lpp" ? "out-lpp" : "out-monitoring";
+  }
+  document.getElementById(output).textContent = json(result);
+  return result;
+}
+
+async function heartbeat(actionName) {
+  const result = await api(`/lpc/heartbeat/${actionName}`, {method:"POST"});
+  document.getElementById("out-lpc").textContent = json(result);
+}
+
+async function writeTemplate(kind, value) {
+  const ski = state.selectedSki, entity = document.getElementById("uc-entity").value;
+  const result = await api(withEntity(`/${kind}/${ski}/limit`, entity), {
+    method:"PUT", headers:{"content-type":"application/json"}, body:JSON.stringify(value)
+  });
+  document.getElementById(`out-${kind}`).textContent = json(result);
+  await loadSnapshot();
+}
+
+function renderTemplates() {
+  for (const [kind, key] of [["lpc","lpc.limit"],["lpp","lpp.limit"]]) {
+    const host = document.getElementById(`${kind}-templates`);
+    host.innerHTML = Object.entries(state.templates[key] || {}).map(([name,tpl]) =>
+      `<button class="small" data-template-kind="${kind}" data-template-name="${esc(name)}" title="${esc(tpl.description || "")}">${esc(tpl.summary || name)}</button>`
+    ).join("") || `<span class="muted">No templates loaded.</span>`;
+  }
+}
+
+async function sendRaw() {
+  const method = document.getElementById("raw-method").value.trim();
+  if (!method) throw new Error("Enter a JSON-RPC method");
+  let params;
+  try { params = JSON.parse(document.getElementById("raw-params").value || "[]"); }
+  catch (_) { throw new Error("Parameters must be a valid JSON array"); }
+  if (!Array.isArray(params)) throw new Error("Parameters must be a positional JSON array");
+  const result = await api("/raw", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({method,params})});
+  document.getElementById("out-raw").textContent = json(result);
+}
+
+async function scanNetwork(button) {
+  const badge = document.getElementById("scan-state");
+  badge.textContent = "scanning"; badge.className = "badge warn";
+  let result;
+  try {
+    result = await action(button, () => api("/discover", {method:"POST"}));
+  } catch (_) {
+    badge.textContent = "scan failed";
+    badge.className = "badge err";
+    return;
+  }
+  const found = result.found || [];
+  badge.textContent = `${found.length} found`; badge.className = `badge ${found.length ? "ok" : "warn"}`;
+  document.getElementById("scan-results").innerHTML = found.length ? found.map(item => `
+    <div class="runtime-row"><span class="dot ok"></span><div><strong>${esc(displayName(item.name || item.model, item.ski))}</strong>
+    <div class="device-meta" title="${esc((item.addresses || []).join(", "))}">${esc(formatAddresses(item.addresses, item.hostName))}:${esc(item.port || "?")}</div></div>
+    ${item.ski ? `<button class="small primary" data-trust="${esc(item.ski)}">Trust</button>` : ""}</div>`).join("")
+    : `<div class="notice"><strong>No mDNS announcements were visible.</strong><br>Use native Linux host networking for real multicast. Static peers remain usable over bridge networking.</div>`;
+}
+
+function renderRuntimeStacks() {
+  const host = document.getElementById("runtime-stacks");
+  host.innerHTML = state.stacks.map(stack => `
+    <div class="runtime-row"><span class="dot ${stack.status === "running" ? "ok" : ""}"></span>
+      <div><strong>${esc(stack.id)}</strong><div class="device-meta">${esc(stack.role)} · ${stack.drivable ? "live control" : stack.role === "observer" ? "observer only" : "process only"}${stack.crash_count_recent ? ` · ${stack.crash_count_recent} recent crashes` : ""}</div></div>
+      <button class="small ${stack.status === "running" ? "" : "primary"}" data-stack-id="${esc(stack.id)}" data-stack-status="${esc(stack.status)}">${stack.status === "running" ? "Stop" : "Start"}</button>
+    </div>`).join("");
+}
+
+async function toggleStack(id, status, button) {
+  const stack = state.stacks.find(item => item.id === id);
+  if (!stack) return;
+  await action(button, async () => {
+    if (stack.role === "counterparty" && status !== "running") {
+      return api("/config/active-stack", {method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({stack:id,persist:false})});
+    }
+    return api(`/stacks/${id}/${status === "running" ? "stop" : "start"}`, {method:"POST"});
+  }, `${id} ${status === "running" ? "stopped" : "started"}`);
+  await refreshCore();
+}
+
+async function refreshNetworkInfo() {
+  const net = await safeApi("/network", null);
+  const host = document.getElementById("network-info");
+  if (!net) { host.textContent = "Network endpoint unavailable."; return; }
+  host.innerHTML = `<table><tbody>
+    <tr><th>Container host</th><td class="mono">${esc(net.container_hostname)}</td></tr>
+    <tr><th>Container IP</th><td class="mono">${esc(net.container_ip || "unknown")}</td></tr>
+    ${net.stacks.map(stack => `<tr><th>${esc(stack.id)}</th><td>${stack.running ? "running" : "stopped"} · <span class="mono">${esc(Object.entries(stack.ports || {}).map(([k,v])=>`${k}=${v}`).join(", ") || "no ports")}</span></td></tr>`).join("")}
+  </tbody></table>`;
+}
+
+// The panel that answers "the device can see me, so why can't it connect?". Both halves of that
+// failure are otherwise invisible from this side: the addresses we publish live in our own mDNS
+// records, and inbound reachability cannot be probed from inside the host at all.
+async function refreshReachability() {
+  const d = await safeApi("/diagnostics/network", null);
+  const host = document.getElementById("reach-info");
+  if (!d) { host.textContent = "Diagnostics endpoint unavailable."; return; }
+
+  const announced = (d.announced || []).length
+    ? d.announced.map(a => `<div><span class="mono">${esc(a.ip)}</span> <span class="muted">${esc(a.interface)}</span></div>`).join("")
+    : `<div class="muted">none -- no peer can connect</div>`;
+
+  const rejected = (d.rejected || []).length
+    ? `<details style="margin-top:8px"><summary class="muted">${d.rejected.length} local address(es) deliberately not published</summary>
+       ${d.rejected.map(r => `<div style="margin-top:6px"><span class="mono">${esc(r.ip)}</span> <span class="muted">${esc(r.interface || "")}</span><br><span class="muted" style="font-size:11px">${esc(r.reason)}</span></div>`).join("")}
+       </details>`
+    : "";
+
+  const warnings = (d.warnings || []).length
+    ? d.warnings.map(w => `<div class="notice" style="margin-top:8px">${esc(w)}</div>`).join("")
+    : "";
+
+  const source = d.announce_overridden ? "from config override"
+    : d.announce_filter_disabled ? "unfiltered" : "auto-detected";
+
+  host.innerHTML = `<table><tbody>
+      <tr><th>SHIP port</th><td class="mono">${esc(d.ship_port)} <span class="muted">(inbound TCP)</span></td></tr>
+      <tr><th>mDNS host</th><td class="mono">${esc(d.mdns_hostname)}.local</td></tr>
+      <tr><th>Platform</th><td class="mono">${esc(d.platform)}</td></tr>
+      <tr><th>Announced</th><td>${announced}<div class="muted" style="font-size:11px;margin-top:4px">${esc(source)} · dialled in this order</div></td></tr>
+    </tbody></table>
+    ${rejected}
+    ${warnings}
+    <details style="margin-top:8px"><summary class="muted">Firewall commands for this platform</summary>
+      <pre class="raw" style="margin-top:6px">${esc((d.firewall_commands || []).join("\n"))}</pre>
+    </details>`;
+}
+
+async function loadTestCatalog() {
+  state.tests = await safeApi("/scenarios/catalog", []);
+  renderTests();
+}
+
+function renderTests() {
+  document.getElementById("tests-total").textContent = `${state.tests.length} tests`;
+  const host = document.getElementById("test-list");
+  host.innerHTML = state.tests.length ? state.tests.map(test => `
+    <div class="test-row" data-test-row="${esc(test.id)}">
+      <div class="test-head">
+        <div><div class="test-name">${esc(test.name)}</div><div class="test-description">${esc(test.description || "Scenario example")}</div></div>
+        <div><span class="badge">${esc(test.category)}</span> <span class="badge ${test.risk === "read-only" ? "ok" : test.risk === "disruptive" ? "err" : "warn"}">${esc(test.risk)}</span></div>
+        <button class="small" data-run-test="${esc(test.id)}">Run</button>
+      </div>
+      <div class="test-result" id="test-result-${esc(test.id)}"></div>
+    </div>`).join("") : `<div class="empty">No scenarios found.</div>`;
+}
+
+function renderTestResult(id, result) {
+  const host = document.getElementById(`test-result-${id}`);
+  if (!host) return;
+  host.className = "test-result show";
+  host.innerHTML = `<div class="badge ${result.status === "passed" ? "ok" : result.status === "skipped" ? "warn" : "err"}">${esc(result.status)} · ${esc(result.duration_s)}s</div>
+    <div>${(result.steps || []).map(step => `<div class="step"><span class="status-${esc(step.status)}">${esc(step.status)}</span><span>${esc(step.step)}${step.detail ? ` · ${esc(step.detail)}` : ""}</span><span>${esc(step.duration_s)}s</span></div>`).join("")}</div>`;
+  updateTestSummary();
+}
+
+function updateTestSummary() {
+  const results = [...document.querySelectorAll(".test-result.show .badge")].map(item => item.textContent.split(" · ")[0]);
+  document.getElementById("tests-passed").textContent = `${results.filter(x=>x==="passed").length} passed`;
+  document.getElementById("tests-skipped").textContent = `${results.filter(x=>x==="skipped").length} skipped`;
+  document.getElementById("tests-failed").textContent = `${results.filter(x=>x==="failed").length} failed`;
+}
+
+async function runOneTest(id, button) {
+  const host = document.getElementById(`test-result-${id}`);
+  host.className = "test-result show"; host.innerHTML = `<span class="badge warn">running</span>`;
+  try {
+    const result = await action(button, () => api(`/scenarios/${encodeURIComponent(id)}/run`, {method:"POST"}));
+    renderTestResult(id, result);
+    return result;
+  } catch (error) {
+    renderTestResult(id, {status:"failed",duration_s:0,steps:[{status:"failed",step:"request",duration_s:0,detail:errorDetail(error)}]});
+    return null;
+  }
+}
+
+async function runTests(readOnly, button) {
+  const tests = readOnly ? state.tests.filter(test => test.risk === "read-only") : state.tests;
+  if (!selectedConnected()) {
+    toast("Device is not connected", "Connect a peer before starting a batch test run.", "warn");
+    return;
+  }
+  button.disabled = true;
+  const original = button.textContent; button.textContent = `Running 0 / ${tests.length}`;
+  try {
+    for (let i = 0; i < tests.length; i++) {
+      button.textContent = `Running ${i + 1} / ${tests.length}`;
+      await runOneTest(tests[i].id, null);
+    }
+    toast("Test run complete", `${tests.length} scenarios executed`);
+  } finally { button.disabled = false; button.textContent = original; }
+}
+
+function populateLogStacks() {
+  const select = document.getElementById("log-stack");
+  const previous = select.value;
+  select.innerHTML = state.stacks.map(stack => `<option value="${esc(stack.id)}">${esc(stack.id)}</option>`).join("");
+  if (state.stacks.some(stack => stack.id === previous)) select.value = previous;
+}
+
+async function loadLogs() {
+  const id = document.getElementById("log-stack").value;
+  if (!id) return;
+  const result = await safeApi(`/stacks/${encodeURIComponent(id)}/logs?tail=250`, {lines:["Unable to read logs."]});
+  const output = document.getElementById("log-output");
+  output.textContent = (result.lines || []).join("\n") || "No log lines yet.";
+  output.scrollTop = output.scrollHeight;
+}
+
+function connectEvents() {
+  state.eventSource?.close();
+  const source = new EventSource(`${API}/events/stream`);
+  state.eventSource = source;
+  source.onopen = () => document.getElementById("stream-state").textContent = "stream connected";
+  source.onmessage = event => appendEvent(JSON.parse(event.data));
+  source.onerror = () => {
+    document.getElementById("stream-state").textContent = "reconnecting…";
+    source.close(); setTimeout(connectEvents, 2500);
+  };
+}
+
+function appendEvent(record, prepend = false) {
+  if (state.eventsPaused && !prepend) return;
+  if (prepend) state.events.unshift(record); else state.events.push(record);
+  if (state.events.length > 500) state.events = state.events.slice(-500);
+  renderEvents();
+}
+
+function renderEvents() {
+  const level = document.getElementById("event-level").value;
+  const records = state.events.filter(item => !level || item.level === level).slice(-300).reverse();
+  document.getElementById("event-count").textContent = state.events.length;
+  document.getElementById("events-body").innerHTML = records.map((record,index) => `
+    <tr class="event-row" data-event-index="${index}">
+      <td>${esc(new Date(record.ts * 1000).toLocaleTimeString())}</td>
+      <td class="event-level-${esc(record.level)}">${esc(record.level)}</td>
+      <td>${esc(record.stack)}</td><td>${esc(record.event)}</td><td class="mono">${esc(record.ski ? shortSki(record.ski) : "—")}</td>
+    </tr>
+    <tr class="event-payload hidden" data-event-payload="${index}"><td colspan="5"><pre class="raw">${esc(json(record.data))}</pre></td></tr>`).join("");
+}
+
+async function loadRecentEvents() {
+  state.events = await safeApi("/events/recent?limit=250", []);
+  renderEvents();
+}
+
+async function boot() {
+  state.version = await safeApi("/version", {});
+  showPage(localStorage.getItem("eebus-active-page") || "dashboard");
+  document.querySelectorAll("#range-buttons button").forEach(button => button.classList.toggle("active", Number(button.dataset.range) === state.range));
+
+  try {
+    await refreshCore();
+    [state.templates] = await Promise.all([safeApi("/templates", {})]);
+    renderTemplates();
+    renderRuntimeInfo();
+    await Promise.all([loadProfile(), loadSnapshot(), loadHistory(), loadTestCatalog(), refreshNetworkInfo(), refreshReachability(), loadRecentEvents()]);
+    connectEvents();
+    document.getElementById("sync-text").textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  } catch (error) {
+    document.getElementById("sync-text").textContent = "API unavailable";
+    document.getElementById("api-pulse").className = "pulse warn";
+    toast("Could not load the testbench", errorDetail(error), "err");
+  }
+
+  clearInterval(state.snapshotTimer);
+  state.snapshotTimer = setInterval(async () => {
+    if (state.polling) return;
+    state.polling = true;
+    try {
+      // Do NOT swallow this silently. A failing poll used to leave the header showing the
+      // last successful "Updated HH:MM:SS" forever, so a facade that had died or a network
+      // that had dropped looked identical to a healthy idle dashboard.
+      await refreshCore().catch(error => {
+        const stale = state.lastSyncOk ? Math.round((Date.now() - state.lastSyncOk) / 1000) : null;
+        document.getElementById("sync-text").textContent =
+          stale === null ? "API unavailable" : `API unreachable · last update ${stale}s ago`;
+        document.getElementById("api-pulse").className = "pulse err";
+        if (!state.apiWasDown) {
+          state.apiWasDown = true;
+          toast("Lost contact with the testbench API", errorDetail(error), "err");
+        }
+      });
+      if (state.apiWasDown && state.lastSyncOk && Date.now() - state.lastSyncOk < 6000) {
+        state.apiWasDown = false;
+        toast("Testbench API is back", "", "ok");
+      }
+      await loadSnapshot();
+    } finally {
+      state.polling = false;
+    }
+  }, 5000);
+  clearInterval(state.logTimer);
+  state.logTimer = setInterval(() => {
+    if (document.getElementById("log-live").checked && document.getElementById("page-diagnostics").classList.contains("active")) loadLogs();
+  }, 3000);
+  setInterval(() => {
+    if (state.snapshot) document.getElementById("snapshot-age").textContent = formatAge(state.snapshot.ts);
+  }, 1000);
+}
+
+document.querySelectorAll(".nav button").forEach(button => button.addEventListener("click", () => showPage(button.dataset.page)));
+document.getElementById("global-peer").addEventListener("change", event => selectPeer(event.target.value));
+document.getElementById("uc-peer").addEventListener("change", event => selectPeer(event.target.value));
+document.getElementById("refresh-all").addEventListener("click", event => action(event.currentTarget, () => refreshCore({notify:true})));
+document.getElementById("lang-select").addEventListener("change", event => setLang(event.target.value));
+document.getElementById("theme-select").addEventListener("change", event => setTheme(event.target.value));
+document.getElementById("local-ski").addEventListener("click", event => copyLocalSKI(event.currentTarget));
+// Keeps "Match system" honest: repaint the canvas when the OS flips while the page is open.
+// The CSS follows on its own; only the chart needs telling.
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (currentTheme === "system") applyTheme();
+});
+document.getElementById("refresh-network").addEventListener("click", refreshNetworkInfo);
+document.getElementById("refresh-reach").addEventListener("click", refreshReachability);
+document.getElementById("scan-network").addEventListener("click", event => scanNetwork(event.currentTarget));
+document.getElementById("limit-range").addEventListener("input", event => syncLimitValue(event.target.value));
+document.getElementById("limit-value").addEventListener("input", event => syncLimitValue(event.target.value));
+document.getElementById("apply-limit").addEventListener("click", event => action(event.currentTarget, () => writeLimit(true), "Live limit applied").catch(() => {}));
+document.getElementById("release-limit").addEventListener("click", event => action(event.currentTarget, () => writeLimit(false), "Limit released").catch(() => {}));
+document.getElementById("read-limit").addEventListener("click", event => action(event.currentTarget, readLimit).catch(() => {}));
+document.getElementById("browse-usecases").addEventListener("click", event => {
+  const button = event.currentTarget;
+  if (!selectedConnected()) {
+    toast("Device is not connected", "Trust and connect the peer before browsing its live use cases.", "warn");
+    return;
+  }
+  action(button, loadProfile, "Use-case discovery refreshed").catch(() => {});
+});
+document.getElementById("send-raw").addEventListener("click", event => action(event.currentTarget, sendRaw, "Raw RPC completed").catch(() => {}));
+document.getElementById("run-readonly").addEventListener("click", event => runTests(true, event.currentTarget));
+document.getElementById("run-all-tests").addEventListener("click", event => runTests(false, event.currentTarget));
+document.getElementById("refresh-logs").addEventListener("click", loadLogs);
+document.getElementById("log-stack").addEventListener("change", loadLogs);
+document.getElementById("event-level").addEventListener("change", renderEvents);
+document.getElementById("pause-events").addEventListener("click", event => {
+  state.eventsPaused = !state.eventsPaused;
+  event.currentTarget.textContent = state.eventsPaused ? "Resume" : "Pause";
+  document.getElementById("stream-state").textContent = state.eventsPaused ? "display paused" : "stream connected";
+});
+document.getElementById("clear-events").addEventListener("click", async () => {
+  await api("/events", {method:"DELETE"}); state.events = []; renderEvents();
+});
+document.getElementById("power-chart").addEventListener("mousemove", event => inspectChart(event));
+document.getElementById("power-chart").addEventListener("click", event => inspectChart(event, true));
+document.getElementById("power-chart").addEventListener("mouseleave", () => {
+  if (state.lockedChartIndex == null) document.getElementById("chart-tooltip").style.display = "none";
+});
+window.addEventListener("resize", drawChart);
+document.querySelectorAll("#range-buttons button").forEach(button => button.addEventListener("click", async () => {
+  state.range = Number(button.dataset.range); localStorage.setItem("eebus-chart-range", state.range);
+  document.querySelectorAll("#range-buttons button").forEach(item => item.classList.toggle("active", item === button));
+  await loadHistory();
+}));
+document.querySelectorAll("[data-uc-read]").forEach(button => button.addEventListener("click", () => {
+  const kind = button.dataset.ucRead;
+  action(button, () => usecaseRead(kind), "Read complete").catch(error => {
+    const output = ["lpc","failsafe","nominal","heartbeat"].includes(kind) ? "out-lpc" : kind === "lpp" ? "out-lpp" : ["ev","assets"].includes(kind) ? "out-assets" : "out-monitoring";
+    document.getElementById(output).textContent = errorDetail(error);
+  });
+}));
+document.querySelectorAll("[data-heartbeat]").forEach(button => button.addEventListener("click", event =>
+  action(event.currentTarget, () => heartbeat(event.currentTarget.dataset.heartbeat), `Heartbeat ${event.currentTarget.dataset.heartbeat}ed`).catch(() => {})
+));
+
+document.addEventListener("click", async event => {
+  const pageButton = event.target.closest("[data-open-page]");
+  if (pageButton) { showPage(pageButton.dataset.openPage); return; }
+  const peerCard = event.target.closest("[data-select-ski]");
+  if (peerCard) { await selectPeer(peerCard.dataset.selectSki); return; }
+  const trust = event.target.closest("[data-trust]");
+  if (trust) {
+    await action(trust, () => api(`/peers/${encodeURIComponent(trust.dataset.trust)}/trust`, {method:"POST"}), "Trust requested").catch(() => {});
+    await refreshCore(); return;
+  }
+  const untrust = event.target.closest("[data-untrust]");
+  if (untrust) {
+    if (!confirm("Disconnect and remove this peer from the running stack? Reconnecting the same SKI may require a stack restart.")) return;
+    await action(untrust, () => api(`/peers/${encodeURIComponent(untrust.dataset.untrust)}/trust`, {method:"DELETE"}), "Peer disconnected").catch(() => {});
+    await refreshCore(); return;
+  }
+  const approve = event.target.closest("[data-approve]");
+  if (approve) { await action(approve, () => api(`/peers/${approve.dataset.approve}/trust`, {method:"POST"}), "Pairing approved").catch(() => {}); await refreshCore(); return; }
+  const deny = event.target.closest("[data-deny]");
+  if (deny) { await action(deny, () => api(`/peers/${deny.dataset.deny}/deny`, {method:"POST"}), "Pairing denied").catch(() => {}); await refreshCore(); return; }
+  const copy = event.target.closest("[data-copy]");
+  if (copy) { await navigator.clipboard.writeText(copy.dataset.copy); toast("Copied to clipboard"); return; }
+  const stack = event.target.closest("[data-stack-id]");
+  if (stack) {
+    await toggleStack(stack.dataset.stackId, stack.dataset.stackStatus, stack).catch(() => {});
+    return;
+  }
+  const template = event.target.closest("[data-template-name]");
+  if (template) {
+    const kind = template.dataset.templateKind;
+    const value = state.templates[`${kind}.limit`]?.[template.dataset.templateName]?.value;
+    await action(template, () => writeTemplate(kind, value), `${kind.toUpperCase()} template sent`).catch(error => {
+      document.getElementById(`out-${kind}`).textContent = errorDetail(error);
+    });
+    return;
+  }
+  const run = event.target.closest("[data-run-test]");
+  if (run) { await runOneTest(run.dataset.runTest, run); return; }
+  const eventRow = event.target.closest("[data-event-index]");
+  if (eventRow) {
+    const payload = document.querySelector(`[data-event-payload="${eventRow.dataset.eventIndex}"]`);
+    payload?.classList.toggle("hidden");
+  }
+});
+
+applyI18n();
+applyTheme();
+boot();
+</script>
+</body>
+</html>

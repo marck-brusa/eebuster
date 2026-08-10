@@ -1,0 +1,13 @@
+name: lpc-nominal-max
+description: Reads the device's declared maximum consumption and checks that it is positive.
+category: LPC
+risk: read-only
+requires:
+  capabilities: [lpc.nominal_max]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/nominal-max"
+      greater_than: {value_w: 0}

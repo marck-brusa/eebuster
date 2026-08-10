@@ -1,0 +1,16 @@
+name: lpc-failsafe
+description: Writes and reads the failsafe power and its minimum duration.
+category: LPC
+risk: live-control
+requires:
+  capabilities: [lpc.failsafe]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/failsafe"
+      template: lpc.failsafe.typical
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/failsafe"
+      equals: {value_w: 2000, duration: "PT2H"}

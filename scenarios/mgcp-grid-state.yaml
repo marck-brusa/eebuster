@@ -1,0 +1,13 @@
+name: mgcp-grid-state
+description: Reads power and frequency at the grid connection point.
+category: MGCP
+risk: read-only
+requires:
+  capabilities: [mgcp.read]
+  use_cases: [monitoringOfGridConnectionPoint]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mgcp/{peer.ski}"
+      not_null: [power_w, frequency_hz]

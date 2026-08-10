@@ -1,0 +1,16 @@
+config/eebus.yaml
+# This repository is public. If you clone a private or vendor repository inside it for
+# cross-referencing while debugging, add it to .git/info/exclude (local, never committed) so
+# `git add -A` cannot pick it up.
+**/.venv/
+__pycache__/
+*.pyc
+/.build-cache/
+*.pem
+*.key
+
+# Go build output. vendor/ IS tracked on purpose -- it carries a local patch to
+# eebus-go's service/service.go (SetMdnsProvider, see patches/eebus-go-service-mdns-hook.patch)
+# that upstream does not have, so a plain `go mod vendor` would silently revert it.
+/eebus-testbench
+/dist/

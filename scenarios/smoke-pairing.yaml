@@ -1,0 +1,10 @@
+name: smoke-pairing
+description: Confirms that at least one configured peer completed SHIP pairing and SPINE setup.
+category: Connectivity
+risk: read-only
+requires:
+  capabilities: [device_profile]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - log: "peer connected -- see GET /api/v1/peers for entities and device address"

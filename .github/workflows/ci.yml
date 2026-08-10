@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # Must match the toolchain line in go.mod. Vendored builds are strict about this.
+          go-version-file: go.mod
+          # vendor/ is committed, so there is nothing to download and nothing to cache.
+          cache: false
+
+      # -mod=vendor everywhere: vendor/ carries a local patch to eebus-go's service.go that a
+      # module-mode build would silently ignore. See scripts/vendor.sh.
+      - name: Verify vendor/ is consistent with go.mod
+        run: go mod verify && go build -mod=vendor ./...
+
+      - name: Formatting
+        run: |
+          unformatted=$(gofmt -l cmd internal)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed for:"; echo "$unformatted"; exit 1
+          fi
+          echo "all files formatted"
+
+      - name: Vet
+        run: go vet -mod=vendor ./cmd/... ./internal/...
+
+      - name: Test
+        run: go test -mod=vendor -count=1 ./cmd/... ./internal/...
+
+      # Catches Windows-only compile breakage (build tags, syscall use, path handling) without
+      # needing a Windows runner. The release workflow produces the real artifact.
+      - name: Cross-compile for Windows
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: go build -mod=vendor -o /dev/null ./cmd/eebus-testbench
+
+      - name: Cross-compile for Linux arm64
+        env:
+          GOOS: linux
+          GOARCH: arm64
+          CGO_ENABLED: "0"
+        run: go build -mod=vendor -o /dev/null ./cmd/eebus-testbench
+
+      # The dashboard is a single hand-written HTML file served by internal/webui. A syntax
+      # error there is invisible to the Go compiler and only shows up as a blank page.
+      # node --check needs a real file: it cannot read a process substitution or stdin.
+      #
+      # Every <script> block is checked separately. A `sed` range from the first <script> to the
+      # first </script> would silently validate only the theme bootstrap in <head> and skip the
+      # main script entirely, which is worse than not checking at all.
+      - name: Parse dashboard JavaScript
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, subprocess, sys
+          html = pathlib.Path("internal/webui/ui.html").read_text()
+          blocks = re.findall(r"<script>(.*?)</script>", html, re.S)
+          if not blocks:
+              sys.exit("no script block extracted from ui.html")
+          for i, block in enumerate(blocks):
+              path = f"/tmp/ui-{i}.js"
+              pathlib.Path(path).write_text(block)
+              subprocess.run(["node", "--check", path], check=True)
+              print(f"block {i} parses ({block.count(chr(10))} lines)")
+          print(f"{len(blocks)} script block(s) OK")
+          PY
+
+      - name: Validate scenario YAML
+        run: |
+          python3 - <<'PY'
+          import glob, sys, yaml
+          bad = []
+          for f in sorted(glob.glob("scenarios/*.yaml")):
+              try:
+                  yaml.safe_load(open(f))
+              except Exception as e:
+                  bad.append((f, e))
+          for f, e in bad:
+              print(f"FAIL {f}: {e}", file=sys.stderr)
+          print(f"{len(glob.glob('scenarios/*.yaml')) - len(bad)} scenario file(s) parsed")
+          sys.exit(1 if bad else 0)
+          PY
