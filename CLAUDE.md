@@ -2,7 +2,9 @@
 
 A single Go binary that acts as an EEBUS energy manager (CEM) against a device under test:
 mDNS discovery, SHIP pairing, LPC/LPP limits, MPC/MGCP reads, a web dashboard, a REST API, a
-YAML scenario runner, and built-in simulated devices. One process, no container, no sidecars.
+YAML scenario runner, a wire-level message trace with a conformance checker, and built-in
+simulated devices. One process, no container; the only child process is the optionally
+bundled EEBusTracer, spawned by serve when its binary sits next to the executable.
 
 Read before changing behaviour:
 
@@ -59,6 +61,9 @@ This is a development and integration tool, not an EEBUS certification or confor
   explicit `?entity=` hint.
 - Treat the energy snapshot as best-effort: return partial data with explicit per-method errors.
 - An empty result must encode as `[]`, not `null`. Clients iterate these.
+- Conformance checks must run on the raw websocket frame, BEFORE the vendored stack's JSON
+  repairs (`JsonFromEEBUSJson`) -- downstream of them the evidence is gone. The capture path
+  relies on ship-go's exact `Trace("Send:"/"Recv:", ski, text)` call shape, pinned by a test.
 
 ## Trust and identity
 
@@ -66,7 +71,8 @@ This is a development and integration tool, not an EEBUS certification or confor
   trust API) and the device trusts us (its own pairing control). A device that is discovered but
   never connects is usually missing the second half — SHIP reports `close 4452`.
 - Trust from the config `peers:` list is declarative; trust through the API is persisted in the
-  data directory. Neither should silently override the other.
+  data directory, and so is every peer that completes a connection (device-initiated pairings
+  never pass through the API). Neither should silently override the other.
 - A device may present a new certificate under an unchanged SKI after being re-imaged. Identity
   is anchored on the SKI; recover rather than rejecting the device forever.
 

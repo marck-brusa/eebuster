@@ -29,6 +29,24 @@ so use `scripts/vendor.sh`, which re-runs it from
 `patches/eebus-go-service-mdns-hook.patch`. When changing a pinned revision, refresh through
 that script and re-run the test suite.
 
+## The raw-frame tap
+
+The Message trace and the conformance checker need every SHIP frame exactly as it crossed the
+wire. Downstream of ship-go's `parseMessage`, payloads have already been through byte-level
+"repairs" (`JsonFromEEBUSJson` rewrites `[{`/`},{`/`}]`/`[]` unconditionally, including inside
+string literals), which destroys precisely the evidence a conformance check needs. The one
+honest observation point is ship-go's websocket layer, which logs each frame as
+
+```go
+logging.Log().Trace("Send:", w.remoteSki, text)   // ws/websocket.go, and "Recv:" likewise
+```
+
+`internal/eebusgo.StdLogger.Trace` recognises exactly that three-argument shape and hands the
+raw frame to the trace store — before the console level filter, so capture works at any log
+verbosity, and **without any vendor patch**. The shape is pinned by
+`TestVendoredFrameLogShape`, so a vendored ship-go upgrade that changes the call turns silent
+frame loss into a test failure.
+
 ## Registered use cases
 
 `internal/eebusgo` registers the client (energy-manager) side of:

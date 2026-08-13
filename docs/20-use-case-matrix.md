@@ -23,7 +23,7 @@ That table is the complete set. A peer may advertise use cases outside it — th
 still lists them, because it reports what the peer advertises rather than what we implement, but
 there is no typed read or write for them.
 
-**Not supported, including via raw RPC:**
+**Not supported (no typed access; the tool has no raw-RPC surface):**
 
 | Acronym | Advertised use-case name |
 |---|---|
@@ -33,10 +33,11 @@ there is no typed read or write for them.
 
 `eebus-go` has no implementation of these at the pinned revision — the complete upstream set is
 `cem/{cevc,evcc,evcem,evsecc,evsoc,vabd,vapd}`, `cs/lpc`, `eg/{lpc,lpp}`, `ma/{mgcp,mpc}` and
-`mu/mpc`. Raw RPC does not reach them either: with no registered client use case there is no
-local feature to send from, so supporting OPEV's current-limit write (which other tools do
-offer) means implementing it against SPINE `LoadControl` directly. An earlier version of this
-table listed all three as available "via Raw RPC", which was wrong.
+`mu/mpc`. With no registered client use case there is no local feature to send from, so
+supporting OPEV's current-limit write (which other tools do offer) means implementing it
+against SPINE `LoadControl` directly. An earlier version of this table listed all three as
+available "via Raw RPC" — wrong then, and the raw-RPC surface itself was removed later (its
+endpoint never existed in the Go rewrite).
 
 ## Included scenario examples
 

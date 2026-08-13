@@ -31,7 +31,8 @@ default to `http://127.0.0.1:8080`. Change it if you moved `api.port` or are dri
 from another machine.
 
 Get a peer's SKI from `GET /api/v1/peers`. See [QUICKSTART.md](../QUICKSTART.md) for getting a
-device connected in the first place, and `GET /api/v1/openapi.yaml` for the full API.
+device connected in the first place, and `GET /api/v1/openapi.yaml` for the full API — or open
+`/docs` (Swagger UI) in a browser; both are embedded and work offline.
 
 ## Python examples
 

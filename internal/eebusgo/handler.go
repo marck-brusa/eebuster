@@ -125,6 +125,14 @@ func (s *Stack) RemoteServiceConnected(_ api.ServiceInterface, identity shipapi.
 	delete(s.pairing.pending, identity.SKI)
 	s.pairing.mu.Unlock()
 	log.Printf("eebus: connection received from %s (ski %s)", identity.ShipID, identity.SKI)
+	// A connection is a completed, mutual trust decision no matter who initiated it. The
+	// callback lets the caller persist peers that paired *from the device's side* (accepted
+	// here via auto-accept), which the trust API alone never sees -- without it, a testbench
+	// restart left reconnection entirely to the device's own retry policy, and devices that
+	// give up (KEO reaches CANNOT_CONNECT) then looked like a lost pairing.
+	if s.OnPeerConnected != nil {
+		s.OnPeerConnected(identity.SKI)
+	}
 	s.events.Publish("lifecycle", stackID, "remote_connected", identity.SKI, nil)
 }
 

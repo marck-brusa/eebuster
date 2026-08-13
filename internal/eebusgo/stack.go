@@ -71,6 +71,11 @@ func (s *Stack) Peers() []PeerInfo {
 type UseCaseSupport struct {
 	UseCaseName      string `json:"useCaseName"`
 	UseCaseAvailable bool   `json:"useCaseAvailable"`
+	// Version and Scenarios are additive (existing clients parse name/available only): the
+	// advertised use-case version and the scenario numbers the peer claims to support,
+	// straight from NodeManagement discovery.
+	UseCaseVersion  string `json:"useCaseVersion,omitempty"`
+	ScenarioSupport []uint `json:"scenarioSupport,omitempty"`
 }
 
 // UseCaseEntry is the JSON-facing shape of one model.UseCaseInformationDataType, matching
@@ -82,6 +87,7 @@ type UseCaseSupport struct {
 // by actually running explore_peer.py against a live instance, not by reading the Go code.
 type UseCaseEntry struct {
 	Address        []uint           `json:"address,omitempty"`
+	Actor          string           `json:"actor,omitempty"`
 	UseCaseSupport []UseCaseSupport `json:"useCaseSupport"`
 }
 
@@ -108,9 +114,24 @@ func (s *Stack) PeerUseCases(ski string) []UseCaseEntry {
 				if s.UseCaseName != nil {
 					name = string(*s.UseCaseName)
 				}
-				support = append(support, UseCaseSupport{UseCaseName: name, UseCaseAvailable: available})
+				version := ""
+				if s.UseCaseVersion != nil {
+					version = string(*s.UseCaseVersion)
+				}
+				scenarios := make([]uint, 0, len(s.ScenarioSupport))
+				for _, scenario := range s.ScenarioSupport {
+					scenarios = append(scenarios, uint(scenario))
+				}
+				support = append(support, UseCaseSupport{
+					UseCaseName: name, UseCaseAvailable: available,
+					UseCaseVersion: version, ScenarioSupport: scenarios,
+				})
 			}
-			out = append(out, UseCaseEntry{Address: addr, UseCaseSupport: support})
+			actor := ""
+			if entry.Actor != nil {
+				actor = string(*entry.Actor)
+			}
+			out = append(out, UseCaseEntry{Address: addr, Actor: actor, UseCaseSupport: support})
 		}
 		return out
 	}
@@ -138,6 +159,10 @@ type PeerProfile struct {
 	// field that did not exist.
 	UseCases    []string       `json:"use_cases"`
 	RawUseCases []UseCaseEntry `json:"raw_use_cases"`
+	// UseCaseDetails is the per-entity advertisement enriched with catalog labels -- the
+	// shape the dashboard's device browser and use-case workbench render. Additive: the flat
+	// and nested forms above are public contract and stay as they are.
+	UseCaseDetails []UseCaseDetail `json:"use_case_details"`
 }
 
 // flattenUseCaseNames reduces the nested per-entity advertisement to the distinct names that
@@ -181,12 +206,13 @@ func (s *Stack) PeerProfile(ski string) (PeerProfile, error) {
 		raw := s.PeerUseCases(ski)
 		return PeerProfile{
 			SKI: ski, Connected: true, Trusted: true,
-			DeviceAddress: deviceAddressString(remote),
-			DeviceType:    deviceType,
-			FeatureSet:    featureSet,
-			Entities:      entityInfos,
-			UseCases:      flattenUseCaseNames(raw),
-			RawUseCases:   raw,
+			DeviceAddress:  deviceAddressString(remote),
+			DeviceType:     deviceType,
+			FeatureSet:     featureSet,
+			Entities:       entityInfos,
+			UseCases:       flattenUseCaseNames(raw),
+			RawUseCases:    raw,
+			UseCaseDetails: buildUseCaseDetails(raw),
 		}, nil
 	}
 	return PeerProfile{}, &NotFoundError{Detail: "peer " + ski + " is not connected"}

@@ -2089,7 +2089,7 @@ function setLang(lang) {
   applyI18n();
   // Dynamically rendered panels rebuild from state on the next poll; rebuild them now
   // instead, so a language switch is instant everywhere, not only in the static chrome.
-  try { renderCore(); renderSnapshot(); renderTests(); renderTemplates(); renderEvents(); renderTrace(); renderTraceSummary(); renderPhases(); renderProfile(); } catch (_) {}
+  try { renderCore(); renderSnapshot(); renderTests(); renderTemplates(); renderEvents(); renderTrace(); renderTraceSummary(); renderPhases(); renderProfileBuilder(); } catch (_) {}
 }
 const USE_CASE_SHORT = {
   limitationOfPowerConsumption: "LPC",
@@ -2113,6 +2113,7 @@ const state = {
   events: [], eventsPaused: false, eventSource: null,
   logTimer: null, snapshotTimer: null, lockedChartIndex: null, polling: false,
   traceCursor: 0, traceEntries: [], tracePaused: false, traceSummary: null,
+  traceExpanded: new Set(), traceDetails: new Map(), eventsExpanded: new Set(),
   profileSteps: [], profileRun: null, profileTimer: null, profileWake: null
 };
 
@@ -2180,7 +2181,10 @@ function formatAddresses(addresses, hostName) {
   const extra = list.length - 1;
   return extra > 0 ? `${primary} (+${extra} more)` : primary;
 }
-function entityValue(address) { return (address && address.entity || []).join(","); }
+function entityValue(address) {
+  if (Array.isArray(address)) return address.join(",");
+  return (address && address.entity || []).join(",");
+}
 function withEntity(path, entity) {
   return entity ? `${path}?entity=${encodeURIComponent(entity)}` : path;
 }
@@ -2463,7 +2467,7 @@ async function loadProfile() {
 }
 
 function useCasesForEntity(entity) {
-  return (state.profile?.use_cases || []).filter(item => entityValue(item.address) === entityValue(entity));
+  return (state.profile?.use_case_details || []).filter(item => entityValue(item.address) === entityValue(entity));
 }
 
 function renderProfile(error = null) {
@@ -2485,7 +2489,7 @@ function renderProfile(error = null) {
   if (!state.profile) { host.innerHTML = `<div class="empty">${esc(t("js.loadingDiscovery"))}</div>`; return; }
 
   const p = state.profile;
-  const supported = new Set((p.use_cases || []).filter(item => item.available).map(item => item.name));
+  const supported = new Set((p.use_case_details || []).filter(item => item.available).map(item => item.name));
   const entityCards = (p.entities || []).map(entity => {
     const useCases = useCasesForEntity(entity.address);
     return `<div class="entity-card">
@@ -2494,7 +2498,7 @@ function renderProfile(error = null) {
       <div class="entity-tags">${useCases.length ? useCases.map(item => `<span class="badge ${item.available ? "ok" : "warn"}">${esc(item.acronym || item.name)}</span>`).join("") : `<span class="muted">${esc(t("js.noUcAdvertised"))}</span>`}</div>
     </div>`;
   }).join("");
-  const usecaseRows = (p.use_cases || []).map(item => `
+  const usecaseRows = (p.use_case_details || []).map(item => `
     <tr>
       <td><strong>${esc(item.acronym || "—")}</strong><div class="device-meta">${esc(item.title)}</div></td>
       <td>${esc(item.actor || "—")}</td>
@@ -2521,7 +2525,7 @@ function renderProfile(error = null) {
 }
 
 function renderUsecaseSupport() {
-  const supported = new Set((state.profile?.use_cases || []).filter(item => item.available).map(item => item.name));
+  const supported = new Set((state.profile?.use_case_details || []).filter(item => item.available).map(item => item.name));
   document.querySelectorAll("[data-support]").forEach(badge => {
     const yes = supported.has(badge.dataset.support);
     badge.textContent = state.profile ? (yes ? t("badge.advertised") : t("badge.notAdvertisedLc")) : t("badge.unknown");
@@ -2536,7 +2540,7 @@ function renderUsecaseBrowser() {
     host.innerHTML = `<div class="empty">${selectedConnected() ? esc(t("js.loadingUc")) : esc(t("empty.selectDeviceUc"))}</div>`;
     return;
   }
-  const items = state.profile.use_cases || [];
+  const items = state.profile.use_case_details || [];
   host.innerHTML = `
     <div class="panel-head">
       <div><h3>${esc(t("js.advertisedUc"))}</h3><div class="sub">${esc(tf("js.liveEntries", {n: items.length}))}</div></div>
@@ -2560,7 +2564,7 @@ function populateEntitySelects() {
   ).join("");
   document.getElementById("uc-entity").innerHTML = options;
 
-  const lpcEntities = (state.profile?.use_cases || []).filter(item => item.name === "limitationOfPowerConsumption" && item.available);
+  const lpcEntities = (state.profile?.use_case_details || []).filter(item => item.name === "limitationOfPowerConsumption" && item.available);
   document.getElementById("limit-entity").innerHTML = `<option value="">${esc(t("field.autoByUsecase"))}</option>` + lpcEntities.map(item =>
     `<option value="${esc(entityValue(item.address))}">[${esc(entityValue(item.address))}] ${esc(item.actor || "LPC")}</option>`
   ).join("");
@@ -2629,15 +2633,15 @@ function renderDashboardIntelligence() {
   const host = document.getElementById("dashboard-intelligence");
   if (!state.profile || !state.snapshot) { host.innerHTML = `<div class="empty">${esc(t("js.noProfile"))}</div>`; return; }
   const domains = new Map();
-  for (const uc of state.profile.use_cases || []) {
-    if (!uc.available) continue;
+  for (const uc of state.profile.use_case_details || []) {
+    if (!uc.available || !uc.domain) continue;
     domains.set(uc.domain, (domains.get(uc.domain) || 0) + 1);
   }
   const evs = state.snapshot.ev?.vehicles || [];
   host.innerHTML = `
     <div class="flow" style="grid-template-columns:repeat(3,1fr);margin:0">
       <div class="flow-node"><span>${esc(t("th.entities"))}</span><strong>${state.profile.entities.length}</strong></div>
-      <div class="flow-node"><span>${esc(t("js.useCases"))}</span><strong>${state.profile.use_cases.filter(item => item.available).length}</strong></div>
+      <div class="flow-node"><span>${esc(t("js.useCases"))}</span><strong>${(state.profile.use_case_details || []).filter(item => item.available).length}</strong></div>
       <div class="flow-node"><span>${esc(t("js.snapshotGaps"))}</span><strong>${state.snapshot.errors.length}</strong></div>
     </div>
     <div class="entity-tags" style="margin-top:13px">${[...domains.entries()].map(([domain,count]) => `<span class="badge ok">${esc(domain)} · ${count}</span>`).join("") || `<span class="muted">${esc(t("js.noUcAdvertised"))}</span>`}</div>
@@ -2985,13 +2989,17 @@ function renderEvents() {
   const level = document.getElementById("event-level").value;
   const records = state.events.filter(item => !level || item.level === level).slice(-300).reverse();
   document.getElementById("event-count").textContent = state.events.length;
-  document.getElementById("events-body").innerHTML = records.map((record,index) => `
-    <tr class="event-row" data-event-index="${index}">
+  document.getElementById("events-body").innerHTML = records.map(record => `
+    <tr class="event-row" data-event-seq="${esc(record.seq)}">
       <td>${esc(new Date(record.ts * 1000).toLocaleTimeString())}</td>
       <td class="event-level-${esc(record.level)}">${esc(record.level)}</td>
       <td>${esc(record.stack)}</td><td>${esc(record.event)}</td><td class="mono">${esc(record.ski ? shortSki(record.ski) : "—")}</td>
     </tr>
-    <tr class="event-payload hidden" data-event-payload="${index}"><td colspan="5"><pre class="raw">${esc(json(record.data))}</pre></td></tr>`).join("");
+    <tr class="event-payload${state.eventsExpanded.has(record.seq) ? "" : " hidden"}" data-event-payload="${esc(record.seq)}"><td colspan="5"><pre class="raw">${esc(json(record.data))}</pre></td></tr>`).join("");
+  const retainedEvents = new Set(state.events.map(record => record.seq));
+  for (const seq of [...state.eventsExpanded]) {
+    if (!retainedEvents.has(seq)) state.eventsExpanded.delete(seq);
+  }
 }
 
 async function loadRecentEvents() {
@@ -3036,7 +3044,7 @@ function formatSeconds(seconds) {
   return `${Math.round(seconds)} s`;
 }
 
-function renderProfile() {
+function renderProfileBuilder() {
   const host = document.getElementById("profile-steps");
   const steps = state.profileSteps;
   const runningIndex = state.profileRun ? state.profileRun.index : -1;
@@ -3095,10 +3103,10 @@ async function runProfile() {
   const steps = state.profileSteps.filter(s => s.seconds > 0);
   if (!steps.length) return;
   state.profileRun = {index: 0, cancelled: false};
-  renderProfile();
+  renderProfileBuilder();
   for (let i = 0; i < steps.length && !state.profileRun.cancelled; i++) {
     state.profileRun.index = i;
-    renderProfile();
+    renderProfileBuilder();
     profileStatus(tf("js.profileStep", {i: i + 1, n: steps.length, p: formatPower(steps[i].watts), d: formatSeconds(steps[i].seconds)}));
     try {
       // duration doubles as a dead-man's switch: if this tab disappears, the limit expires.
@@ -3106,7 +3114,7 @@ async function runProfile() {
     } catch (error) {
       profileStatus(errorDetail(error), true);
       state.profileRun = null;
-      renderProfile();
+      renderProfileBuilder();
       return;
     }
     await profileSleep(steps[i].seconds * 1000);
@@ -3117,7 +3125,7 @@ async function runProfile() {
     try { await profileWriteLimit({value_w: 0, is_active: false, is_changeable: true, delete_duration: true}); } catch (_) {}
   }
   profileStatus(cancelled ? t("js.profileStopped") : t("js.profileDone"));
-  renderProfile();
+  renderProfileBuilder();
   await loadSnapshot();
 }
 
@@ -3298,7 +3306,12 @@ function traceFilterMatch(e) {
 function renderTrace() {
   const rows = state.traceEntries.filter(traceFilterMatch).slice(-300).reverse();
   document.getElementById("trace-empty").style.display = state.traceEntries.length ? "none" : "block";
-  document.getElementById("trace-body").innerHTML = rows.map(e => `
+  // Expansion lives in state, keyed by the frame's stable seq -- the tbody is rebuilt on
+  // every poll, so anything kept only in the DOM (like a toggled class) survives two
+  // seconds at most.
+  document.getElementById("trace-body").innerHTML = rows.map(e => {
+    const expanded = state.traceExpanded.has(e.seq);
+    return `
     <tr class="event-row" data-trace-seq="${esc(e.seq)}">
       <td>${esc(new Date(e.ts * 1000).toLocaleTimeString())}</td>
       <td><span class="badge ${e.dir === "send" ? "" : "purple"}">${esc(e.dir === "send" ? t("trace.sent") : t("trace.received"))}</span></td>
@@ -3308,27 +3321,45 @@ function renderTrace() {
       <td class="mono">${e.msg_counter ?? "—"}${e.msg_counter_reference != null ? ` → ${esc(e.msg_counter_reference)}` : ""}</td>
       <td>${e.findings.length ? `<span class="badge err">${e.findings.length}</span>` : `<span class="badge ok">0</span>`}</td>
     </tr>
-    <tr class="event-payload hidden" data-trace-payload="${esc(e.seq)}"><td colspan="7"></td></tr>`).join("");
+    <tr class="event-payload${expanded ? "" : " hidden"}" data-trace-payload="${esc(e.seq)}"><td colspan="7">${expanded ? (state.traceDetails.get(e.seq) || `<div class="muted">${esc(t("empty.loading"))}</div>`) : ""}</td></tr>`;
+  }).join("");
+  // Frames that fell out of the retained buffer can never be shown again; drop their state.
+  const retained = new Set(state.traceEntries.map(e => e.seq));
+  for (const seq of [...state.traceExpanded]) {
+    if (!retained.has(seq)) {
+      state.traceExpanded.delete(seq);
+      state.traceDetails.delete(seq);
+    }
+  }
 }
 
 async function toggleTraceDetail(seq) {
-  const row = document.querySelector(`[data-trace-payload="${seq}"]`);
-  if (!row) return;
-  if (!row.classList.contains("hidden")) { row.classList.add("hidden"); return; }
-  const cell = row.firstElementChild;
-  cell.innerHTML = `<div class="muted">${esc(t("empty.loading"))}</div>`;
-  row.classList.remove("hidden");
+  seq = Number(seq);
+  if (state.traceExpanded.has(seq)) {
+    state.traceExpanded.delete(seq);
+    state.traceDetails.delete(seq);
+    renderTrace();
+    return;
+  }
+  state.traceExpanded.add(seq);
+  renderTrace(); // shows the loading placeholder in place
   const entry = await safeApi(`/trace/${seq}`, null);
-  if (!entry) { cell.innerHTML = `<div class="muted">${esc(t("trace.gone"))}</div>`; return; }
+  if (!state.traceExpanded.has(seq)) return; // collapsed again while fetching
+  if (!entry) {
+    state.traceDetails.set(seq, `<div class="muted">${esc(t("trace.gone"))}</div>`);
+    renderTrace();
+    return;
+  }
   let pretty = entry.raw;
   try { pretty = JSON.stringify(JSON.parse(entry.raw.replace(/\u0000+$/, "")), null, 2); } catch (_) {}
   const findings = entry.findings.length ? `<div style="margin-bottom:9px">${entry.findings.map(f => `
       <div class="notice" style="margin-top:6px"><span class="badge ${f.severity === "error" ? "err" : "warn"}">${esc(f.rule)}</span>
       ${f.path ? `<span class="mono" style="margin-left:7px">${esc(f.path)}</span>` : ""}<br>${esc(f.message)}
       ${f.spec_ref ? `<br><span class="muted" style="font-size:11px">${esc(f.spec_ref)}</span>` : ""}</div>`).join("")}</div>` : "";
-  cell.innerHTML = `${findings}
+  state.traceDetails.set(seq, `${findings}
     <div class="muted" style="margin:4px 0">${esc(t("trace.rawTitle"))} · ${esc(entry.size)} B · ${esc(entry.source || "")}${entry.dest ? " → " + esc(entry.dest) : ""}</div>
-    <pre class="raw" style="max-height:340px">${esc(pretty)}</pre>`;
+    <pre class="raw" style="max-height:340px">${esc(pretty)}</pre>`);
+  renderTrace();
 }
 
 async function jumpToTraceFrame(seq) {
@@ -3345,7 +3376,8 @@ async function jumpToTraceFrame(seq) {
   document.getElementById("trace-findings-only").checked = false;
   document.getElementById("trace-search").value = "";
   renderTrace();
-  await toggleTraceDetail(Number(seq));
+  // Expand-only: jumping to a frame that is already open must not close it.
+  if (!state.traceExpanded.has(Number(seq))) await toggleTraceDetail(Number(seq));
   document.querySelector(`[data-trace-seq="${seq}"]`)?.scrollIntoView({block: "center"});
 }
 
@@ -3409,7 +3441,7 @@ async function boot() {
     if (document.getElementById("log-live").checked && document.getElementById("page-diagnostics").classList.contains("active")) loadLogs();
   }, 3000);
   state.profileSteps = loadProfileSteps();
-  renderProfile();
+  renderProfileBuilder();
   setInterval(pollTrace, 2000);
   setInterval(() => { refreshTraceSummary(); if (tracePageActive()) populateTracePeers(); }, 6000);
   setInterval(() => {
@@ -3455,7 +3487,7 @@ document.getElementById("pause-events").addEventListener("click", event => {
   document.getElementById("stream-state").textContent = state.eventsPaused ? t("js.displayPaused") : t("js.streamConnected");
 });
 document.getElementById("clear-events").addEventListener("click", async () => {
-  await api("/events", {method:"DELETE"}); state.events = []; renderEvents();
+  await api("/events", {method:"DELETE"}); state.events = []; state.eventsExpanded.clear(); renderEvents();
 });
 document.getElementById("trace-pause").addEventListener("click", event => {
   state.tracePaused = !state.tracePaused;
@@ -3471,7 +3503,7 @@ document.getElementById("trace-clear").addEventListener("click", async () => {
 document.getElementById("trace-search").addEventListener("input", renderTrace);
 document.getElementById("profile-add").addEventListener("click", () => {
   state.profileSteps.push({watts: 4200, seconds: 900});
-  saveProfileSteps(); renderProfile();
+  saveProfileSteps(); renderProfileBuilder();
 });
 document.getElementById("profile-run").addEventListener("click", () => runProfile());
 document.getElementById("profile-stop").addEventListener("click", stopProfile);
@@ -3501,7 +3533,7 @@ document.getElementById("profile-steps").addEventListener("input", event => {
   const total = state.profileSteps.reduce((a, s) => a + s.seconds, 0);
   document.getElementById("profile-total").textContent = `${t("profile.total")} ${formatSeconds(total)}`;
 });
-document.getElementById("profile-steps").addEventListener("change", () => { saveProfileSteps(); renderProfile(); });
+document.getElementById("profile-steps").addEventListener("change", () => { saveProfileSteps(); renderProfileBuilder(); });
 document.getElementById("power-chart").addEventListener("mousemove", event => inspectChart(event));
 document.getElementById("power-chart").addEventListener("click", event => inspectChart(event, true));
 document.getElementById("power-chart").addEventListener("mouseleave", () => {
@@ -3565,21 +3597,23 @@ document.addEventListener("click", async event => {
   const profileRemove = event.target.closest("[data-profile-remove]");
   if (profileRemove) {
     state.profileSteps.splice(Number(profileRemove.dataset.profileRemove), 1);
-    saveProfileSteps(); renderProfile(); return;
+    saveProfileSteps(); renderProfileBuilder(); return;
   }
   const profilePreset = event.target.closest("[data-profile-preset]");
   if (profilePreset) {
     state.profileSteps = PROFILE_PRESETS[profilePreset.dataset.profilePreset].map(s => ({...s}));
-    saveProfileSteps(); renderProfile(); return;
+    saveProfileSteps(); renderProfileBuilder(); return;
   }
   const traceJump = event.target.closest("[data-trace-jump]");
   if (traceJump) { await jumpToTraceFrame(traceJump.dataset.traceJump); return; }
   const traceRow = event.target.closest("[data-trace-seq]");
   if (traceRow) { await toggleTraceDetail(traceRow.dataset.traceSeq); return; }
-  const eventRow = event.target.closest("[data-event-index]");
+  const eventRow = event.target.closest("[data-event-seq]");
   if (eventRow) {
-    const payload = document.querySelector(`[data-event-payload="${eventRow.dataset.eventIndex}"]`);
-    payload?.classList.toggle("hidden");
+    const seq = Number(eventRow.dataset.eventSeq);
+    if (state.eventsExpanded.has(seq)) state.eventsExpanded.delete(seq);
+    else state.eventsExpanded.add(seq);
+    renderEvents();
   }
 });
 

@@ -25,9 +25,17 @@ hardware is available.
 - **REST API** — everything the dashboard does is an HTTP call, so it scripts cleanly. An
   OpenAPI description is served at `/api/v1/openapi.yaml`, with browsable references at
   `/docs` (Swagger UI) and `/redoc` — both embedded, so they work without internet access.
+- **Message trace and conformance checking** — every SHIP frame both directions, captured
+  before the stack's own JSON repairs and checked against the EEBUS encoding and SPINE
+  datagram rules, each finding citing the standard. Bundled EEBusTracer for offline deep dives.
+- **Phase balance** — per-phase power, current and voltage with asymmetric loading flagged.
+- **Charge profiles** — timed LPC limit sequences with per-step expiry, run live or exported
+  as scenario YAML.
 - **Scenario runner** — a library of YAML test cases, runnable from the dashboard, the CLI or
   CI, with JUnit XML output.
 - **Simulated devices** — LPC-accepting, MPC-reporting devices built into the binary.
+- **Three languages** — the dashboard is fully localized in English, German, and simplified
+  Chinese.
 
 ## Install
 
@@ -38,10 +46,11 @@ Download the archive for your platform from the
 | --- | --- |
 | `…-windows-amd64.zip` | Windows 10/11, 64-bit |
 | `…-linux-amd64.zip` | Linux, x86-64 |
-| `…-linux-arm64.zip` | Linux, ARM64 |
+| `…-darwin-arm64.zip` | macOS, Apple Silicon |
 
-Each archive contains the executable, a ready-to-edit `eebus.yaml`, the scenario library and
-sample scripts. Verify against `SHA256SUMS.txt` if required.
+Each archive contains the executable, a ready-to-edit `eebus.yaml`, the scenario library,
+sample scripts, and the bundled `eebustracer` analyzer. Verify against `SHA256SUMS.txt` if
+required.
 
 Or build from source (Go 1.24+):
 
@@ -108,10 +117,12 @@ from the terminal.
 ## Layout
 
 ```
-cmd/eebus-testbench/   serve, scenario and firewall subcommands
+cmd/eebus-testbench/   serve, run, run-all and firewall subcommands
 internal/eebusgo/      EEBUS stack and use cases (LPC, LPP, MPC, MGCP, EV, PV, battery)
 internal/httpapi/      REST API
 internal/webui/        dashboard
+internal/conformance/  wire-frame checks against SHIP TS §11 / SPINE TS §5
+internal/trace/        bounded raw-frame store behind the Message trace page
 internal/scenario/     YAML scenario runner
 internal/simulator/    built-in simulated devices
 internal/announce/     mDNS announcement address selection
@@ -142,8 +153,9 @@ go vet -mod=vendor ./cmd/... ./internal/...
 go test -mod=vendor ./cmd/... ./internal/...
 ```
 
-CI runs the same commands, cross-compiles for Windows and ARM64, and validates the dashboard
-JavaScript and every scenario file. Please keep `vendor/` updates going through
+CI runs the same commands, cross-compiles for Windows and macOS (Apple Silicon), and
+validates the dashboard JavaScript (including duplicate-declaration and i18n dictionary
+checks) and every scenario file. Please keep `vendor/` updates going through
 `scripts/vendor.sh`, and do not commit real device addresses, SKIs or credentials.
 
 ## Upstream

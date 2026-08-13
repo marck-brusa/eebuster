@@ -98,6 +98,11 @@ type Stack struct {
 	pinMu       sync.Mutex
 	addressPins map[string]string
 
+	// OnPeerConnected, if set (before Start), is called with the SKI of every peer that
+	// completes a SHIP connection -- including peers whose pairing was initiated remotely and
+	// auto-accepted, which no API call ever sees. Used to persist those into the truststore.
+	OnPeerConnected func(ski string)
+
 	lpc  *LPC
 	lpp  *LPP
 	mpc  *MPC

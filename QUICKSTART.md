@@ -14,10 +14,11 @@ Download the archive for your platform from the
 | --- | --- |
 | `eebus-testbench-<version>-windows-amd64.zip` | Windows 10/11, 64-bit |
 | `eebus-testbench-<version>-linux-amd64.zip` | Linux, x86-64 |
-| `eebus-testbench-<version>-linux-arm64.zip` | Linux, ARM64 |
+| `eebus-testbench-<version>-darwin-arm64.zip` | macOS, Apple Silicon |
 
-Each archive contains the executable, a ready-to-edit `eebus.yaml`, the scenario library, and
-the sample scripts in `examples/`. Verify the download against `SHA256SUMS.txt` if required.
+Each archive contains the executable, a ready-to-edit `eebus.yaml`, the scenario library, the
+sample scripts in `examples/`, and the bundled `eebustracer` protocol analyzer. Verify the
+download against `SHA256SUMS.txt` if required.
 
 To build from source instead (Go 1.24 or newer):
 
@@ -37,9 +38,14 @@ Always build with `-mod=vendor`. The committed `vendor/` tree carries a required
 ./eebus-testbench serve
 ```
 
-With no configuration file present the tool starts in real mDNS discovery mode on every usable
-interface, with one simulated device enabled. Open <http://127.0.0.1:8080/ui>. You should see
-the simulated device connected, reporting 11 kW.
+The launch directory does not matter: the tool finds `eebus.yaml`, the data directory and
+`scenarios/` next to its own executable when the working directory has none, and the first
+log lines state exactly which config file and data directory it resolved. With no
+configuration file present it starts in real mDNS discovery mode on every usable interface,
+with one simulated device enabled. Open <http://127.0.0.1:8080/ui>. You should see the
+simulated device connected, reporting 11 kW — and asymmetrically, on two of three phases,
+which the dashboard's Phase balance panel flags. The bundled EEBusTracer starts alongside on
+<http://127.0.0.1:8090> and is linked from the sidebar.
 
 This first run is worth doing before touching real hardware: it confirms the executable runs,
 the dashboard loads, and the API answers, with no network or device variables involved.
@@ -78,16 +84,19 @@ simulator:
   enabled: false          # off once you are testing real hardware
 ```
 
-Then:
+Then simply:
 
 ```bash
-./eebus-testbench serve -config ./eebus.yaml
+./eebus-testbench serve
 ```
+
+(the file next to the executable is found automatically; `-config` overrides it).
 
 Note the SKI the tool prints at startup; the device needs it. It is also shown permanently in the
 dashboard sidebar under **This testbench's SKI**, where clicking it copies it. The identity is persisted under
-the data directory (`-data-dir`, default `./data`) — keep it, because deleting it generates a
-new SKI and invalidates the pairing you are about to set up. Startup says which happened:
+the data directory (by default `data/` next to the executable; `-data-dir` overrides) — keep
+it, because deleting it generates a new SKI and invalidates the pairing you are about to set
+up. Startup says which happened:
 
 ```
 identity: loaded from data/identity -- ski <ski>
@@ -103,8 +112,10 @@ identity; the tool warns when that happens.
 second is the most common reason a device is discovered but never connects:
 
 1. **The tool must trust the device.** Either list it under `peers:` with `trust: auto`, or
-   click Trust in the dashboard (equivalently `POST /api/v1/peers/{ski}/trust`). Both persist
-   across a restart — dashboard and API decisions are stored in the data directory.
+   click Trust in the dashboard (equivalently `POST /api/v1/peers/{ski}/trust`) — or simply
+   pair from the device's side: an incoming pairing is accepted automatically (unless
+   `require_approval` is set). All three persist across a restart: every peer that completes a
+   connection is stored in the data directory and re-dialled at the next start.
 2. **The device must trust the tool.** Use whatever pairing control the device provides —
    typically a Trust or Pair button on its own web interface, or an equivalent call on its REST
    API, given the tool's SKI.
@@ -167,6 +178,18 @@ curl -X POST http://127.0.0.1:8080/api/v1/scenarios/run-all
 Scenarios target the peer named `device-under-test` in your configuration. A scenario is
 skipped when the device does not advertise the use case it needs, which is normal and distinct
 from a failure. Results are also available as JUnit XML for CI.
+
+## 7. Inspect the wire
+
+The dashboard's **Message trace** page shows every SHIP frame in both directions, checked
+against the EEBUS encoding rules — structurally broken JSON from a device (the classic
+"arrays where objects are expected") is flagged with the exact rule and the standard section
+it violates, *before* the stack's own repairs can mask it. The conformance summary aggregates
+findings by rule and jumps to the offending frame.
+
+For offline deep dives, every frame is also appended to `data/frames.log`; import it into the
+bundled analyzer with `./eebustracer import frames.log` and browse at its UI, or run
+`./eebustracer analyze frames.log` for a quick terminal audit.
 
 ## Platform notes
 
@@ -255,6 +278,8 @@ device of that kind connected — set the others to `trust: manual`.
 | `close 4452: Node rejected by application` | The device does not trust the tool. Complete step 4.2 — and check it was done against the SKI printed at startup, not an older identity. |
 | Device visible, never connects | Inbound TCP on the SHIP port is blocked. Run `./eebus-testbench firewall`. |
 | `trying to connect to <ski> at <another device's address>` | Two devices announce the same SHIP id, so discovery cross-linked their records. Pin the address: give the device a `peers:` entry with its IP as `host`. |
+| A device's scan still lists the testbench although it is not running | A clean shutdown (Ctrl+C) sends mDNS goodbyes; a hard kill (closed console window) cannot, so the record lingers in peers' caches until its TTL expires, and some device stacks additionally cache scan results. Harmless as long as the identity is stable: restart the testbench with the same data directory and the stale record points at the current instance again. |
+| Pairing "breaks" after restarting the testbench | Almost always a changed identity: the SKI comes from the data directory, and if that moves, every pairing is void. The startup log prints the resolved data directory and warns loudly when a NEW identity was generated. Defaults now anchor next to the executable, so the launch directory cannot silently change the identity. |
 | `identifier conflict on fingerprint` | The device presented a new certificate under an existing SKI, typically after re-imaging. Cleared and re-registered automatically; no restart needed. |
 | `lookup <host>.local ... server misbehaving` | Expected. `.local` names never resolve in these builds; the IP addresses from the mDNS record are used instead. |
 | MPC all null | The device is not reporting measurements, usually no active session. |

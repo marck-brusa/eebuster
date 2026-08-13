@@ -67,7 +67,7 @@ jobs:
       - name: Parse dashboard JavaScript
         run: |
           python3 - <<'PY'
-          import pathlib, re, subprocess, sys
+          import collections, pathlib, re, subprocess, sys
           html = pathlib.Path("internal/webui/ui.html").read_text()
           blocks = re.findall(r"<script>(.*?)</script>", html, re.S)
           if not blocks:
@@ -76,7 +76,15 @@ jobs:
               path = f"/tmp/ui-{i}.js"
               pathlib.Path(path).write_text(block)
               subprocess.run(["node", "--check", path], check=True)
-              print(f"block {i} parses ({block.count(chr(10))} lines)")
+              # A duplicate top-level `function name(...)` is valid JavaScript -- the later
+              # declaration silently replaces the earlier one, which is how the device-detail
+              # renderer once vanished behind a same-named function. node --check cannot see
+              # it; this can.
+              names = collections.Counter(re.findall(r"^(?:async )?function (\w+)\(", block, re.M))
+              duplicates = sorted(n for n, c in names.items() if c > 1)
+              if duplicates:
+                  sys.exit(f"block {i}: duplicate top-level function declarations: {duplicates}")
+              print(f"block {i} parses ({block.count(chr(10))} lines, {len(names)} functions)")
           print(f"{len(blocks)} script block(s) OK")
           PY
 

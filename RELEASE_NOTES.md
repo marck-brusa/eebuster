@@ -1,5 +1,41 @@
 # Release notes
 
+## 1.0.0-rc3
+
+Field-report fixes, mostly around one theme: the launch directory could silently change
+everything.
+
+- **Device explorer and use-case browser rendered nothing in rc2.** Two functions shared the
+  name `renderProfile` (device detail vs. charge-profile builder), and in JavaScript the later
+  declaration silently wins — selecting a peer rendered the wrong one. Renamed, and CI now
+  fails on duplicate top-level function declarations, which `node --check` cannot see.
+- **The launch directory no longer matters.** `eebus.yaml`, the data directory (and with it
+  the identity/SKI!), and `scenarios/` were all resolved against the *current working
+  directory* — starting the release binary from anywhere else silently ignored the edited
+  config (so `simulator.enabled: false` "didn't work"), minted a **new identity**, and broke
+  every existing pairing. Defaults now fall back to the executable's own directory, and
+  startup prints the resolved config path and data directory unmissably.
+- **Pairings initiated from the device's side now survive a testbench restart.** A device
+  that paired *itself* to the testbench (auto-accepted) never passed through the trust API,
+  so nothing was persisted and reconnection after a restart depended entirely on the device's
+  own retry policy — which gives up. Every completed connection is now persisted to
+  `trusted-skis.json` and re-dialled at the next start. Verified with a two-instance restart
+  cycle: reconnect within seconds, no re-pairing.
+- **The device browser and use-case workbench now show real data.** The profile endpoint
+  carried only flat use-case name strings — a Go-rewrite gap — while the dashboard rendered
+  fields (availability, actor, version, scenarios, catalog labels) that only the old Python
+  facade ever served, so every capability chip claimed NOT ADVERTISED and the browser cards
+  were empty. The profile now includes `use_case_details`, enriched per entity from live
+  NodeManagement discovery plus the documented catalog; entity addresses also render again
+  (the JS still expected the facade's `{entity: [...]}` wrapper). Verified against a live
+  charging system: six use cases with actors, versions, and scenario lists.
+- **Expanded trace and event rows stay expanded.** Both tables rebuild on every live
+  update, which collapsed an opened frame within seconds unless the stream was paused.
+  Expansion is now tracked per frame (by its sequence number) and re-applied on each render.
+- Clean shutdowns send mDNS goodbyes (verified); a hard kill cannot, so a stale scan entry on
+  a device is possible but — with the identity now stable — harmless. Documented in
+  QUICKSTART's troubleshooting table.
+
 ## 1.0.0-rc2
 
 The debugging release: the testbench can now show what is actually on the wire, judge it

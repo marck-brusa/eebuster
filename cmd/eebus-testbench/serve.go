@@ -30,12 +30,37 @@ import (
 // config/eebus.yaml -- so a bare `./eebus-testbench serve` read neither and silently started on
 // zero-config defaults, ignoring the very file the archive tells you to edit. Peers configured
 // there, including address pins, were dropped without a word. Both layouts now work.
+//
+// The same applied one directory level up: every default here was resolved against the
+// CURRENT WORKING directory, so launching the release binary from anywhere else (double-click,
+// a shortcut, a different terminal directory) silently ignored the eebus.yaml sitting next to
+// the executable -- and, far worse, put the data directory somewhere new, which mints a new
+// identity/SKI and breaks every existing pairing "for no reason". Defaults therefore fall back
+// to the executable's own directory whenever the working directory has nothing.
 var configCandidates = []string{"config/eebus.yaml", "eebus.yaml"}
 
-// defaultConfigPath returns the first candidate that exists, or the last one so the
-// "no config file at ..." message names something meaningful.
+// executableDir is where the release archive puts eebus.yaml, scenarios/ and the data
+// directory -- next to the binary. Empty when it cannot be determined (never fatal).
+func executableDir() string {
+	self, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	return filepath.Dir(self)
+}
+
+// defaultConfigPath returns the first candidate that exists -- working directory first (the
+// development layout), then next to the executable (the release layout) -- or the last
+// working-directory candidate so the "no config file at ..." message names something
+// meaningful.
 func defaultConfigPath() string {
-	for _, candidate := range configCandidates {
+	candidates := configCandidates
+	if dir := executableDir(); dir != "" {
+		for _, candidate := range configCandidates {
+			candidates = append(candidates, filepath.Join(dir, candidate))
+		}
+	}
+	for _, candidate := range candidates {
 		if _, err := os.Stat(candidate); err == nil {
 			return candidate
 		}
@@ -43,10 +68,36 @@ func defaultConfigPath() string {
 	return configCandidates[len(configCandidates)-1]
 }
 
+// defaultDataDir keeps an existing working-directory data/ (the historical location, and the
+// development layout), and otherwise anchors next to the executable, so where a run happens
+// to be started from can never silently change the identity.
+func defaultDataDir() string {
+	if info, err := os.Stat("data"); err == nil && info.IsDir() {
+		return "./data"
+	}
+	if dir := executableDir(); dir != "" {
+		return filepath.Join(dir, "data")
+	}
+	return "./data"
+}
+
+// defaultScenariosDir mirrors defaultDataDir for the scenario library.
+func defaultScenariosDir() string {
+	if info, err := os.Stat("scenarios"); err == nil && info.IsDir() {
+		return "scenarios"
+	}
+	if dir := executableDir(); dir != "" {
+		if info, err := os.Stat(filepath.Join(dir, "scenarios")); err == nil && info.IsDir() {
+			return filepath.Join(dir, "scenarios")
+		}
+	}
+	return "scenarios"
+}
+
 func runServe(args []string) {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	configPath := fs.String("config", "config/eebus.yaml", "path to eebus.yaml (default: config/eebus.yaml, then eebus.yaml)")
-	dataDir := fs.String("data-dir", "./data", "directory for identity keys and other persistent state")
+	configPath := fs.String("config", "config/eebus.yaml", "path to eebus.yaml (default: config/eebus.yaml, then eebus.yaml, then the same names next to the executable)")
+	dataDir := fs.String("data-dir", "./data", "directory for identity keys and other persistent state (default: ./data if it exists, else data/ next to the executable)")
 	scenariosDir := fs.String("scenarios", "scenarios", "directory of *.yaml scenario files, for the dashboard's Scenarios tab")
 	simulatorFlag := fs.Bool("simulator", true, "run the simulated devices from config's simulator.devices (both this flag and simulator.enabled must be true)")
 	autoAcceptFlag := fs.Bool("auto-accept", true, "announce register=true in mDNS, i.e. present this testbench as available for pairing (overrides config auto_accept when passed)")
@@ -58,7 +109,7 @@ func runServe(args []string) {
 	tracerFlag := fs.Bool("tracer", true, "run the bundled eebustracer web UI on localhost and link it from the dashboard sidebar (skipped when the binary is not next to this executable, or when config sets tracer_url)")
 	tracerPortFlag := fs.Int("tracer-port", 8090, "port for the bundled eebustracer UI")
 	fs.Parse(args)
-	autoAcceptSet, requireApprovalSet, noFilterSet, configSet := false, false, false, false
+	autoAcceptSet, requireApprovalSet, noFilterSet, configSet, dataDirSet, scenariosSet := false, false, false, false, false, false
 	fs.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "auto-accept":
@@ -69,10 +120,20 @@ func runServe(args []string) {
 			noFilterSet = true
 		case "config":
 			configSet = true
+		case "data-dir":
+			dataDirSet = true
+		case "scenarios":
+			scenariosSet = true
 		}
 	})
 	if !configSet {
 		*configPath = defaultConfigPath()
+	}
+	if !dataDirSet {
+		*dataDir = defaultDataDir()
+	}
+	if !scenariosSet {
+		*scenariosDir = defaultScenariosDir()
 	}
 
 	// Every log.Printf lands both in this console (what a terminal user watches directly)
@@ -83,9 +144,22 @@ func runServe(args []string) {
 
 	cfg, err := config.Load(*configPath)
 	if err == config.ErrUsingZeroConfigDefaults {
-		log.Printf("no config file at %s -- %v", *configPath, err)
+		tried := strings.Join(configCandidates, ", ")
+		if dir := executableDir(); dir != "" {
+			tried += ", " + filepath.Join(dir, "eebus.yaml")
+		}
+		log.Printf("config: NO file found (tried %s) -- running on zero-config defaults; "+
+			"an edited eebus.yaml elsewhere is NOT being read", tried)
 	} else if err != nil {
 		log.Fatalf("config: %v", err)
+	} else {
+		abs, _ := filepath.Abs(*configPath)
+		log.Printf("config: loaded %s", abs)
+	}
+	if absData, err := filepath.Abs(*dataDir); err == nil {
+		// The data directory decides the identity, and the identity decides every pairing.
+		// Name it unmissably, so "why did my pairing break" is answerable from one log line.
+		log.Printf("data dir: %s (holds the identity -- changing it changes this testbench's SKI)", absData)
 	}
 
 	identityDir := filepath.Join(*dataDir, "identity")
@@ -230,6 +304,35 @@ func runServe(args []string) {
 	if err != nil {
 		log.Fatalf("eebus stack: %v", err)
 	}
+	// The truststore must exist and the connected-peer callback must be registered BEFORE the
+	// stack starts: a device can dial in the instant the SHIP server is up, and that first
+	// connection is exactly the one that needs persisting. Config peers cover devices declared
+	// up front; the store covers everything trusted interactively or paired from the device's
+	// side (auto-accepted here, never visible to the trust API). Kept separate from the config
+	// so a re-imaged device (new SKI) can simply be trusted again without editing any file.
+	trustStore, err := truststore.Load(*dataDir)
+	if err != nil {
+		// A damaged store costs re-pairing, not startup.
+		log.Printf("truststore: %v", err)
+	}
+	simSKIs := map[string]bool{}
+	for _, dev := range simDevices {
+		simSKIs[dev.LocalSKI()] = true
+	}
+	stack.OnPeerConnected = func(ski string) {
+		if simSKIs[ski] {
+			return
+		}
+		added, addErr := trustStore.Add(ski)
+		if addErr != nil {
+			log.Printf("trust: persisting %s failed: %v", ski, addErr)
+			return
+		}
+		if added {
+			log.Printf("trust: %s connected and is now persisted in %s -- it will be re-dialled after a restart", ski, truststore.FileName)
+		}
+	}
+
 	if err := stack.Start(); err != nil {
 		log.Fatalf("eebus stack start: %v", err)
 	}
@@ -270,15 +373,8 @@ func runServe(args []string) {
 		}
 	}
 
-	// Re-trust everything trusted through the API or dashboard in an earlier run. Config peers
-	// above cover devices declared up front; this covers the ones trusted interactively, which
-	// used to be forgotten on restart. Kept separate from the config so a re-imaged device (new
-	// SKI) can simply be trusted again without editing any file.
-	trustStore, err := truststore.Load(*dataDir)
-	if err != nil {
-		// A damaged store costs re-pairing, not startup.
-		log.Printf("truststore: %v", err)
-	}
+	// Re-dial everything trusted in an earlier run (loaded and registered before Start; the
+	// dial itself needs the started stack).
 	for _, ski := range trustStore.SKIs() {
 		log.Printf("trust: restoring %s from %s", ski, truststore.FileName)
 		stack.Trust(ski)

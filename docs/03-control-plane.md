@@ -2,8 +2,10 @@
 
 ## Web interfaces
 
-The dashboard (`/ui`) and the REST API share one port, `api.port` in `eebus.yaml` (
-defaulting to 8080/8081) -- there is no separate host-port mapping to know about.
+The dashboard (`/ui`) and the REST API share one port, `api.port` in `eebus.yaml`
+(default 8080) -- there is no separate host-port mapping to know about. The bundled
+EEBusTracer, when running, serves its own UI on its own port (default 8090) and is linked
+from the sidebar.
 
 The dashboard is a single static HTML application served by the binary. It has no external
 frontend runtime or build step.

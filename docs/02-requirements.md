@@ -5,8 +5,9 @@
 The testbench is an engineering tool for understanding and exercising an EEBUS device under
 test. It is intended for development, integration, and regression testing.
 
-It is not a conformance, certification, fuzzing, security-negative, performance, or robustness
-suite.
+It is not a certification, fuzzing, security-negative, performance, or robustness suite. It
+does include a wire-level conformance checker (EEBUS JSON encoding and SPINE datagram rules,
+with the standard reference on every finding), but passing it is not a certification claim.
 
 ## Required workflows
 
@@ -18,9 +19,13 @@ The product must support these end-to-end workflows:
 4. Explore device type, entity addresses, advertised use cases, versions, and raw discovery.
 5. Read live energy, grid, vehicle, photovoltaic, battery, and power-limit state when the peer
    advertises those use cases.
-6. Apply and release power limits directly from the dashboard.
+6. Apply and release power limits directly from the dashboard, including timed charge
+   profiles (sequences of limits with per-step expiry).
 7. Run repeatable use-case scenarios from the dashboard, the CLI, or CI.
 8. Inspect logs, live events, and mDNS visibility.
+9. Inspect every raw SHIP frame both directions, with conformance findings that cite the
+   standard, live in the dashboard and via REST — and hand a session to the bundled
+   EEBusTracer for offline deep dives.
 
 ## Current typed API
 
@@ -41,6 +46,9 @@ The primary adapter provides typed operations for:
   - EVCC, EVSECC, CEVC, EVCEM, EVSOC;
   - VAPD photovoltaic data;
   - VABD battery data.
+- Message trace
+  - raw frame list with cursor polling, single-frame lookup with the wire payload;
+  - conformance summary aggregated by rule, split into errors and warnings.
 
 The REST API remains the single surface for every registered operation, without a dedicated
 method.
@@ -58,7 +66,13 @@ The desktop dashboard must:
 - let an engineer drill from peer to entity to use case;
 - label actions that change the connected device;
 - provide an interactive time-series view with selectable ranges and sample inspection;
-- provide a separate test runner and diagnostics workspace.
+- render per-phase values with asymmetric loading flagged;
+- provide a message-trace workspace with per-frame conformance findings, and keep expanded
+  rows expanded while the live stream updates;
+- provide a charge-profile builder whose live runs carry per-step expiry (a dead-man's
+  switch) and which exports the equivalent scenario YAML;
+- provide a separate test runner and diagnostics workspace;
+- be fully localized (en/de/zh-Hans), with the dictionaries guarded by CI.
 
 The current history is session-local. Persistent time-series storage is not included.
 
@@ -87,11 +101,13 @@ The implemented step verbs are:
 - `sleep`
 - `log`
 - `call`
-- `put`
+- `put`, `post`, `delete` — each with an optional `expect_status:` so a scenario can require
+  a refusal
 - `assert`
 - `expect_event`
 
-Assertions support nested fields and:
+Assertions support nested fields (numeric path segments index arrays, e.g.
+`ev.vehicles.0.power_w`) and:
 
 - `equals`, `not_equals`
 - `greater_than`, `greater_or_equal`
@@ -99,9 +115,12 @@ Assertions support nested fields and:
 - `not_null`
 - `contains`
 - `length_greater_than`
+- `each_less_than` — every numeric element of an array under a bound
+- `sum_matches` — array elements must add up to another field within a tolerance
+- `duration_at_least`, `duration_at_most` — ISO-8601 comparisons
 
-The framework is deliberately small. Add domain-specific behavior through REST endpoints or
-raw RPC, then express the expected result in YAML.
+The framework is deliberately small. Add domain-specific behavior through REST endpoints,
+then express the expected result in YAML.
 
 ## Known limitations
 
@@ -112,8 +131,9 @@ raw RPC, then express the expected result in YAML.
 - EV count is derived from discovered EV entities and their reported connected state. It is
   not inferred from electrical load.
 - A vehicle's state of charge depends on the charging communication path and may be absent.
-- Real mDNS requires native Linux host networking. Static addresses are the supported
-  fallback elsewhere.
+- Real mDNS requires a layer-2 path to the device: native Windows, macOS, or Linux all work;
+  NAT'd namespaces (WSL2, containers) do not. Static `peers:` addresses are the supported
+  fallback where multicast cannot reach.
 
 ## Safety and confidentiality
 
