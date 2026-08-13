@@ -337,6 +337,53 @@ paths:
       summary: Server-Sent Events live feed (text/event-stream) -- open this in a browser tab, not Swagger's Try-it-out
       responses: { "200": { description: OK } }
 
+  /api/v1/trace:
+    get:
+      tags: [trace]
+      summary: Raw SHIP frames as captured on the wire (pre-repair), with conformance findings; list responses omit the raw payload
+      parameters:
+        - name: after
+          in: query
+          schema: { type: integer }
+          description: Return only frames with a sequence number greater than this (cursor polling)
+        - name: limit
+          in: query
+          schema: { type: integer }
+        - name: ski
+          in: query
+          schema: { type: string }
+        - name: dir
+          in: query
+          schema: { type: string, enum: [send, recv] }
+        - name: findings
+          in: query
+          schema: { type: string, enum: [only] }
+          description: Pass "only" to return exclusively non-conformant frames
+      responses: { "200": { description: OK } }
+    delete:
+      tags: [trace]
+      summary: Drop the retained frames and reset the per-peer conformance sessions
+      responses: { "200": { description: OK } }
+
+  /api/v1/trace/summary:
+    get:
+      tags: [trace]
+      summary: Conformance violations aggregated by rule, with standard references and per-peer counts
+      responses: { "200": { description: OK } }
+
+  /api/v1/trace/{seq}:
+    get:
+      tags: [trace]
+      summary: One captured frame in full, including the raw wire payload
+      parameters:
+        - name: seq
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+        "404": { description: Frame no longer retained }
+
   /api/v1/scenarios:
     get:
       tags: [scenarios]

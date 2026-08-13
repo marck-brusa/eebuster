@@ -29,6 +29,7 @@ import (
 	"github.com/marck-brusa/eebuster/internal/announce"
 	"github.com/marck-brusa/eebuster/internal/netfilter"
 	"github.com/marck-brusa/eebuster/internal/staticmdns"
+	"github.com/marck-brusa/eebuster/internal/trace"
 )
 
 // stackID is the event bus's stack identifier -- there is exactly one stack in this rewrite
@@ -66,6 +67,9 @@ type BootConfig struct {
 	// internal/netfilter and internal/announce.
 	AnnounceRules     netfilter.Rules
 	AnnounceAddresses []net.IP
+	// Frames, if set, receives every raw SHIP frame for the message trace and conformance
+	// checks -- captured at the websocket layer, before the vendored stack's JSON repairs.
+	Frames *trace.Store
 }
 
 // Stack wraps the embedded eebus-go service.Service plus the static mDNS provider feeding it
@@ -169,7 +173,21 @@ func New(cfg BootConfig) (*Stack, error) {
 	if err := svc.Setup(); err != nil {
 		return nil, err
 	}
-	svc.SetLogging(StdLogger{Prefix: "[" + stackID + "]", Level: cfg.LogLevel, Observe: stack.observeLogLine})
+	logger := StdLogger{Prefix: "[" + stackID + "]", Level: cfg.LogLevel, Observe: stack.observeLogLine}
+	if cfg.Frames != nil {
+		frames := cfg.Frames
+		logger.ObserveFrame = func(dir, ski, payload string) {
+			entry := frames.Add(stackID, dir, ski, payload)
+			// Only non-conformant traffic becomes an event: the event ring is the "something
+			// needs your attention" channel, the full frame flow lives in the trace store.
+			if len(entry.Findings) > 0 {
+				stack.events.Publish("spine", stackID, "spine-nonconformant", ski, map[string]any{
+					"seq": entry.Seq, "function": entry.Function, "findings": len(entry.Findings),
+				})
+			}
+		}
+	}
+	svc.SetLogging(logger)
 	stack.service = svc
 
 	if stack.injected {

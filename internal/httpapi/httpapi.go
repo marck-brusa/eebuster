@@ -16,6 +16,7 @@ import (
 	"github.com/marck-brusa/eebuster/internal/openapi"
 	"github.com/marck-brusa/eebuster/internal/telemetry"
 	"github.com/marck-brusa/eebuster/internal/templates"
+	"github.com/marck-brusa/eebuster/internal/trace"
 	"github.com/marck-brusa/eebuster/internal/truststore"
 	"github.com/marck-brusa/eebuster/internal/webui"
 )
@@ -29,15 +30,20 @@ type Server struct {
 	trust        *truststore.Store
 	telemetry    *telemetry.Store
 	logs         *logbuf.Buffer
+	frames       *trace.Store
 	mux          *http.ServeMux
 }
 
 // New builds the server. trust may be nil, in which case runtime trust decisions are not
-// persisted and behave as they did before (forgotten on restart).
-func New(cfg *config.Config, configPath, scenariosDir string, logs *logbuf.Buffer, stack *eebusgo.Stack, trust *truststore.Store) *Server {
+// persisted and behave as they did before (forgotten on restart). frames may be nil, in which
+// case the trace endpoints report an empty store.
+func New(cfg *config.Config, configPath, scenariosDir string, logs *logbuf.Buffer, stack *eebusgo.Stack, trust *truststore.Store, frames *trace.Store) *Server {
+	if frames == nil {
+		frames = trace.New()
+	}
 	s := &Server{
 		cfg: cfg, configPath: configPath, scenariosDir: scenariosDir, stack: stack,
-		telemetry: telemetry.New(), logs: logs, mux: http.NewServeMux(), trust: trust,
+		telemetry: telemetry.New(), logs: logs, mux: http.NewServeMux(), trust: trust, frames: frames,
 	}
 	s.routes()
 	return s
@@ -98,6 +104,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/events/recent", s.handleEventsRecent)
 	s.mux.HandleFunc("DELETE /api/v1/events", s.handleEventsClear)
 	s.mux.HandleFunc("GET /api/v1/events/stream", s.handleEventsStream)
+
+	s.mux.HandleFunc("GET /api/v1/trace", s.handleTraceList)
+	s.mux.HandleFunc("GET /api/v1/trace/summary", s.handleTraceSummary)
+	s.mux.HandleFunc("GET /api/v1/trace/{seq}", s.handleTraceEntry)
+	s.mux.HandleFunc("DELETE /api/v1/trace", s.handleTraceClear)
 
 	s.mux.HandleFunc("GET /api/v1/scenarios", s.handleScenariosList)
 	s.mux.HandleFunc("GET /api/v1/scenarios/catalog", s.handleScenariosCatalog)

@@ -66,6 +66,11 @@ type StdLogger struct {
 	// failed can be reported back through the API instead of only existing as a log line --
 	// see Stack.observeLogLine.
 	Observe func(msg string)
+	// ObserveFrame, if set, receives every raw SHIP frame this stack sends or receives --
+	// independent of Level, because frame capture must work without turning the console into
+	// the trace-level firehose. dir is "send" or "recv". See the Trace method for how the
+	// frames are recognised.
+	ObserveFrame func(dir, ski, payload string)
 }
 
 func (l StdLogger) enabled(level LogLevel) bool { return level <= l.Level }

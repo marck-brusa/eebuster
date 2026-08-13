@@ -452,6 +452,7 @@
       <button data-page="dashboard" class="active"><span class="nav-icon">D</span><span data-i18n="nav.dashboard">Dashboard</span></button>
       <button data-page="devices"><span class="nav-icon">N</span><span data-i18n="nav.devices">Devices &amp; network</span></button>
       <button data-page="usecases"><span class="nav-icon">U</span><span data-i18n="nav.usecases">Use cases</span></button>
+      <button data-page="trace"><span class="nav-icon">W</span><span data-i18n="nav.trace">Message trace</span></button>
       <button data-page="tests"><span class="nav-icon">T</span><span data-i18n="nav.tests">Test runner</span></button>
       <button data-page="diagnostics"><span class="nav-icon">X</span><span data-i18n="nav.diagnostics">Diagnostics</span></button>
     </nav>
@@ -713,6 +714,44 @@
         </div>
       </section>
 
+      <section class="page" id="page-trace">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow" data-i18n="page.trace.eyebrow">Wire-level inspection</div>
+            <h2 data-i18n="page.trace.title">Message trace and conformance</h2>
+            <p data-i18n="page.trace.sub">Every SHIP frame exactly as it appeared on the wire, checked against the EEBUS encoding rules before the stack's own JSON repairs.</p>
+          </div>
+          <div class="page-actions">
+            <span class="badge" id="trace-frames" data-i18n="trace.frames0">0 frames</span>
+            <span class="badge ok" id="trace-bad" data-i18n="trace.bad0">0 non-conformant</span>
+          </div>
+        </div>
+        <div class="panel panel-pad" style="margin-bottom:14px">
+          <div class="panel-head">
+            <div><h3 data-i18n="panel.conformance">Conformance summary</h3><div class="sub" data-i18n="panel.conformance.sub">Violations aggregated by rule, each with its reference into the standard</div></div>
+            <button class="small" id="trace-clear" data-i18n="btn.clear">Clear</button>
+          </div>
+          <div id="trace-summary" class="muted" data-i18n="trace.clean">No conformance findings in the retained window.</div>
+        </div>
+        <div class="panel panel-pad">
+          <div class="event-toolbar">
+            <select id="trace-peer" style="min-width:170px"><option value="" data-i18n="trace.allPeers">All peers</option></select>
+            <select id="trace-dir" style="min-width:110px">
+              <option value="" data-i18n="trace.bothDirs">Both directions</option>
+              <option value="send" data-i18n="trace.sent">sent</option>
+              <option value="recv" data-i18n="trace.received">received</option>
+            </select>
+            <input id="trace-search" type="text" style="min-width:210px" placeholder="filter by function, peer, classifier…" data-i18n-placeholder="trace.search">
+            <label class="muted"><input type="checkbox" id="trace-findings-only"> <span data-i18n="trace.findingsOnly">findings only</span></label>
+            <button class="small" id="trace-pause" data-i18n="btn.pause">Pause</button>
+          </div>
+          <div id="trace-table-wrap" style="max-height:560px;overflow:auto">
+            <table><thead><tr><th data-i18n="th.time">Time</th><th data-i18n="th.dir">Dir</th><th data-i18n="th.peer">Peer</th><th data-i18n="th.classifier">Classifier</th><th data-i18n="th.function">Function</th><th data-i18n="th.counter">Counter</th><th data-i18n="th.findings">Findings</th></tr></thead><tbody id="trace-body"></tbody></table>
+          </div>
+          <div class="empty" id="trace-empty" data-i18n="trace.empty">No frames captured yet. Frames appear as soon as a peer connects.</div>
+        </div>
+      </section>
+
       <section class="page" id="page-tests">
         <div class="page-head">
           <div>
@@ -816,6 +855,37 @@ const API = "/api/v1";
 // the spec and the logs.
 const I18N = {
   en: {
+    "nav.trace": "Message trace",
+    "page.trace.eyebrow": "Wire-level inspection",
+    "page.trace.title": "Message trace and conformance",
+    "page.trace.sub": "Every SHIP frame exactly as it appeared on the wire, checked against the EEBUS encoding rules before the stack's own JSON repairs.",
+    "panel.conformance": "Conformance summary",
+    "panel.conformance.sub": "Violations aggregated by rule, each with its reference into the standard",
+    "trace.frames0": "0 frames",
+    "trace.bad0": "0 non-conformant",
+    "trace.clean": "No conformance findings in the retained window.",
+    "trace.empty": "No frames captured yet. Frames appear as soon as a peer connects.",
+    "trace.allPeers": "All peers",
+    "trace.bothDirs": "Both directions",
+    "trace.sent": "sent",
+    "trace.received": "received",
+    "trace.search": "filter by function, peer, classifier…",
+    "trace.findingsOnly": "findings only",
+    "trace.rawTitle": "Wire payload",
+    "trace.gone": "Frame no longer retained.",
+    "th.dir": "Dir",
+    "th.peer": "Peer",
+    "th.classifier": "Classifier",
+    "th.function": "Function",
+    "th.counter": "Counter",
+    "th.findings": "Findings",
+    "th.rule": "Rule",
+    "th.count": "Count",
+    "th.specref": "Standard reference",
+    "btn.showFrame": "Show frame",
+    "js.traceFrames": "{n} frames",
+    "js.traceBad": "{n} non-conformant",
+    "js.traceCleared": "Trace cleared",
     "brand.tagline": "Live engineering testbench",
     "nav.label": "Workspace",
     "nav.dashboard": "Dashboard",
@@ -1121,6 +1191,37 @@ const I18N = {
     "js.allInterfaces": "(all)",
   },
   de: {
+    "nav.trace": "Nachrichten-Trace",
+    "page.trace.eyebrow": "Inspektion auf Leitungsebene",
+    "page.trace.title": "Nachrichten-Trace und Konformität",
+    "page.trace.sub": "Jeder SHIP-Frame genau wie auf der Leitung, geprüft gegen die EEBUS-Kodierungsregeln, bevor der Stack sein eigenes JSON repariert.",
+    "panel.conformance": "Konformitätsübersicht",
+    "panel.conformance.sub": "Verstöße je Regel aggregiert, jeweils mit Verweis in die Norm",
+    "trace.frames0": "0 Frames",
+    "trace.bad0": "0 nicht konform",
+    "trace.clean": "Keine Konformitätsbefunde im aufbewahrten Fenster.",
+    "trace.empty": "Noch keine Frames erfasst. Frames erscheinen, sobald sich ein Peer verbindet.",
+    "trace.allPeers": "Alle Peers",
+    "trace.bothDirs": "Beide Richtungen",
+    "trace.sent": "gesendet",
+    "trace.received": "empfangen",
+    "trace.search": "nach Funktion, Peer, Classifier filtern…",
+    "trace.findingsOnly": "nur Befunde",
+    "trace.rawTitle": "Leitungsdaten",
+    "trace.gone": "Frame nicht mehr vorhanden.",
+    "th.dir": "Richtung",
+    "th.peer": "Peer",
+    "th.classifier": "Classifier",
+    "th.function": "Funktion",
+    "th.counter": "Zähler",
+    "th.findings": "Befunde",
+    "th.rule": "Regel",
+    "th.count": "Anzahl",
+    "th.specref": "Normverweis",
+    "btn.showFrame": "Frame anzeigen",
+    "js.traceFrames": "{n} Frames",
+    "js.traceBad": "{n} nicht konform",
+    "js.traceCleared": "Trace geleert",
     "brand.tagline": "Live-Engineering-Testumgebung",
     "nav.label": "Arbeitsbereich",
     "nav.dashboard": "Übersicht",
@@ -1426,6 +1527,37 @@ const I18N = {
     "js.allInterfaces": "(alle)",
   },
   "zh-Hans": {
+    "nav.trace": "报文跟踪",
+    "page.trace.eyebrow": "线路级检查",
+    "page.trace.title": "报文跟踪与一致性",
+    "page.trace.sub": "每个 SHIP 帧均按线路上的原始形态展示，并在协议栈自行修复 JSON 之前按 EEBUS 编码规则检查。",
+    "panel.conformance": "一致性摘要",
+    "panel.conformance.sub": "按规则汇总的违规项，均附标准引用",
+    "trace.frames0": "0 帧",
+    "trace.bad0": "0 个不合规",
+    "trace.clean": "在保留窗口内未发现一致性问题。",
+    "trace.empty": "尚未捕获任何帧。对端连接后即会出现。",
+    "trace.allPeers": "所有对端",
+    "trace.bothDirs": "两个方向",
+    "trace.sent": "发送",
+    "trace.received": "接收",
+    "trace.search": "按功能、对端、分类器过滤…",
+    "trace.findingsOnly": "仅显示问题",
+    "trace.rawTitle": "线路载荷",
+    "trace.gone": "帧已不在保留窗口中。",
+    "th.dir": "方向",
+    "th.peer": "对端",
+    "th.classifier": "分类器",
+    "th.function": "功能",
+    "th.counter": "计数器",
+    "th.findings": "发现",
+    "th.rule": "规则",
+    "th.count": "数量",
+    "th.specref": "标准引用",
+    "btn.showFrame": "查看帧",
+    "js.traceFrames": "{n} 帧",
+    "js.traceBad": "{n} 个不合规",
+    "js.traceCleared": "跟踪已清空",
     "brand.tagline": "实时工程测试平台",
     "nav.label": "工作区",
     "nav.dashboard": "仪表板",
@@ -1797,6 +1929,7 @@ function applyI18n() {
   document.documentElement.lang = currentLang;
   document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = t(el.dataset.i18n); });
   document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
   const select = document.getElementById("lang-select");
   if (select) select.value = currentLang;
   // Re-selects the theme option: translating the option labels leaves the value intact, but
@@ -1811,7 +1944,7 @@ function setLang(lang) {
   applyI18n();
   // Dynamically rendered panels rebuild from state on the next poll; rebuild them now
   // instead, so a language switch is instant everywhere, not only in the static chrome.
-  try { renderCore(); renderSnapshot(); renderTests(); renderTemplates(); renderEvents(); } catch (_) {}
+  try { renderCore(); renderSnapshot(); renderTests(); renderTemplates(); renderEvents(); renderTrace(); renderTraceSummary(); } catch (_) {}
 }
 const USE_CASE_SHORT = {
   limitationOfPowerConsumption: "LPC",
@@ -1833,7 +1966,8 @@ const state = {
   selectedSki: localStorage.getItem("eebus-selected-ski") || "",
   range: Number(localStorage.getItem("eebus-chart-range") || 900),
   events: [], eventsPaused: false, eventSource: null,
-  logTimer: null, snapshotTimer: null, lockedChartIndex: null, polling: false
+  logTimer: null, snapshotTimer: null, lockedChartIndex: null, polling: false,
+  traceCursor: 0, traceEntries: [], tracePaused: false, traceSummary: null
 };
 
 class ApiError extends Error {
@@ -1961,6 +2095,7 @@ function showPage(name) {
   document.querySelectorAll(".nav button").forEach(button => button.classList.toggle("active", button.dataset.page === name));
   localStorage.setItem("eebus-active-page", name);
   if (name === "diagnostics") loadLogs();
+  if (name === "trace") { pollTrace(); refreshTraceSummary(); }
   if (name === "devices" && state.selectedSki) loadProfile();
 }
 
@@ -2698,6 +2833,135 @@ async function loadRecentEvents() {
   renderEvents();
 }
 
+// ---- Message trace -------------------------------------------------------------------
+// The trace page polls with a cursor: the server's ring keeps ~2000 frames, the browser
+// keeps the last 1000 it saw. Filters are applied at render time on the local buffer, so
+// changing them never loses already-captured frames.
+
+function tracePageActive() {
+  return document.getElementById("page-trace").classList.contains("active");
+}
+
+async function pollTrace() {
+  if (!tracePageActive() || state.tracePaused) return;
+  const res = await safeApi(`/trace?after=${state.traceCursor}&limit=500`, null);
+  if (!res) return;
+  state.traceCursor = res.latest_seq;
+  if (res.entries.length) {
+    state.traceEntries.push(...res.entries);
+    if (state.traceEntries.length > 1000) state.traceEntries = state.traceEntries.slice(-1000);
+  }
+  renderTrace();
+}
+
+async function refreshTraceSummary() {
+  if (!tracePageActive()) return;
+  state.traceSummary = await safeApi("/trace/summary", null);
+  renderTraceSummary();
+}
+
+function renderTraceSummary() {
+  const s = state.traceSummary;
+  if (!s) return;
+  document.getElementById("trace-frames").textContent = tf("js.traceFrames", {n: s.frames});
+  const bad = document.getElementById("trace-bad");
+  bad.textContent = tf("js.traceBad", {n: s.non_conformant});
+  bad.className = `badge ${s.non_conformant ? "err" : "ok"}`;
+  const host = document.getElementById("trace-summary");
+  if (!s.rules.length) {
+    host.className = "muted";
+    host.textContent = t("trace.clean");
+    return;
+  }
+  host.className = "";
+  host.innerHTML = `<div style="overflow:auto"><table><thead><tr><th>${esc(t("th.rule"))}</th><th>${esc(t("th.level"))}</th><th>${esc(t("th.count"))}</th><th>${esc(t("th.specref"))}</th><th></th></tr></thead><tbody>
+    ${s.rules.map(r => `<tr>
+      <td class="mono">${esc(r.rule)}</td>
+      <td><span class="badge ${r.severity === "error" ? "err" : "warn"}">${esc(r.severity)}</span></td>
+      <td>${esc(r.count)}</td>
+      <td class="muted">${esc(r.spec_ref || "")}</td>
+      <td><button class="small" data-trace-jump="${esc(r.last_seq)}">${esc(t("btn.showFrame"))}</button></td>
+    </tr>`).join("")}
+  </tbody></table></div>`;
+}
+
+function traceFilterMatch(e) {
+  const peer = document.getElementById("trace-peer").value;
+  if (peer && e.ski !== peer) return false;
+  const dir = document.getElementById("trace-dir").value;
+  if (dir && e.dir !== dir) return false;
+  if (document.getElementById("trace-findings-only").checked && !e.findings.length) return false;
+  const q = document.getElementById("trace-search").value.trim().toLowerCase();
+  if (q) {
+    const hay = `${e.function || ""} ${e.classifier || ""} ${e.ski} ${e.source || ""} ${e.dest || ""} ${e.stack}`.toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  return true;
+}
+
+function renderTrace() {
+  const rows = state.traceEntries.filter(traceFilterMatch).slice(-300).reverse();
+  document.getElementById("trace-empty").style.display = state.traceEntries.length ? "none" : "block";
+  document.getElementById("trace-body").innerHTML = rows.map(e => `
+    <tr class="event-row" data-trace-seq="${esc(e.seq)}">
+      <td>${esc(new Date(e.ts * 1000).toLocaleTimeString())}</td>
+      <td><span class="badge ${e.dir === "send" ? "" : "purple"}">${esc(e.dir === "send" ? t("trace.sent") : t("trace.received"))}</span></td>
+      <td class="mono">${esc(shortSki(e.ski))}</td>
+      <td>${esc(e.classifier || (e.kind === "ship" ? "SHIP" : "—"))}</td>
+      <td class="mono">${esc(e.function || "—")}</td>
+      <td class="mono">${e.msg_counter ?? "—"}${e.msg_counter_reference != null ? ` → ${esc(e.msg_counter_reference)}` : ""}</td>
+      <td>${e.findings.length ? `<span class="badge err">${e.findings.length}</span>` : `<span class="badge ok">0</span>`}</td>
+    </tr>
+    <tr class="event-payload hidden" data-trace-payload="${esc(e.seq)}"><td colspan="7"></td></tr>`).join("");
+}
+
+async function toggleTraceDetail(seq) {
+  const row = document.querySelector(`[data-trace-payload="${seq}"]`);
+  if (!row) return;
+  if (!row.classList.contains("hidden")) { row.classList.add("hidden"); return; }
+  const cell = row.firstElementChild;
+  cell.innerHTML = `<div class="muted">${esc(t("empty.loading"))}</div>`;
+  row.classList.remove("hidden");
+  const entry = await safeApi(`/trace/${seq}`, null);
+  if (!entry) { cell.innerHTML = `<div class="muted">${esc(t("trace.gone"))}</div>`; return; }
+  let pretty = entry.raw;
+  try { pretty = JSON.stringify(JSON.parse(entry.raw.replace(/\u0000+$/, "")), null, 2); } catch (_) {}
+  const findings = entry.findings.length ? `<div style="margin-bottom:9px">${entry.findings.map(f => `
+      <div class="notice" style="margin-top:6px"><span class="badge ${f.severity === "error" ? "err" : "warn"}">${esc(f.rule)}</span>
+      ${f.path ? `<span class="mono" style="margin-left:7px">${esc(f.path)}</span>` : ""}<br>${esc(f.message)}
+      ${f.spec_ref ? `<br><span class="muted" style="font-size:11px">${esc(f.spec_ref)}</span>` : ""}</div>`).join("")}</div>` : "";
+  cell.innerHTML = `${findings}
+    <div class="muted" style="margin:4px 0">${esc(t("trace.rawTitle"))} · ${esc(entry.size)} B · ${esc(entry.source || "")}${entry.dest ? " → " + esc(entry.dest) : ""}</div>
+    <pre class="raw" style="max-height:340px">${esc(pretty)}</pre>`;
+}
+
+async function jumpToTraceFrame(seq) {
+  // Frame referenced from the summary may be outside the local buffer; make sure a row for
+  // it exists, then open its detail.
+  if (!state.traceEntries.some(e => e.seq === Number(seq))) {
+    const entry = await safeApi(`/trace/${seq}`, null);
+    if (entry) {
+      delete entry.raw;
+      state.traceEntries.push(entry);
+      state.traceEntries.sort((a, b) => a.seq - b.seq);
+    }
+  }
+  document.getElementById("trace-findings-only").checked = false;
+  document.getElementById("trace-search").value = "";
+  renderTrace();
+  await toggleTraceDetail(Number(seq));
+  document.querySelector(`[data-trace-seq="${seq}"]`)?.scrollIntoView({block: "center"});
+}
+
+function populateTracePeers() {
+  const select = document.getElementById("trace-peer");
+  const previous = select.value;
+  const skis = [...new Set(state.traceEntries.map(e => e.ski))];
+  select.innerHTML = `<option value="">${esc(t("trace.allPeers"))}</option>` +
+    skis.map(ski => `<option value="${esc(ski)}">${esc(labelForSki(ski))}</option>`).join("");
+  if (skis.includes(previous)) select.value = previous;
+}
+
 async function boot() {
   state.version = await safeApi("/version", {});
   showPage(localStorage.getItem("eebus-active-page") || "dashboard");
@@ -2748,6 +3012,8 @@ async function boot() {
   state.logTimer = setInterval(() => {
     if (document.getElementById("log-live").checked && document.getElementById("page-diagnostics").classList.contains("active")) loadLogs();
   }, 3000);
+  setInterval(pollTrace, 2000);
+  setInterval(() => { refreshTraceSummary(); if (tracePageActive()) populateTracePeers(); }, 6000);
   setInterval(() => {
     if (state.snapshot) document.getElementById("snapshot-age").textContent = formatAge(state.snapshot.ts);
   }, 1000);
@@ -2793,6 +3059,18 @@ document.getElementById("pause-events").addEventListener("click", event => {
 document.getElementById("clear-events").addEventListener("click", async () => {
   await api("/events", {method:"DELETE"}); state.events = []; renderEvents();
 });
+document.getElementById("trace-pause").addEventListener("click", event => {
+  state.tracePaused = !state.tracePaused;
+  event.currentTarget.textContent = state.tracePaused ? t("btn.resume") : t("btn.pause");
+});
+document.getElementById("trace-clear").addEventListener("click", async () => {
+  await api("/trace", {method:"DELETE"});
+  state.traceEntries = []; state.traceCursor = 0; state.traceSummary = null;
+  renderTrace(); refreshTraceSummary(); toast(t("js.traceCleared"));
+});
+["trace-peer","trace-dir","trace-findings-only"].forEach(id =>
+  document.getElementById(id).addEventListener("change", renderTrace));
+document.getElementById("trace-search").addEventListener("input", renderTrace);
 document.getElementById("power-chart").addEventListener("mousemove", event => inspectChart(event));
 document.getElementById("power-chart").addEventListener("click", event => inspectChart(event, true));
 document.getElementById("power-chart").addEventListener("mouseleave", () => {
@@ -2853,6 +3131,10 @@ document.addEventListener("click", async event => {
   }
   const run = event.target.closest("[data-run-test]");
   if (run) { await runOneTest(run.dataset.runTest, run); return; }
+  const traceJump = event.target.closest("[data-trace-jump]");
+  if (traceJump) { await jumpToTraceFrame(traceJump.dataset.traceJump); return; }
+  const traceRow = event.target.closest("[data-trace-seq]");
+  if (traceRow) { await toggleTraceDetail(traceRow.dataset.traceSeq); return; }
   const eventRow = event.target.closest("[data-event-index]");
   if (eventRow) {
     const payload = document.querySelector(`[data-event-payload="${eventRow.dataset.eventIndex}"]`);

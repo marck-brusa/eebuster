@@ -103,7 +103,7 @@ jobs:
           console.log(`${Object.keys(I18N).length} languages, ${base.size} keys, ${used.size} referenced`);
           process.exit(problems ? 1 : 0);
           """
-          used = set(re.findall(r'data-i18n(?:-title)?="([^"]+)"', html))
+          used = set(re.findall(r'data-i18n(?:-title|-placeholder)?="([^"]+)"', html))
           used |= set(re.findall(r'\bt(?:f)?\("([^"]+)"', html))
           path = tempfile.NamedTemporaryFile("w", suffix=".js", delete=False)
           path.write(harness); path.close()

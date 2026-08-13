@@ -27,6 +27,7 @@ import (
 	"github.com/marck-brusa/eebuster/internal/eebusgo"
 	"github.com/marck-brusa/eebuster/internal/identity"
 	"github.com/marck-brusa/eebuster/internal/netfilter"
+	"github.com/marck-brusa/eebuster/internal/trace"
 )
 
 // Device is one simulated peer: its own EEBUS service, an LPC (Controllable System side --
@@ -60,8 +61,10 @@ func entityAndDeviceType(t string) (spinemodel.EntityTypeType, spinemodel.Device
 
 // New configures and Setup()s (but does not Start) one simulated device. dataDir is the same
 // data directory the primary stack uses -- each simulated device gets its own identity under
-// <dataDir>/identity/sim-<id>/, never shared with the primary stack's own identity.
-func New(cfg config.SimulatedDevice, dataDir string, logLevel eebusgo.LogLevel, rules netfilter.Rules) (*Device, error) {
+// <dataDir>/identity/sim-<id>/, never shared with the primary stack's own identity. frames
+// may be nil; when set, the simulated device's raw frames land in the same trace store as the
+// primary stack's, which is what lets the Trace tab (and its tests) run without hardware.
+func New(cfg config.SimulatedDevice, dataDir string, logLevel eebusgo.LogLevel, rules netfilter.Rules, frames *trace.Store) (*Device, error) {
 	if cfg.ID == "" {
 		return nil, fmt.Errorf("simulator device is missing an id")
 	}
@@ -108,7 +111,14 @@ func New(cfg config.SimulatedDevice, dataDir string, logLevel eebusgo.LogLevel, 
 	if err := svc.Setup(); err != nil {
 		return nil, fmt.Errorf("simulator %s: setup: %w", cfg.ID, err)
 	}
-	svc.SetLogging(eebusgo.StdLogger{Prefix: "[sim-" + cfg.ID + "]", Level: logLevel})
+	simLogger := eebusgo.StdLogger{Prefix: "[sim-" + cfg.ID + "]", Level: logLevel}
+	if frames != nil {
+		simStack := "sim-" + cfg.ID
+		simLogger.ObserveFrame = func(dir, ski, payload string) {
+			frames.Add(simStack, dir, ski, payload)
+		}
+	}
+	svc.SetLogging(simLogger)
 	d.service = svc
 	// Its own host label, so this device's address records can never merge with the main stack's
 	// or with another simulated device's.

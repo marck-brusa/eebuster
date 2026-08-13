@@ -19,6 +19,7 @@ import (
 	"github.com/marck-brusa/eebuster/internal/logbuf"
 	"github.com/marck-brusa/eebuster/internal/simulator"
 	"github.com/marck-brusa/eebuster/internal/staticmdns"
+	"github.com/marck-brusa/eebuster/internal/trace"
 	"github.com/marck-brusa/eebuster/internal/truststore"
 )
 
@@ -158,11 +159,15 @@ func runServe(args []string) {
 	// chain composes real zeroconf with these synthetic entries in either case, so the
 	// simulator runs under the zero-config mdns default a double-click gets, not just static
 	// mode. Verified by a full SPINE handshake in mdns mode.
+	// One trace store for every stack in the process: the primary stack's frames and the
+	// simulated devices' frames land in the same ring, tagged by stack id.
+	frames := trace.New()
+
 	var simDevices []*simulator.Device
 	var simPeers []staticmdns.Peer
 	if *simulatorFlag && cfg.Simulator.Enabled {
 		for _, devCfg := range cfg.Simulator.Devices {
-			dev, err := simulator.New(devCfg, *dataDir, logLevel, cfg.Network.AnnounceRules())
+			dev, err := simulator.New(devCfg, *dataDir, logLevel, cfg.Network.AnnounceRules(), frames)
 			if err != nil {
 				log.Fatalf("simulator %s: %v", devCfg.ID, err)
 			}
@@ -191,6 +196,7 @@ func runServe(args []string) {
 
 		AnnounceRules:     cfg.Network.AnnounceRules(),
 		AnnounceAddresses: announceIPs,
+		Frames:            frames,
 	})
 	if err != nil {
 		log.Fatalf("eebus stack: %v", err)
@@ -258,7 +264,7 @@ func runServe(args []string) {
 		stack.Trust(dev.LocalSKI())
 	}
 
-	server := httpapi.New(cfg, *configPath, *scenariosDir, logs, stack, trustStore)
+	server := httpapi.New(cfg, *configPath, *scenariosDir, logs, stack, trustStore, frames)
 	httpServer := &http.Server{Addr: cfg.API.Bind + ":" + strconv.Itoa(cfg.API.Port), Handler: server.Handler()}
 	go func() {
 		log.Printf("dashboard listening on http://%s/ui", httpServer.Addr)

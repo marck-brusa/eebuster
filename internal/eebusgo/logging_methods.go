@@ -3,6 +3,7 @@ package eebusgo
 import (
 	"fmt"
 	"log"
+	"strings"
 )
 
 // The LoggingInterface implementations live here rather than next to the type so each one can
@@ -30,7 +31,29 @@ func (l StdLogger) emitf(level LogLevel, format string, args ...interface{}) {
 	log.Print(msg)
 }
 
-func (l StdLogger) Trace(args ...interface{})                 { l.emit(LogTrace, args...) }
+// Trace additionally recognises ship-go's raw-frame logging. The websocket layer logs every
+// frame in exactly this shape (vendor/github.com/enbility/ship-go/ws/websocket.go):
+//
+//	logging.Log().Trace("Send:", w.remoteSki, text)
+//	logging.Log().Trace("Recv:", w.remoteSki, text)
+//
+// where text is the message minus its 1-byte SHIP header, BEFORE the stack's JSON repairs --
+// the only place the honest wire bytes are observable. Matching the argument shape here
+// avoids parsing formatted log text, and runs before the level filter so capture works at any
+// console verbosity. If a vendored ship-go update changes the call shape, frames silently
+// stop arriving -- TestVendoredFrameLogShape pins it.
+func (l StdLogger) Trace(args ...interface{}) {
+	if l.ObserveFrame != nil && len(args) == 3 {
+		if dir, ok := args[0].(string); ok && (dir == "Send:" || dir == "Recv:") {
+			ski, okSki := args[1].(string)
+			payload, okPayload := args[2].(string)
+			if okSki && okPayload {
+				l.ObserveFrame(strings.TrimSuffix(strings.ToLower(dir), ":"), ski, payload)
+			}
+		}
+	}
+	l.emit(LogTrace, args...)
+}
 func (l StdLogger) Tracef(format string, args ...interface{}) { l.emitf(LogTrace, format, args...) }
 func (l StdLogger) Debug(args ...interface{})                 { l.emit(LogDebug, args...) }
 func (l StdLogger) Debugf(format string, args ...interface{}) { l.emitf(LogDebug, format, args...) }

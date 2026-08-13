@@ -65,6 +65,16 @@ Provides:
 - MPC and MGCP reads;
 - combined EV/PV/battery snapshot reads;
 
+### Message trace
+
+Shows every SHIP frame as it appeared on the wire, in both directions, for every stack in the
+process (including simulated devices). Capture happens at the websocket layer *before* the
+vendored stack's JSON repairs, so structurally broken messages are shown as the device
+actually sent them. Each frame is checked against the EEBUS JSON encoding rules and the SPINE
+datagram rules (see `internal/conformance`); findings carry a reference into the standard. A
+conformance summary aggregates violations by rule; clicking a frame shows its findings and
+the raw wire payload.
+
 ### Test runner
 
 Loads metadata from `scenarios/*.yaml`. Tests can be run individually, as a read-only set, or
@@ -149,6 +159,10 @@ needed.
 | GET | `/events/stream` | Server-Sent Events |
 | DELETE | `/events` | Clear recent events |
 | GET | `/templates` | LPC/LPP request templates |
+| GET | `/trace` | Captured wire frames with conformance findings (cursor polling via `?after=`) |
+| GET | `/trace/{seq}` | One frame in full, including the raw payload |
+| GET | `/trace/summary` | Violations aggregated by rule, with standard references |
+| DELETE | `/trace` | Clear the trace and conformance sessions |
 
 ## Examples
 
