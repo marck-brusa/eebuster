@@ -140,9 +140,24 @@ func New(cfg config.SimulatedDevice, dataDir string, logLevel eebusgo.LogLevel, 
 	_ = lpcUC.SetFailsafeConsumptionActivePowerLimit(baseline/2, true)
 	_ = lpcUC.SetFailsafeDurationMinimum(2*time.Hour, true)
 
+	// Publish per-phase values too, on a deliberately asymmetric two-phase split (see
+	// reportPower): the dashboard's phase-balance panel and the asymmetry scenarios need a
+	// device that shows the effect without hardware.
+	measured := mumpc.PhaseMeasurementSourceMap{
+		spinemodel.ElectricalConnectionPhaseNameTypeA: util.Ptr(spinemodel.MeasurementValueSourceTypeMeasuredValue),
+		spinemodel.ElectricalConnectionPhaseNameTypeB: util.Ptr(spinemodel.MeasurementValueSourceTypeMeasuredValue),
+		spinemodel.ElectricalConnectionPhaseNameTypeC: util.Ptr(spinemodel.MeasurementValueSourceTypeMeasuredValue),
+	}
 	mpcUC, err := mumpc.NewMPC(localEntity, d.onMPCEvent,
-		&mumpc.MonitorPowerConfig{ValueSourceTotal: util.Ptr(spinemodel.MeasurementValueSourceTypeMeasuredValue)},
-		nil, nil, nil, nil,
+		&mumpc.MonitorPowerConfig{
+			ConnectedPhases:     spinemodel.ElectricalConnectionPhaseNameTypeAbc,
+			ValueSourceTotal:    util.Ptr(spinemodel.MeasurementValueSourceTypeMeasuredValue),
+			ValueSourcePerPhase: measured,
+		},
+		nil,
+		&mumpc.MonitorCurrentConfig{ValueSourcePerPhase: measured},
+		&mumpc.MonitorVoltageConfig{ValueSourcePerPhase: measured},
+		nil,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("simulator %s: configuring mu/mpc: %w", cfg.ID, err)
@@ -217,11 +232,28 @@ func (d *Device) reportPower() {
 	}
 	d.mu.Unlock()
 
-	if err := d.mpc.Update(d.mpc.UpdateDataPowerTotal(power, nil, nil)); err != nil {
+	// Two-phase split: L1 and L2 carry the load, L3 idles. A real single/two-phase EV charger
+	// on a three-phase connection looks exactly like this, and a deliberately asymmetric
+	// simulated device is what lets the phase-balance panel and the asymmetry test scenarios
+	// demonstrate anything without hardware. 230 V nominal per phase.
+	const nominalV = 230.0
+	phaseW := []float64{power / 2, power / 2, 0}
+	if err := d.mpc.Update(
+		d.mpc.UpdateDataPowerTotal(power, nil, nil),
+		d.mpc.UpdateDataPowerPhaseA(phaseW[0], nil, nil),
+		d.mpc.UpdateDataPowerPhaseB(phaseW[1], nil, nil),
+		d.mpc.UpdateDataPowerPhaseC(phaseW[2], nil, nil),
+		d.mpc.UpdateDataCurrentPhaseA(phaseW[0]/nominalV, nil, nil),
+		d.mpc.UpdateDataCurrentPhaseB(phaseW[1]/nominalV, nil, nil),
+		d.mpc.UpdateDataCurrentPhaseC(phaseW[2]/nominalV, nil, nil),
+		d.mpc.UpdateDataVoltagePhaseA(nominalV, nil, nil),
+		d.mpc.UpdateDataVoltagePhaseB(nominalV, nil, nil),
+		d.mpc.UpdateDataVoltagePhaseC(nominalV, nil, nil),
+	); err != nil {
 		log.Printf("simulator[%s]: reporting %.0fW failed: %v", d.id, power, err)
 		return
 	}
-	log.Printf("simulator[%s]: reporting %.0fW", d.id, power)
+	log.Printf("simulator[%s]: reporting %.0fW (L1 %.0fW / L2 %.0fW / L3 %.0fW)", d.id, power, phaseW[0], phaseW[1], phaseW[2])
 }
 
 // The rest of api.ServiceReaderInterface: a simulator has no pairing UI, so these are
