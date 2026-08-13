@@ -1,4 +1,4 @@
-# github.com/enbility/eebus-go v0.7.1-0.20260720111250-363db3c5c262
+# github.com/enbility/eebus-go v0.7.1-0.20260731142702-0aa83d264add
 ## explicit; go 1.24.1
 github.com/enbility/eebus-go/api
 github.com/enbility/eebus-go/features/client
@@ -11,6 +11,9 @@ github.com/enbility/eebus-go/usecases/cem/evcc
 github.com/enbility/eebus-go/usecases/cem/evcem
 github.com/enbility/eebus-go/usecases/cem/evsecc
 github.com/enbility/eebus-go/usecases/cem/evsoc
+github.com/enbility/eebus-go/usecases/cem/ohpcf
+github.com/enbility/eebus-go/usecases/cem/opev
+github.com/enbility/eebus-go/usecases/cem/oscev
 github.com/enbility/eebus-go/usecases/cem/vabd
 github.com/enbility/eebus-go/usecases/cem/vapd
 github.com/enbility/eebus-go/usecases/cs/lpc

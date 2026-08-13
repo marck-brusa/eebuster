@@ -3,7 +3,7 @@ module github.com/marck-brusa/eebuster
 go 1.24.1
 
 require (
-	github.com/enbility/eebus-go v0.7.1-0.20260720111250-363db3c5c262
+	github.com/enbility/eebus-go v0.7.1-0.20260731142702-0aa83d264add
 	github.com/enbility/ship-go v0.6.1-0.20260518113001-134687068e3c
 	github.com/enbility/spine-go v0.7.1-0.20260520153416-0104ce40c885
 	gopkg.in/yaml.v3 v3.0.1

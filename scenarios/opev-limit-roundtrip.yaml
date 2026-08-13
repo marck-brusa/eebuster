@@ -1,0 +1,37 @@
+name: opev-limit-roundtrip
+description: >
+  Writes per-phase charging-current obligations (Overload Protection by EV Charging Current
+  Curtailment, EEBus UC TS OPEV V1.0.1b, scenario 1) and requires them to be visible on
+  readback, then releases them. Obligations cap the current the EV may draw per phase — the
+  control a HEMS uses to protect a site fuse — so a device that accepts the write but keeps
+  reporting the old limits leaves the energy manager blind to what is actually enforced.
+  Needs a vehicle associated: some devices announce this use case permanently but only create
+  the EV entity it lives on during a session, so without one the write fails (rather than
+  skips) — which is itself worth knowing about a device.
+category: Conformance
+risk: live-control
+requires:
+  capabilities: [opev.write]
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: a, value_a: 6, is_active: true}
+          - {phase: b, value_a: 6, is_active: true}
+          - {phase: c, value_a: 6, is_active: true}
+  - sleep: 2
+  - assert:
+      get: "/api/v1/opev/{peer.ski}"
+      not_null: [limits]
+      equals: {limits.0.value_a: 6, limits.0.is_active: true}
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: a, value_a: 6, is_active: false}
+          - {phase: b, value_a: 6, is_active: false}
+          - {phase: c, value_a: 6, is_active: false}

@@ -29,7 +29,7 @@ type useCaseCatalogEntry struct {
 
 // useCaseCatalog mirrors docs/20-use-case-matrix.md. TypedOperations names the typed access
 // this tool offers for the use case; empty means the device browser lists it without any
-// typed read or write (OPEV/OSCEV/OHPCF have no eebus-go client implementation).
+// typed read or write.
 var useCaseCatalog = map[string]useCaseCatalogEntry{
 	"limitationOfPowerConsumption": {
 		Acronym: "LPC", Title: "Limitation of Power Consumption", Domain: "limitation",
@@ -88,18 +88,18 @@ var useCaseCatalog = map[string]useCaseCatalogEntry{
 	},
 	"overloadProtectionByEvChargingCurrentCurtailment": {
 		Acronym: "OPEV", Title: "Overload Protection by EV Charging Current Curtailment", Domain: "e-mobility",
-		Description:     "Per-phase charging-current limits. No typed access in this tool (no eebus-go client implementation).",
-		TypedOperations: []string{},
+		Description:     "Per-phase charging-current obligations the EV must not exceed.",
+		TypedOperations: []string{"current limits read/write", "constraints"},
 	},
 	"optimizationOfSelfConsumptionDuringEvCharging": {
 		Acronym: "OSCEV", Title: "Optimization of Self-Consumption During EV Charging", Domain: "e-mobility",
-		Description:     "No typed access in this tool (no eebus-go client implementation).",
-		TypedOperations: []string{},
+		Description:     "Per-phase charging-current recommendations the EV may follow.",
+		TypedOperations: []string{"current limits read/write", "constraints"},
 	},
 	"optimizationOfSelfConsumptionByHeatPumpCompressorFlexibility": {
 		Acronym: "OHPCF", Title: "Optimization of Self-Consumption by Heat Pump Compressor Flexibility", Domain: "hvac",
-		Description:     "No typed access in this tool (no eebus-go client implementation).",
-		TypedOperations: []string{},
+		Description:     "A heat pump compressor's flexibility offer: optional power consumption, pausability, run windows.",
+		TypedOperations: []string{"flexibility read"},
 	},
 }
 

@@ -1,0 +1,15 @@
+name: oscev-read
+description: >
+  Reads the per-phase recommendation state of Optimization of Self-Consumption During EV
+  Charging (EEBus UC TS OSCEV V1.0.1b). Recommendations are advisory current setpoints the
+  EV may follow to absorb solar excess; a device advertising the use case must at least
+  answer the read.
+category: EV charging
+risk: read-only
+requires:
+  use_cases: [optimizationOfSelfConsumptionDuringEvCharging]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/oscev/{peer.ski}"

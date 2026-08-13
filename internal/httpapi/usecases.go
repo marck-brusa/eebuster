@@ -26,6 +26,11 @@ func (s *Server) registerUsecaseRoutes() {
 	s.mux.HandleFunc("GET /api/v1/lpp/{ski}/nominal-max", s.handleLPPNominalMax)
 
 	s.mux.HandleFunc("GET /api/v1/mpc/{ski}", s.handleMPCRead)
+	s.mux.HandleFunc("GET /api/v1/opev/{ski}", s.handleOPEVRead)
+	s.mux.HandleFunc("PUT /api/v1/opev/{ski}/limits", s.handleOPEVWriteLimits)
+	s.mux.HandleFunc("GET /api/v1/oscev/{ski}", s.handleOSCEVRead)
+	s.mux.HandleFunc("PUT /api/v1/oscev/{ski}/limits", s.handleOSCEVWriteLimits)
+	s.mux.HandleFunc("GET /api/v1/ohpcf/{ski}", s.handleOHPCFRead)
 	s.mux.HandleFunc("GET /api/v1/mgcp/{ski}", s.handleMGCPRead)
 }
 
@@ -272,6 +277,92 @@ func (s *Server) handleMGCPRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := s.stack.MGCP().Read(r.PathValue("ski"), hint)
+	if err != nil {
+		writeUsecaseError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+// Per-phase charging-current limits. OPEV writes obligations (overload protection: the EV
+// must not exceed them), OSCEV writes recommendations (self-consumption optimization: the EV
+// may follow them). Same request/response shapes, deliberately.
+
+type phaseLimitsBody struct {
+	Limits []eebusgo.PhaseLimit `json:"limits"`
+}
+
+func (s *Server) handleOPEVRead(w http.ResponseWriter, r *http.Request) {
+	hint, err := entityHint(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_entity_hint", "detail": err.Error()})
+		return
+	}
+	result, err := s.stack.OPEV().Read(r.PathValue("ski"), hint)
+	if err != nil {
+		writeUsecaseError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (s *Server) handleOPEVWriteLimits(w http.ResponseWriter, r *http.Request) {
+	hint, err := entityHint(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_entity_hint", "detail": err.Error()})
+		return
+	}
+	var body phaseLimitsBody
+	if err := decodeBody(r, &body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "detail": err.Error()})
+		return
+	}
+	if err := s.stack.OPEV().WriteLimits(r.PathValue("ski"), body.Limits, hint); err != nil {
+		writeUsecaseError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "sent": body.Limits})
+}
+
+func (s *Server) handleOSCEVRead(w http.ResponseWriter, r *http.Request) {
+	hint, err := entityHint(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_entity_hint", "detail": err.Error()})
+		return
+	}
+	result, err := s.stack.OSCEV().Read(r.PathValue("ski"), hint)
+	if err != nil {
+		writeUsecaseError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (s *Server) handleOSCEVWriteLimits(w http.ResponseWriter, r *http.Request) {
+	hint, err := entityHint(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_entity_hint", "detail": err.Error()})
+		return
+	}
+	var body phaseLimitsBody
+	if err := decodeBody(r, &body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "detail": err.Error()})
+		return
+	}
+	if err := s.stack.OSCEV().WriteLimits(r.PathValue("ski"), body.Limits, hint); err != nil {
+		writeUsecaseError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "sent": body.Limits})
+}
+
+func (s *Server) handleOHPCFRead(w http.ResponseWriter, r *http.Request) {
+	hint, err := entityHint(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_entity_hint", "detail": err.Error()})
+		return
+	}
+	result, err := s.stack.OHPCF().Read(r.PathValue("ski"), hint)
 	if err != nil {
 		writeUsecaseError(w, err)
 		return

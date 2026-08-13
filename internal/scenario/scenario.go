@@ -311,8 +311,23 @@ func selectPeer(peers []any, configPeers map[string]string, peerName string) (ma
 	// cause is a peers: entry named something else, and the fix is invisible unless the available
 	// names are shown: rename the entry, or set the scenario's peer: to one of these.
 	if len(configPeers) == 0 {
-		return nil, fmt.Errorf("peer %q cannot be resolved: the config has no peers: entries, so no name maps to a ski. "+
-			"Add the device under peers: (name it %q to match the bundled scenarios), or set this scenario's peer: to a 40-hex ski", peerName, peerName)
+		// With no peers: entries at all, exactly one connected peer is unambiguous -- this is
+		// the truststore workflow, where the device paired at runtime and the config never
+		// names it. Targeting the wrong device is impossible with a single candidate; two or
+		// more still fail loudly below, preserving the guarantee that made resolution strict
+		// in the first place (scenarios once silently ran against the simulator instead of
+		// the real device).
+		var connected []map[string]any
+		for _, p := range peers {
+			if m, ok := p.(map[string]any); ok && m["connected"] == true {
+				connected = append(connected, m)
+			}
+		}
+		if len(connected) == 1 {
+			return connected[0], nil
+		}
+		return nil, fmt.Errorf("peer %q cannot be resolved: the config has no peers: entries, and %d peers are connected (exactly one would be used automatically). "+
+			"Add the device under peers: (name it %q to match the bundled scenarios), or set this scenario's peer: to a 40-hex ski", peerName, len(connected), peerName)
 	}
 	names := make([]string, 0, len(configPeers))
 	for name := range configPeers {

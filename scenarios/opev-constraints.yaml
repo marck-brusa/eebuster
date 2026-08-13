@@ -1,0 +1,17 @@
+name: opev-constraints
+description: >
+  Reads the per-phase current state of the Overload Protection use case (EEBus UC TS OPEV
+  V1.0.1b). Passing means the use case resolves to an entity and answers; the constraints
+  block (min/max/default amps per phase) additionally appears once the device has published
+  its permitted-value sets. Needs a vehicle associated on devices that announce the use case
+  permanently but only create the EV entity during a session — failing here while idle
+  documents exactly that behaviour.
+category: Conformance
+risk: read-only
+requires:
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/opev/{peer.ski}"

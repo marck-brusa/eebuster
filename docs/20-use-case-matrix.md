@@ -18,26 +18,20 @@ human-readable labels; it never invents support.
 | EVSOC | `evStateOfCharge` | Vehicle state of charge |
 | VAPD | `visualizationOfAggregatedPhotovoltaicData` | Power, peak power, total yield |
 | VABD | `visualizationOfAggregatedBatteryData` | Power, state of charge, energy |
+| OPEV | `overloadProtectionByEvChargingCurrentCurtailment` | Per-phase current obligations read/write, constraints |
+| OSCEV | `optimizationOfSelfConsumptionDuringEvCharging` | Per-phase current recommendations read/write, constraints |
+| OHPCF | `optimizationOfSelfConsumptionByHeatPumpCompressorFlexibility` | Flexibility offer read |
 
 That table is the complete set. A peer may advertise use cases outside it — the device browser
 still lists them, because it reports what the peer advertises rather than what we implement, but
 there is no typed read or write for them.
 
-**Not supported (no typed access; the tool has no raw-RPC surface):**
-
-| Acronym | Advertised use-case name |
-|---|---|
-| OPEV | `overloadProtectionByEvChargingCurrentCurtailment` |
-| OSCEV | `optimizationOfSelfConsumptionDuringEvCharging` |
-| OHPCF | `optimizationOfSelfConsumptionByHeatPumpCompressorFlexibility` |
-
-`eebus-go` has no implementation of these at the pinned revision — the complete upstream set is
-`cem/{cevc,evcc,evcem,evsecc,evsoc,vabd,vapd}`, `cs/lpc`, `eg/{lpc,lpp}`, `ma/{mgcp,mpc}` and
-`mu/mpc`. With no registered client use case there is no local feature to send from, so
-supporting OPEV's current-limit write (which other tools do offer) means implementing it
-against SPINE `LoadControl` directly. An earlier version of this table listed all three as
-available "via Raw RPC" — wrong then, and the raw-RPC surface itself was removed later (its
-endpoint never existed in the Go rewrite).
+OPEV and OSCEV share one wire mechanism (per-phase `LoadControl` current limits towards the
+EV entity) with opposite semantics: OPEV writes **obligations** the EV must not exceed
+(overload protection of a site fuse), OSCEV writes **recommendations** the EV may follow
+(absorbing solar excess). Historical note: these three had no eebus-go client implementation
+before the 2026-07-31 upstream revision this tool now pins, and an even earlier version of
+this table listed them as available "via Raw RPC", which was never true.
 
 ## Included scenario examples
 
@@ -58,6 +52,10 @@ endpoint never existed in the Go rewrite).
 | `mpc-phase-plausibility` | read-only | Per-phase currents/voltages must be plausible for their units (catches mA-as-A scale faults) |
 | `mpc-phase-consistency` | read-only | Per-phase powers must add up to the reported total |
 | `ev-charged-energy` | read-only | EVCEM scenario 3, when advertised, must deliver a charged-energy value |
+| `opev-limit-roundtrip` | live-control | Per-phase current obligations must be visible on readback, then released |
+| `opev-constraints` | read-only | The OPEV use case must resolve and answer a read |
+| `oscev-read` | read-only | The OSCEV recommendation state must answer a read |
+| `ohpcf-read` | read-only | A compressor's flexibility offer must answer a read |
 | `lpp-read-current` | read-only | Read current production limit |
 | `lpp-basic-limit` | live-control | Apply and verify a production limit |
 | `mpc-live-power` | read-only | Read total consumption |

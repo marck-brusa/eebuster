@@ -1,0 +1,14 @@
+name: ohpcf-read
+description: >
+  Reads a heat pump compressor's flexibility offer (Optimization of Self-Consumption by Heat
+  Pump Compressor Flexibility, EEBus UC TS OHPCF V1.0.0): optional power consumption,
+  requested power, pausability, and minimal run/pause windows.
+category: HVAC
+risk: read-only
+requires:
+  use_cases: [optimizationOfSelfConsumptionByHeatPumpCompressorFlexibility]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/ohpcf/{peer.ski}"

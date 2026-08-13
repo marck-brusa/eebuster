@@ -17,7 +17,8 @@ hardware is available.
 - **Discovery and pairing** — real mDNS (`_ship._tcp`) discovery, SHIP trust, incoming-pairing
   approval, and SPINE entity and use-case exploration.
 - **Power control** — LPC and LPP limits with optional durations, failsafe values, nominal
-  maximum, and heartbeat.
+  maximum, and heartbeat; per-phase charging-current obligations (OPEV) and recommendations
+  (OSCEV) towards the EV.
 - **Measurements** — MPC and MGCP reads, plus EV, PV, battery and EVSE data when the device
   advertises it.
 - **Web dashboard** — live view of connections, limits, measurements, use cases and logs. Shows
@@ -88,7 +89,7 @@ curl http://127.0.0.1:8080/api/v1/mpc/<ski>                   # measurements
 | Area | Endpoints |
 | --- | --- |
 | Peers and trust | `/peers`, `/peers/visible`, `/peers/pending`, `/peers/{ski}/trust`, `/peers/{ski}/profile`, `/peers/{ski}/usecases` |
-| Limits | `/lpc/{ski}/limit`, `/lpc/{ski}/failsafe`, `/lpc/{ski}/nominal-max`, `/lpc/heartbeat/start`, `/lpp/{ski}/…` |
+| Limits | `/lpc/{ski}/limit`, `/lpc/{ski}/failsafe`, `/lpc/{ski}/nominal-max`, `/lpc/heartbeat/start`, `/lpp/{ski}/…`, `/opev/{ski}/limits`, `/oscev/{ski}/limits` |
 | Measurements | `/mpc/{ski}`, `/mgcp/{ski}`, `/energy/{ski}/snapshot`, `/energy/{ski}/history` |
 | Scenarios | `/scenarios`, `/scenarios/{name}/run`, `/scenarios/run-all` |
 | Message trace | `/trace`, `/trace/{seq}`, `/trace/summary` — raw wire frames with conformance findings |

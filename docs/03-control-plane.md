@@ -141,6 +141,11 @@ All endpoints are under `/api/v1`.
 | GET/PUT | `/lpp/{ski}/failsafe` | Production failsafe value and duration |
 | GET | `/lpp/{ski}/nominal-max` | Declared maximum production |
 | GET | `/mpc/{ski}` | Consumption measurements |
+| GET | `/opev/{ski}` | Per-phase current obligations and constraints |
+| PUT | `/opev/{ski}/limits` | Write per-phase current obligations (overload protection) |
+| GET | `/oscev/{ski}` | Per-phase current recommendations and constraints |
+| PUT | `/oscev/{ski}/limits` | Write per-phase current recommendations |
+| GET | `/ohpcf/{ski}` | Heat pump compressor flexibility offer |
 | GET | `/mgcp/{ski}` | Grid-connection measurements |
 | GET | `/energy/{ski}/snapshot` | Best-effort energy intelligence |
 | GET | `/energy/{ski}/history` | Session history |

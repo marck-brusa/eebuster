@@ -126,3 +126,29 @@ func TestIsSKI(t *testing.T) {
 		}
 	}
 }
+
+// The truststore workflow has no peers: entries at all; a single connected peer is then
+// unambiguous and used automatically, while two or more still fail loudly -- targeting the
+// wrong device silently is the failure mode strict resolution was built to prevent.
+func TestSelectPeerWithoutConfigEntries(t *testing.T) {
+	one := []any{
+		map[string]any{"ski": "aaaa000000000000000000000000000000000000", "connected": true},
+		map[string]any{"ski": "bbbb000000000000000000000000000000000000", "connected": false},
+	}
+	peer, err := selectPeer(one, map[string]string{}, "device-under-test")
+	if err != nil {
+		t.Fatalf("single connected peer must resolve automatically: %v", err)
+	}
+	if peer["ski"] != "aaaa000000000000000000000000000000000000" {
+		t.Fatalf("resolved the wrong peer: %v", peer)
+	}
+
+	two := append(one, map[string]any{"ski": "cccc000000000000000000000000000000000000", "connected": true})
+	if _, err := selectPeer(two, map[string]string{}, "device-under-test"); err == nil {
+		t.Fatal("two connected peers without config entries must fail loudly")
+	}
+
+	if _, err := selectPeer(nil, map[string]string{}, "device-under-test"); err == nil {
+		t.Fatal("no connected peers must fail")
+	}
+}

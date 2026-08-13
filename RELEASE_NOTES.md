@@ -1,5 +1,35 @@
 # Release notes
 
+## 1.0.0-rc4
+
+The control half of a HEMS: per-phase charging-current management.
+
+- **OPEV — Overload Protection by EV Charging Current Curtailment.** Write per-phase current
+  *obligations* the EV must not exceed (site-fuse protection), read them back, and read the
+  EV's declared min/max/default constraints. `GET /api/v1/opev/{ski}`,
+  `PUT /api/v1/opev/{ski}/limits`.
+- **OSCEV — Optimization of Self-Consumption During EV Charging.** The same mechanism with
+  advisory semantics: per-phase current *recommendations* the EV may follow (solar excess).
+  `GET /api/v1/oscev/{ski}`, `PUT /api/v1/oscev/{ski}/limits`.
+- **OHPCF — Heat Pump Compressor Flexibility.** Read a compressor's flexibility offer:
+  optional power consumption, requested power, pausability, minimal run/pause windows.
+  `GET /api/v1/ohpcf/{ski}`.
+- The Use-case workbench gains a per-phase current card (L1/L2/L3 amps, apply as obligation
+  or recommendation, release, read back) and a heat-pump flexibility card; the capability
+  catalog and device browser show the new typed operations.
+- New scenarios: `opev-limit-roundtrip`, `opev-constraints`, `oscev-read`, `ohpcf-read`.
+  Verified against a live charging system: the two OPEV scenarios correctly expose a real
+  device behaviour — the use case is announced permanently while the EV entity it lives on
+  only exists during a session, so they fail (not skip) on an idle device, by design.
+- **Scenario peer resolution now handles the truststore workflow**: with no `peers:` entries
+  in the config and exactly one connected peer, that peer is used automatically. Ambiguity
+  (two or more connected) still fails loudly, preserving the original guarantee.
+- Underneath: the vendored eebus-go moved forward eleven days (2026-07-20 → 2026-07-31),
+  bringing the three new use-case clients plus an upstream conformance fix (#253: an Energy
+  Guard client now ignores `useCaseAvailable` during discovery, per SPINE UCD-01 /
+  TC_SPINE_RTC_003). ship-go and spine-go pins are unchanged; the single vendor patch
+  reapplied cleanly and the frame-tap pin test still holds.
+
 ## 1.0.0-rc3
 
 Field-report fixes, mostly around one theme: the launch directory could silently change

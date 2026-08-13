@@ -726,6 +726,30 @@ tr.phase-asym .phase-bar{background:var(--amber)}
             </div>
             <pre class="raw uc-output" id="out-assets" data-i18n="uc.noRequest">No request yet.</pre>
           </div>
+          <div class="panel uc-card">
+            <div class="panel-head"><div><div class="uc-code">OPEV / OSCEV</div><h3 data-i18n="uc.current.title">Per-phase charging current</h3></div><span class="badge" data-support="overloadProtectionByEvChargingCurrentCurtailment" data-i18n="badge.unknown">unknown</span></div>
+            <div class="live-warning"><strong>!</strong><span data-i18n="current.warning">Obligations cap the EV's charging current immediately; recommendations are advisory.</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">
+              <div class="field" style="margin:0"><label for="opev-a">L1 (A)</label><input id="opev-a" type="number" min="0" step="0.1" value="16"></div>
+              <div class="field" style="margin:0"><label for="opev-b">L2 (A)</label><input id="opev-b" type="number" min="0" step="0.1" value="16"></div>
+              <div class="field" style="margin:0"><label for="opev-c">L3 (A)</label><input id="opev-c" type="number" min="0" step="0.1" value="16"></div>
+            </div>
+            <div class="button-row" style="margin-top:9px">
+              <button class="primary" data-current-write="opev" data-i18n="btn.applyObligation">Apply obligation</button>
+              <button data-current-write="oscev" data-i18n="btn.applyRecommendation">Apply recommendation</button>
+              <button class="warn" data-current-release="opev" data-i18n="btn.releaseCurrent">Release</button>
+            </div>
+            <div class="button-row" style="margin-top:6px">
+              <button data-uc-read="opev" data-i18n="btn.readObligations">Read obligations</button>
+              <button data-uc-read="oscev" data-i18n="btn.readRecommendations">Read recommendations</button>
+            </div>
+            <pre class="raw uc-output" id="out-current" data-i18n="uc.noRequest">No request yet.</pre>
+          </div>
+          <div class="panel uc-card">
+            <div class="panel-head"><div><div class="uc-code">OHPCF</div><h3 data-i18n="uc.ohpcf.title">Heat pump flexibility</h3></div><span class="badge" data-support="optimizationOfSelfConsumptionByHeatPumpCompressorFlexibility" data-i18n="badge.unknown">unknown</span></div>
+            <div class="button-row"><button data-uc-read="ohpcf" data-i18n="btn.readFlex">Read flexibility offer</button></div>
+            <pre class="raw uc-output" id="out-ohpcf" data-i18n="uc.noRequest">No request yet.</pre>
+          </div>
         </div>
         <div class="panel panel-pad" style="margin-top:14px">
           <div class="panel-head">
@@ -904,6 +928,18 @@ const API = "/api/v1";
 // the spec and the logs.
 const I18N = {
   en: {
+    "uc.current.title": "Per-phase charging current",
+    "current.warning": "Obligations cap the EV's charging current immediately; recommendations are advisory.",
+    "btn.applyObligation": "Apply obligation",
+    "btn.applyRecommendation": "Apply recommendation",
+    "btn.releaseCurrent": "Release",
+    "btn.readObligations": "Read obligations",
+    "btn.readRecommendations": "Read recommendations",
+    "uc.ohpcf.title": "Heat pump flexibility",
+    "btn.readFlex": "Read flexibility offer",
+    "js.obligationApplied": "Obligation limits applied",
+    "js.recommendationApplied": "Recommendation limits applied",
+    "js.currentReleased": "Current limits released",
     "panel.profile": "Charge profile builder",
     "panel.profile.sub": "A timed sequence of LPC limits — run it live or export it as a scenario",
     "profile.watts": "Limit (W)",
@@ -1272,6 +1308,18 @@ const I18N = {
     "js.allInterfaces": "(all)",
   },
   de: {
+    "uc.current.title": "Ladestrom je Phase",
+    "current.warning": "Verpflichtungen begrenzen den Ladestrom des EV sofort; Empfehlungen sind unverbindlich.",
+    "btn.applyObligation": "Verpflichtung anwenden",
+    "btn.applyRecommendation": "Empfehlung anwenden",
+    "btn.releaseCurrent": "Aufheben",
+    "btn.readObligations": "Verpflichtungen lesen",
+    "btn.readRecommendations": "Empfehlungen lesen",
+    "uc.ohpcf.title": "Wärmepumpen-Flexibilität",
+    "btn.readFlex": "Flexibilitätsangebot lesen",
+    "js.obligationApplied": "Verpflichtungsgrenzen angewendet",
+    "js.recommendationApplied": "Empfehlungsgrenzen angewendet",
+    "js.currentReleased": "Stromgrenzen aufgehoben",
     "panel.profile": "Ladeprofil-Editor",
     "panel.profile.sub": "Eine zeitgesteuerte Folge von LPC-Grenzen — live ausführen oder als Szenario exportieren",
     "profile.watts": "Grenze (W)",
@@ -1640,6 +1688,18 @@ const I18N = {
     "js.allInterfaces": "(alle)",
   },
   "zh-Hans": {
+    "uc.current.title": "各相充电电流",
+    "current.warning": "义务限值会立即限制电动车的充电电流；建议限值仅供参考。",
+    "btn.applyObligation": "应用义务限值",
+    "btn.applyRecommendation": "应用建议限值",
+    "btn.releaseCurrent": "解除",
+    "btn.readObligations": "读取义务限值",
+    "btn.readRecommendations": "读取建议限值",
+    "uc.ohpcf.title": "热泵灵活性",
+    "btn.readFlex": "读取灵活性信息",
+    "js.obligationApplied": "已应用义务限值",
+    "js.recommendationApplied": "已应用建议限值",
+    "js.currentReleased": "已解除电流限值",
     "panel.profile": "充电曲线编辑器",
     "panel.profile.sub": "按时间排列的 LPC 限值序列——可实时执行或导出为场景",
     "profile.watts": "限值（W）",
@@ -2767,7 +2827,8 @@ async function usecaseRead(kind) {
   const paths = {
     lpc: `/lpc/${ski}/limit`, failsafe: `/lpc/${ski}/failsafe`,
     nominal: `/lpc/${ski}/nominal-max`, heartbeat: `/lpc/${ski}/heartbeat`,
-    lpp: `/lpp/${ski}/limit`, mpc: `/mpc/${ski}`, mgcp: `/mgcp/${ski}`
+    lpp: `/lpp/${ski}/limit`, mpc: `/mpc/${ski}`, mgcp: `/mgcp/${ski}`,
+    opev: `/opev/${ski}`, oscev: `/oscev/${ski}`, ohpcf: `/ohpcf/${ski}`
   };
   let result, output;
   if (kind === "snapshot" || kind === "ev" || kind === "assets") {
@@ -2777,7 +2838,11 @@ async function usecaseRead(kind) {
     state.snapshot = snapshot; renderSnapshot(); await loadHistory();
   } else {
     result = await api(withEntity(paths[kind], entity));
-    output = kind === "lpc" || kind === "failsafe" || kind === "nominal" || kind === "heartbeat" ? "out-lpc" : kind === "lpp" ? "out-lpp" : "out-monitoring";
+    output = kind === "lpc" || kind === "failsafe" || kind === "nominal" || kind === "heartbeat" ? "out-lpc"
+      : kind === "lpp" ? "out-lpp"
+      : kind === "opev" || kind === "oscev" ? "out-current"
+      : kind === "ohpcf" ? "out-ohpcf"
+      : "out-monitoring";
   }
   document.getElementById(output).textContent = json(result);
   return result;
@@ -3005,6 +3070,29 @@ function renderEvents() {
 async function loadRecentEvents() {
   state.events = await safeApi("/events/recent?limit=250", []);
   renderEvents();
+}
+
+// ---- Per-phase charging current (OPEV obligations / OSCEV recommendations) --------------
+
+function currentLimitsBody(active) {
+  const phases = ["a", "b", "c"];
+  const limits = phases.map((phase, i) => ({
+    phase,
+    value_a: Math.max(0, Number(document.getElementById(`opev-${phase}`).value) || 0),
+    is_active: active,
+  }));
+  return {limits};
+}
+
+async function writeCurrentLimits(kind, active) {
+  if (!state.selectedSki) throw new Error(t("js.selectDeviceFirst"));
+  const entity = document.getElementById("uc-entity").value;
+  const result = await api(withEntity(`/${kind}/${encodeURIComponent(state.selectedSki)}/limits`, entity), {
+    method: "PUT", headers: {"content-type": "application/json"},
+    body: JSON.stringify(currentLimitsBody(active)),
+  });
+  document.getElementById("out-current").textContent = json(result);
+  return result;
 }
 
 // ---- Charge profile builder ------------------------------------------------------------
@@ -3501,6 +3589,15 @@ document.getElementById("trace-clear").addEventListener("click", async () => {
 ["trace-peer","trace-dir","trace-findings-only"].forEach(id =>
   document.getElementById(id).addEventListener("change", renderTrace));
 document.getElementById("trace-search").addEventListener("input", renderTrace);
+document.querySelectorAll("[data-current-write]").forEach(button => button.addEventListener("click", event =>
+  action(event.currentTarget, () => writeCurrentLimits(event.currentTarget.dataset.currentWrite, true),
+    event.currentTarget.dataset.currentWrite === "opev" ? t("js.obligationApplied") : t("js.recommendationApplied")
+  ).catch(error => { document.getElementById("out-current").textContent = errorDetail(error); })
+));
+document.querySelectorAll("[data-current-release]").forEach(button => button.addEventListener("click", event =>
+  action(event.currentTarget, () => writeCurrentLimits(event.currentTarget.dataset.currentRelease, false), t("js.currentReleased"))
+    .catch(error => { document.getElementById("out-current").textContent = errorDetail(error); })
+));
 document.getElementById("profile-add").addEventListener("click", () => {
   state.profileSteps.push({watts: 4200, seconds: 900});
   saveProfileSteps(); renderProfileBuilder();
@@ -3548,7 +3645,7 @@ document.querySelectorAll("#range-buttons button").forEach(button => button.addE
 document.querySelectorAll("[data-uc-read]").forEach(button => button.addEventListener("click", () => {
   const kind = button.dataset.ucRead;
   action(button, () => usecaseRead(kind), t("js.readDone")).catch(error => {
-    const output = ["lpc","failsafe","nominal","heartbeat"].includes(kind) ? "out-lpc" : kind === "lpp" ? "out-lpp" : ["ev","assets"].includes(kind) ? "out-assets" : "out-monitoring";
+    const output = ["lpc","failsafe","nominal","heartbeat"].includes(kind) ? "out-lpc" : kind === "lpp" ? "out-lpp" : ["ev","assets"].includes(kind) ? "out-assets" : ["opev","oscev"].includes(kind) ? "out-current" : kind === "ohpcf" ? "out-ohpcf" : "out-monitoring";
     document.getElementById(output).textContent = errorDetail(error);
   });
 }));

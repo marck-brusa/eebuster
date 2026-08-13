@@ -15,6 +15,9 @@ import (
 	"github.com/enbility/eebus-go/usecases/cem/evcem"
 	"github.com/enbility/eebus-go/usecases/cem/evsecc"
 	"github.com/enbility/eebus-go/usecases/cem/evsoc"
+	"github.com/enbility/eebus-go/usecases/cem/ohpcf"
+	"github.com/enbility/eebus-go/usecases/cem/opev"
+	"github.com/enbility/eebus-go/usecases/cem/oscev"
 	"github.com/enbility/eebus-go/usecases/cem/vabd"
 	"github.com/enbility/eebus-go/usecases/cem/vapd"
 	"github.com/enbility/eebus-go/usecases/eg/lpc"
@@ -115,6 +118,10 @@ type Stack struct {
 	evsoc  *EVSOC
 	vapd   *VAPD
 	vabd   *VABD
+
+	opev  *OPEV
+	oscev *OSCEV
+	ohpcf *OHPCF
 }
 
 // New configures and Setup()s (but does not Start) the embedded stack in either static or
@@ -298,6 +305,26 @@ func New(cfg BootConfig) (*Stack, error) {
 	}
 	stack.evcem = &EVCEM{uc: evcemUC}
 
+	// Per-phase charging-current control towards the EV entity: OPEV writes obligations
+	// (overload protection), OSCEV writes recommendations (self-consumption optimization).
+	opevUC := opev.NewOPEV(localEntity, stack.propagateEvent)
+	if err := svc.AddUseCase(opevUC); err != nil {
+		return nil, err
+	}
+	stack.opev = &OPEV{uc: opevUC}
+
+	oscevUC := oscev.NewOSCEV(localEntity, stack.propagateEvent)
+	if err := svc.AddUseCase(oscevUC); err != nil {
+		return nil, err
+	}
+	stack.oscev = &OSCEV{uc: oscevUC}
+
+	ohpcfUC := ohpcf.NewOHPCF(localEntity, stack.propagateEvent)
+	if err := svc.AddUseCase(ohpcfUC); err != nil {
+		return nil, err
+	}
+	stack.ohpcf = &OHPCF{uc: ohpcfUC}
+
 	evsocUC := evsoc.NewEVSOC(localEntity, stack.propagateEvent)
 	if err := svc.AddUseCase(evsocUC); err != nil {
 		return nil, err
@@ -319,10 +346,13 @@ func New(cfg BootConfig) (*Stack, error) {
 	return stack, nil
 }
 
-func (s *Stack) LPC() *LPC   { return s.lpc }
-func (s *Stack) LPP() *LPP   { return s.lpp }
-func (s *Stack) MPC() *MPC   { return s.mpc }
-func (s *Stack) MGCP() *MGCP { return s.mgcp }
+func (s *Stack) LPC() *LPC     { return s.lpc }
+func (s *Stack) LPP() *LPP     { return s.lpp }
+func (s *Stack) MPC() *MPC     { return s.mpc }
+func (s *Stack) MGCP() *MGCP   { return s.mgcp }
+func (s *Stack) OPEV() *OPEV   { return s.opev }
+func (s *Stack) OSCEV() *OSCEV { return s.oscev }
+func (s *Stack) OHPCF() *OHPCF { return s.ohpcf }
 
 // Start (re-)starts the embedded stack. ship-go's mDNS manager clears its injected test
 // provider on every Shutdown (mdns.go: "m.mdnsProvider = nil", to guarantee a clean state for

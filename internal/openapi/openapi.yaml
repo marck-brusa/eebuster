@@ -337,6 +337,71 @@ paths:
       summary: Server-Sent Events live feed (text/event-stream) -- open this in a browser tab, not Swagger's Try-it-out
       responses: { "200": { description: OK } }
 
+  /api/v1/opev/{ski}:
+    get:
+      tags: [usecases]
+      summary: Per-phase charging-current obligations (OPEV) — active limits and the EV's declared min/max/default constraints
+      parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
+      responses: { "200": { description: OK } }
+
+  /api/v1/opev/{ski}/limits:
+    put:
+      tags: [usecases]
+      summary: Write per-phase current obligations the EV must not exceed (overload protection)
+      parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limits:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      phase: {type: string, enum: [a, b, c]}
+                      value_a: {type: number}
+                      is_active: {type: boolean}
+      responses: { "200": { description: OK } }
+
+  /api/v1/oscev/{ski}:
+    get:
+      tags: [usecases]
+      summary: Per-phase charging-current recommendations (OSCEV) — advisory setpoints and constraints
+      parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
+      responses: { "200": { description: OK } }
+
+  /api/v1/oscev/{ski}/limits:
+    put:
+      tags: [usecases]
+      summary: Write per-phase current recommendations the EV may follow (self-consumption optimization)
+      parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limits:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      phase: {type: string, enum: [a, b, c]}
+                      value_a: {type: number}
+                      is_active: {type: boolean}
+      responses: { "200": { description: OK } }
+
+  /api/v1/ohpcf/{ski}:
+    get:
+      tags: [usecases]
+      summary: Heat pump compressor flexibility offer (OHPCF) — optional power consumption, pausability, run windows
+      parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
+      responses: { "200": { description: OK } }
+
   /api/v1/trace:
     get:
       tags: [trace]

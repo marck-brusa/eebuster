@@ -99,6 +99,41 @@ simulator:
       ship_port: 4713
       baseline_w: 11000    # reports this until an LPC limit pulls it lower
 
+  # What a simulated device does, regardless of type:
+  #   - accepts LPC consumption limits (write 4 kW and its reported power drops until
+  #     released; a limit with a duration expires by itself, reporting inactive afterwards);
+  #   - accepts LPC failsafe writes and answers failsafe reads (2 kW / 2 h defaults);
+  #   - reports MPC measurements: total power, a deliberately asymmetric per-phase split
+  #     (half on L1, half on L2, nothing on L3 -- so the Phase balance panel and the
+  #     mpc-phase-* scenarios have something to show), phase currents, 230 V, 50 Hz.
+  #
+  # The `type` changes what the device announces itself as (entity/device type in SPINE
+  # discovery), which is what a CEM's device classification sees:
+  #   generic    EVSE / charging station (the default stand-in for "some load")
+  #   ev         same entity shape, e-mobility category
+  #   heat_pump  heat pump appliance / heat generation system, HVAC category
+  #
+  # It does NOT implement the EV-session use cases (EVCC/EVCEM/OPEV/OSCEV) or the heat pump
+  # flexibility offer (OHPCF) -- those have no device-side implementation in the underlying
+  # stack and need real hardware. Scenarios requiring them skip against the simulator.
+  #
+  # Several devices can run at once; give each its own id and ship_port. Examples:
+  #
+  #   - id: sim-load-2         # a second, smaller load on its own SHIP endpoint --
+  #     type: generic          # useful for multi-peer dashboards and testing that
+  #     ship_port: 4714        # scenarios refuse to guess between two candidates
+  #     baseline_w: 3600
+  #
+  #   - id: sim-wallbox        # announces as an e-mobility charging station
+  #     type: ev
+  #     ship_port: 4715
+  #     baseline_w: 22000
+  #
+  #   - id: sim-heatpump       # announces as a heat pump (HVAC category) -- handy for
+  #     type: heat_pump        # checking how a HEMS classifies and lists device kinds
+  #     ship_port: 4716
+  #     baseline_w: 2500
+
 # EEBusTracer (the bundled deep-dive protocol analyzer, a separate tool with its own web UI)
 # starts automatically when its binary sits next to eebus-testbench, serves on
 # http://127.0.0.1:8090 (-tracer-port to change, -tracer=false to disable) and is linked from

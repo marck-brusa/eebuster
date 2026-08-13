@@ -46,6 +46,12 @@ The primary adapter provides typed operations for:
   - EVCC, EVSECC, CEVC, EVCEM, EVSOC;
   - VAPD photovoltaic data;
   - VABD battery data.
+- Overload Protection by EV Charging Current Curtailment (OPEV)
+  - per-phase current obligations read/write and declared constraints.
+- Optimization of Self-Consumption During EV Charging (OSCEV)
+  - per-phase current recommendations read/write and declared constraints.
+- Heat pump compressor flexibility (OHPCF)
+  - flexibility offer read (optional power consumption, pausability, run windows).
 - Message trace
   - raw frame list with cursor polling, single-frame lookup with the wire payload;
   - conformance summary aggregated by rule, split into errors and warnings.
