@@ -53,6 +53,7 @@ func runServe(args []string) {
 	logLevelFlag := fs.String("log-level", "", "EEBUS stack log verbosity: trace|debug|info|error (default debug; trace dumps every SPINE datagram as JSON)")
 	announceAddrFlag := fs.String("announce-address", "", "comma-separated IPs to publish in our own mDNS records, overriding auto-detection (e.g. 192.168.9.100)")
 	noFilterFlag := fs.Bool("no-announce-filter", false, "publish every local address, including IPv6 link-local/unique-local and virtual adapters (upstream zeroconf behaviour)")
+	frameLogFlag := fs.String("frame-log", "", "append every raw SHIP frame to this file in EEBus Hub log format, ready for `eebustracer serve --log-file <file>`")
 	fs.Parse(args)
 	autoAcceptSet, requireApprovalSet, noFilterSet, configSet := false, false, false, false
 	fs.Visit(func(f *flag.Flag) {
@@ -162,6 +163,15 @@ func runServe(args []string) {
 	// One trace store for every stack in the process: the primary stack's frames and the
 	// simulated devices' frames land in the same ring, tagged by stack id.
 	frames := trace.New()
+	if *frameLogFlag != "" {
+		frameLog, err := os.OpenFile(*frameLogFlag, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		if err != nil {
+			log.Fatalf("frame log: %v", err)
+		}
+		defer frameLog.Close()
+		frames.SetLogWriter(frameLog)
+		log.Printf("frame log: appending every raw SHIP frame to %s (EEBus Hub format; feed it to EEBusTracer with --log-file)", *frameLogFlag)
+	}
 
 	var simDevices []*simulator.Device
 	var simPeers []staticmdns.Peer

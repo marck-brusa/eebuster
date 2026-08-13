@@ -50,9 +50,9 @@ jobs:
           CGO_ENABLED: "0"
         run: go build -mod=vendor -o /dev/null ./cmd/eebus-testbench
 
-      - name: Cross-compile for Linux arm64
+      - name: Cross-compile for macOS (Apple Silicon)
         env:
-          GOOS: linux
+          GOOS: darwin
           GOARCH: arm64
           CGO_ENABLED: "0"
         run: go build -mod=vendor -o /dev/null ./cmd/eebus-testbench

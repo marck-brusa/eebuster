@@ -153,7 +153,12 @@ type Config struct {
 	// trace|debug|info|error, default debug. Trace dumps every SPINE datagram as raw JSON in
 	// both directions, which with a simulated device running is a continuous firehose that
 	// buries the few lines explaining a real connection problem -- so it is opt-in.
-	LogLevel  string           `yaml:"log_level" json:"log_level"`
+	LogLevel string `yaml:"log_level" json:"log_level"`
+	// TracerURL, when set, adds an "EEBusTracer" link to the dashboard sidebar that opens in
+	// a new tab (it is a separate tool with its own UI, and the new tab keeps that visible).
+	// The bundled eebustracer binary serves on http://127.0.0.1:8090 with
+	// `eebustracer serve --port 8090`; feed it frames via `serve -frame-log` + `import`.
+	TracerURL string           `yaml:"tracer_url" json:"tracer_url,omitempty"`
 	Peers     []Peer           `yaml:"peers" json:"peers"`
 	Stacks    map[string]Stack `yaml:"stacks" json:"stacks"`
 	Simulator Simulator        `yaml:"simulator" json:"simulator"`

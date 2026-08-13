@@ -82,11 +82,30 @@ curl http://127.0.0.1:8080/api/v1/mpc/<ski>                   # measurements
 | Limits | `/lpc/{ski}/limit`, `/lpc/{ski}/failsafe`, `/lpc/{ski}/nominal-max`, `/lpc/heartbeat/start`, `/lpp/{ski}/…` |
 | Measurements | `/mpc/{ski}`, `/mgcp/{ski}`, `/energy/{ski}/snapshot`, `/energy/{ski}/history` |
 | Scenarios | `/scenarios`, `/scenarios/{name}/run`, `/scenarios/run-all` |
+| Message trace | `/trace`, `/trace/{seq}`, `/trace/summary` — raw wire frames with conformance findings |
 | Diagnostics | `/health`, `/version`, `/config`, `/events/stream`, `/diagnostics/network`, `/stacks/{id}/logs` |
 
 Ready-made scripts for the two most common operations are in
 [`examples/`](examples/) — `lpc-set-limit` and `mpc-watch`, in both bash and PowerShell, plus
 Python references for pulling data in and out of the CEM.
+
+## Deep-dive tracing with EEBusTracer
+
+The dashboard's **Message trace** page shows live frames with conformance findings. For
+offline deep dives — message-flow diagrams, latency correlation, lifecycle checklists — the
+release archive bundles [EEBusTracer](https://github.com/uhl/EEBusTracer) (MIT), a standalone
+protocol analyzer with its own web UI:
+
+```bash
+./eebus-testbench serve -frame-log frames.log   # append every raw frame to a file
+./eebustracer import frames.log                 # ingest a session
+./eebustracer serve --port 8090                 # its own UI, on its own port
+```
+
+Setting `tracer_url: "http://127.0.0.1:8090"` in `eebus.yaml` adds an EEBusTracer link to the
+dashboard sidebar (a separate product, so it opens in a new tab). The frame log uses the
+EEBus Hub line format, which EEBusTracer auto-detects; `eebustracer analyze frames.log` also
+works directly for a quick use-case audit from the terminal.
 
 ## Layout
 

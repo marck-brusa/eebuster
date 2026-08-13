@@ -7,6 +7,8 @@ package trace
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -67,10 +69,23 @@ type Store struct {
 	capacity int
 	seq      int64
 	sessions map[string]*conformance.Session
+	// logWriter, when set, additionally appends every frame as one line in the "EEBus Hub"
+	// log format: `2026-03-16 05:19:57    [Send] <40-hex-ski><payload>`. That exact shape is
+	// what EEBusTracer's log tailing auto-detects, so pointing its --log-file at this file
+	// gives the deep-dive tracer a live feed with no protocol glue at all.
+	logWriter io.Writer
 }
 
 func New() *Store {
 	return &Store{capacity: defaultCapacity, sessions: map[string]*conformance.Session{}}
+}
+
+// SetLogWriter attaches the frame log sink (see logWriter). Pass nil to detach. Writes are
+// serialized; write errors are ignored on purpose -- a full disk must not take down capture.
+func (s *Store) SetLogWriter(w io.Writer) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.logWriter = w
 }
 
 // Add records one frame and returns the stored entry (including findings), so the caller can
@@ -102,6 +117,14 @@ func (s *Store) Add(stack, dir, ski, payload string) Entry {
 	s.ring = append(s.ring, entry)
 	if len(s.ring) > s.capacity {
 		s.ring = s.ring[len(s.ring)-s.capacity:]
+	}
+	if s.logWriter != nil {
+		direction := "Recv"
+		if dir == "send" {
+			direction = "Send"
+		}
+		_, _ = fmt.Fprintf(s.logWriter, "%s    [%s] %s%s\n",
+			time.Now().Format("2006-01-02 15:04:05"), direction, ski, payload)
 	}
 	s.mu.Unlock()
 	return entry

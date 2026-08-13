@@ -490,6 +490,9 @@ tr.phase-asym .phase-bar{background:var(--amber)}
       </select>
       <a href="/docs" target="_blank" rel="noreferrer">OpenAPI / Swagger ↗</a>
       <a href="/redoc" target="_blank" rel="noreferrer" data-i18n="side.apiref">API reference ↗</a>
+      <!-- A separate product with its own UI; deliberately a new tab, so that stays visible.
+           Hidden unless config sets tracer_url. -->
+      <a href="#" target="_blank" rel="noreferrer" id="tracer-link" style="display:none">EEBusTracer ↗</a>
     </div>
   </aside>
 
@@ -2394,6 +2397,11 @@ function renderCore() {
   populateLogStacks();
   populateUsecaseTargets();
   renderRuntimeInfo();
+
+  const tracerLink = document.getElementById("tracer-link");
+  const tracerURL = state.config?.tracer_url;
+  tracerLink.style.display = tracerURL ? "" : "none";
+  if (tracerURL) tracerLink.href = tracerURL;
 }
 
 function renderDeviceLists() {

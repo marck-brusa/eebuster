@@ -20,14 +20,16 @@ jobs:
             goarch: amd64
             name: linux-amd64
             ext: ""
-          - goos: linux
-            goarch: arm64
-            name: linux-arm64
-            ext: ""
           - goos: windows
             goarch: amd64
             name: windows-amd64
             ext: ".exe"
+          # Apple Silicon replaced linux/arm64 in the matrix: the engineers' laptops are
+          # x86 Linux/Windows and increasingly darwin/arm64; nothing deploys to ARM Linux.
+          - goos: darwin
+            goarch: arm64
+            name: darwin-arm64
+            ext: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -61,6 +63,23 @@ jobs:
             -o "$out" ./cmd/eebus-testbench
           ls -la "$out"
 
+      # EEBusTracer (MIT) is the bundled deep-dive analyzer -- see README "Deep-dive tracing".
+      # Built from a pinned commit, never a branch: the bundle must not change under us. It is
+      # pure Go (no CGO), verified to cross-compile for all three targets in the matrix.
+      - name: Build bundled EEBusTracer
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+          EEBUSTRACER_REPO: https://github.com/uhl/EEBusTracer.git
+          EEBUSTRACER_COMMIT: e7cdb4a # v0.7.0
+        run: |
+          git clone --quiet "$EEBUSTRACER_REPO" /tmp/eebustracer
+          git -C /tmp/eebustracer checkout --quiet "$EEBUSTRACER_COMMIT"
+          (cd /tmp/eebustracer && go build -trimpath -ldflags "-s -w" \
+            -o "$GITHUB_WORKSPACE/eebustracer${{ matrix.ext }}" ./cmd/eebustracer)
+          ls -la "eebustracer${{ matrix.ext }}"
+
       - name: Assemble distribution
         run: |
           set -eu
@@ -69,6 +88,8 @@ jobs:
           mkdir -p "$D/scenarios" "$D/examples"
 
           cp "eebus-testbench${{ matrix.ext }}" "$D/"
+          cp "eebustracer${{ matrix.ext }}" "$D/"
+          curl -sL -o "$D/EEBUSTRACER-LICENSE" https://raw.githubusercontent.com/uhl/EEBusTracer/e7cdb4a/LICENSE
           cp QUICKSTART.md README.md "$D/"
           # Shipped as eebus.yaml, ready to edit -- the binary looks for exactly this name.
           cp config/eebus.example.yaml "$D/eebus.yaml"
@@ -76,7 +97,7 @@ jobs:
           cp examples/lpc-set-limit.sh examples/lpc-set-limit.ps1 \
              examples/mpc-watch.sh    examples/mpc-watch.ps1 \
              examples/README.md "$D/examples/" 2>/dev/null || true
-          chmod +x "$D/eebus-testbench" 2>/dev/null || true
+          chmod +x "$D/eebus-testbench" "$D/eebustracer" 2>/dev/null || true
 
           zip -qr "${D}.zip" "$D"
           echo "--- ${D}.zip ---"
