@@ -457,8 +457,8 @@
     </nav>
     <div class="sidebar-status">
       <div class="eyebrow" data-i18n="side.state">Testbench state</div>
-      <div class="status-line"><span class="pulse" id="sidebar-pulse"></span><span id="sidebar-state">Connecting…</span></div>
-      <div class="muted" id="sidebar-stack" style="font-size:11px;margin-top:5px">No active counterparty</div>
+      <div class="status-line"><span class="pulse" id="sidebar-pulse"></span><span id="sidebar-state" data-i18n="side.connecting">Connecting…</span></div>
+      <div class="muted" id="sidebar-stack" style="font-size:11px;margin-top:5px" data-i18n="side.noCounterparty">No active counterparty</div>
     </div>
     <!-- Our own SKI, always on screen. The device under test needs this exact value to pair,
          and it changes whenever the identity is regenerated -- hunting for it in the startup
@@ -484,7 +484,7 @@
         <option value="zh-Hans">中文（简体）</option>
       </select>
       <a href="/docs" target="_blank" rel="noreferrer">OpenAPI / Swagger ↗</a>
-      <a href="/redoc" target="_blank" rel="noreferrer">API reference ↗</a>
+      <a href="/redoc" target="_blank" rel="noreferrer" data-i18n="side.apiref">API reference ↗</a>
     </div>
   </aside>
 
@@ -492,11 +492,11 @@
     <header class="topbar">
       <div class="target">
         <label for="global-peer" data-i18n="top.target">Target device</label>
-        <select id="global-peer"><option value="">No connected device</option></select>
-        <span class="badge" id="global-peer-state">offline</span>
+        <select id="global-peer"><option value="" data-i18n="top.noDevice">No connected device</option></select>
+        <span class="badge" id="global-peer-state" data-i18n="badge.offline">offline</span>
       </div>
       <div class="top-actions">
-        <span class="sync-status"><span class="pulse" id="api-pulse"></span><span id="sync-text">Starting</span></span>
+        <span class="sync-status"><span class="pulse" id="api-pulse"></span><span id="sync-text" data-i18n="sync.starting">Starting</span></span>
         <button class="small" id="refresh-all" data-i18n="top.refresh">Refresh now</button>
       </div>
     </header>
@@ -510,30 +510,30 @@
             <p data-i18n="page.dash.sub">Measurements, limits, vehicles, generation, and storage from the selected EEBUS peer.</p>
           </div>
           <div class="page-actions">
-            <span class="badge" id="snapshot-age">waiting for data</span>
+            <span class="badge" id="snapshot-age" data-i18n="badge.waiting">waiting for data</span>
           </div>
         </div>
 
         <div class="grid metrics">
           <div class="panel metric" style="--metric-color:var(--cyan)">
-            <div class="metric-top"><span>Total consumption</span><span class="metric-icon">P</span></div>
+            <div class="metric-top"><span data-i18n="metric.consumption">Total consumption</span><span class="metric-icon">P</span></div>
             <div class="metric-value" id="metric-power">—</div>
-            <div class="metric-note" id="metric-power-note">No MPC value</div>
+            <div class="metric-note" id="metric-power-note" data-i18n="metric.noMpc">No MPC value</div>
           </div>
           <div class="panel metric" style="--metric-color:var(--purple)">
-            <div class="metric-top"><span>EV charging</span><span class="metric-icon">EV</span></div>
+            <div class="metric-top"><span data-i18n="metric.ev">EV charging</span><span class="metric-icon">EV</span></div>
             <div class="metric-value" id="metric-ev">—</div>
-            <div class="metric-note" id="metric-ev-note">No EV entities</div>
+            <div class="metric-note" id="metric-ev-note" data-i18n="metric.noEv">No EV entities</div>
           </div>
           <div class="panel metric" style="--metric-color:var(--green)">
-            <div class="metric-top"><span>PV production</span><span class="metric-icon">PV</span></div>
+            <div class="metric-top"><span data-i18n="metric.pv">PV production</span><span class="metric-icon">PV</span></div>
             <div class="metric-value" id="metric-pv">—</div>
-            <div class="metric-note" id="metric-pv-note">No VAPD value</div>
+            <div class="metric-note" id="metric-pv-note" data-i18n="metric.noVapd">No VAPD value</div>
           </div>
           <div class="panel metric" style="--metric-color:var(--amber)">
-            <div class="metric-top"><span>Consumption limit</span><span class="metric-icon">L</span></div>
+            <div class="metric-top"><span data-i18n="metric.limit">Consumption limit</span><span class="metric-icon">L</span></div>
             <div class="metric-value" id="metric-limit">—</div>
-            <div class="metric-note" id="metric-limit-note">No active LPC limit</div>
+            <div class="metric-note" id="metric-limit-note" data-i18n="metric.noLimit">No active LPC limit</div>
           </div>
         </div>
 
@@ -542,13 +542,13 @@
             <div class="panel-head">
               <div>
                 <h3 data-i18n="panel.history">Power and limits over time</h3>
-                <div class="sub">Hover or click the chart to inspect a sample</div>
+                <div class="sub" data-i18n="panel.history.sub">Hover or click the chart to inspect a sample</div>
               </div>
               <div class="chart-toolbar">
                 <div class="chart-legend">
-                  <span><i class="legend-dot" style="background:var(--cyan)"></i>Consumption</span>
-                  <span><i class="legend-dot" style="background:var(--green)"></i>PV</span>
-                  <span><i class="legend-dot" style="background:var(--amber)"></i>Limit</span>
+                  <span><i class="legend-dot" style="background:var(--cyan)"></i><span data-i18n="legend.consumption">Consumption</span></span>
+                  <span><i class="legend-dot" style="background:var(--green)"></i><span data-i18n="legend.pv">PV</span></span>
+                  <span><i class="legend-dot" style="background:var(--amber)"></i><span data-i18n="legend.limit">Limit</span></span>
                 </div>
                 <div class="segmented" id="range-buttons">
                   <button data-range="300">5m</button>
@@ -561,28 +561,28 @@
             <div class="chart-wrap">
               <canvas id="power-chart"></canvas>
               <div class="chart-tooltip" id="chart-tooltip"></div>
-              <div class="empty-chart" id="chart-empty">Select a connected peer to begin collecting history.</div>
+              <div class="empty-chart" id="chart-empty" data-i18n="chart.empty">Select a connected peer to begin collecting history.</div>
             </div>
             <div class="flow">
-              <div class="flow-node"><span>Grid</span><strong id="flow-grid">—</strong></div>
-              <div class="flow-node"><span>EV charging</span><strong id="flow-ev">—</strong></div>
-              <div class="flow-node"><span>Photovoltaic</span><strong id="flow-pv">—</strong></div>
-              <div class="flow-node"><span>Battery</span><strong id="flow-battery">—</strong></div>
+              <div class="flow-node"><span data-i18n="flow.grid">Grid</span><strong id="flow-grid">—</strong></div>
+              <div class="flow-node"><span data-i18n="flow.ev">EV charging</span><strong id="flow-ev">—</strong></div>
+              <div class="flow-node"><span data-i18n="flow.pv">Photovoltaic</span><strong id="flow-pv">—</strong></div>
+              <div class="flow-node"><span data-i18n="flow.battery">Battery</span><strong id="flow-battery">—</strong></div>
             </div>
           </div>
 
           <div class="panel panel-pad control-live">
             <div class="panel-head">
               <div><h3 data-i18n="panel.limit">Live consumption limit</h3><div class="sub">LPC · Energy Guard → Controllable System</div></div>
-              <span class="badge warn">LIVE</span>
+              <span class="badge warn" data-i18n="badge.live">LIVE</span>
             </div>
-            <div class="live-warning"><strong>!</strong><span>Apply sends the value to the selected device immediately.</span></div>
+            <div class="live-warning"><strong>!</strong><span data-i18n="limit.warning">Apply sends the value to the selected device immediately.</span></div>
             <div class="field">
-              <label for="limit-entity"><span>Target entity</span><span>SPINE address</span></label>
-              <select id="limit-entity"><option value="">Automatic</option></select>
+              <label for="limit-entity"><span data-i18n="field.entity">Target entity</span><span data-i18n="field.spineAddr">SPINE address</span></label>
+              <select id="limit-entity"><option value="" data-i18n="field.automatic">Automatic</option></select>
             </div>
             <div class="field">
-              <label for="limit-range"><span>Active power</span><strong id="limit-display">4.2 kW</strong></label>
+              <label for="limit-range"><span data-i18n="field.activePower">Active power</span><strong id="limit-display">4.2 kW</strong></label>
               <div class="limit-number">
                 <input id="limit-range" type="range" min="0" max="22000" step="100" value="4200">
                 <input id="limit-value" type="number" min="0" max="1000000" step="100" value="4200" aria-label="Limit in watts">
@@ -590,22 +590,22 @@
               <div class="limit-scale"><span>0 W</span><span id="limit-max-label">22 kW</span></div>
             </div>
             <div class="field">
-              <label for="limit-duration"><span>Duration</span><span>ISO-8601 on the API</span></label>
+              <label for="limit-duration"><span data-i18n="field.duration">Duration</span><span data-i18n="field.iso8601">ISO-8601 on the API</span></label>
               <select id="limit-duration">
-                <option value="PT1M">1 minute</option>
-                <option value="PT15M">15 minutes</option>
-                <option value="PT30M">30 minutes</option>
-                <option value="PT1H">1 hour</option>
-                <option value="PT2H" selected>2 hours</option>
-                <option value="">No expiry</option>
+                <option value="PT1M" data-i18n="dur.1m">1 minute</option>
+                <option value="PT15M" data-i18n="dur.15m">15 minutes</option>
+                <option value="PT30M" data-i18n="dur.30m">30 minutes</option>
+                <option value="PT1H" data-i18n="dur.1h">1 hour</option>
+                <option value="PT2H" selected data-i18n="dur.2h">2 hours</option>
+                <option value="" data-i18n="dur.none">No expiry</option>
               </select>
             </div>
             <div class="button-row">
-              <button class="primary" id="apply-limit">Apply live</button>
-              <button id="release-limit">Release limit</button>
-              <button id="read-limit">Read current</button>
+              <button class="primary" id="apply-limit" data-i18n="btn.applyLive">Apply live</button>
+              <button id="release-limit" data-i18n="btn.release">Release limit</button>
+              <button id="read-limit" data-i18n="btn.readCurrent">Read current</button>
             </div>
-            <div class="action-result" id="limit-result">Waiting for a connected LPC-capable device.</div>
+            <div class="action-result" id="limit-result" data-i18n="limit.waiting">Waiting for a connected LPC-capable device.</div>
           </div>
         </div>
 
@@ -613,13 +613,13 @@
           <div class="panel">
             <div class="panel-pad panel-head" style="margin:0">
               <div><h3 data-i18n="panel.connected">Connected devices</h3><div class="sub" data-i18n="panel.connected.sub">Click a device to inspect it</div></div>
-              <button class="small" data-open-page="devices">Open network</button>
+              <button class="small" data-open-page="devices" data-i18n="btn.openNetwork">Open network</button>
             </div>
-            <div id="dashboard-devices"><div class="empty">No device data yet.</div></div>
+            <div id="dashboard-devices"><div class="empty" data-i18n="empty.noDeviceData">No device data yet.</div></div>
           </div>
           <div class="panel panel-pad">
             <div class="panel-head"><div><h3 data-i18n="panel.intel">Selected device intelligence</h3><div class="sub" data-i18n="panel.intel.sub">Live capability and asset summary</div></div></div>
-            <div id="dashboard-intelligence" class="empty">Select a connected device.</div>
+            <div id="dashboard-intelligence" class="empty" data-i18n="empty.selectDevice">Select a connected device.</div>
           </div>
         </div>
       </section>
@@ -632,26 +632,26 @@
             <p data-i18n="page.dev.sub">Discover, trust, explore, and inspect the complete advertised device model.</p>
           </div>
           <div class="page-actions">
-            <button id="scan-network">Scan mDNS (5s)</button>
+            <button id="scan-network" data-i18n="btn.scan">Scan mDNS (5s)</button>
           </div>
         </div>
         <div class="grid device-layout">
           <div>
             <div class="panel">
               <div class="panel-pad panel-head" style="margin:0"><h3 data-i18n="panel.known">Known peers</h3><span class="badge" id="peer-count">0</span></div>
-              <div id="device-list"><div class="empty">Loading peers…</div></div>
+              <div id="device-list"><div class="empty" data-i18n="empty.loadingPeers">Loading peers…</div></div>
             </div>
             <div class="panel panel-pad" style="margin-top:14px">
               <div class="panel-head"><h3 data-i18n="panel.pending">Pending pairing</h3><span class="badge" id="pending-count">0</span></div>
-              <div id="pending-list" class="muted">No pending requests.</div>
+              <div id="pending-list" class="muted" data-i18n="empty.noPending">No pending requests.</div>
             </div>
             <div class="panel panel-pad" style="margin-top:14px">
-              <div class="panel-head"><h3 data-i18n="panel.scan">mDNS scan results</h3><span class="badge" id="scan-state">not run</span></div>
-              <div id="scan-results" class="muted">Run a scan to inspect real multicast visibility.</div>
+              <div class="panel-head"><h3 data-i18n="panel.scan">mDNS scan results</h3><span class="badge" id="scan-state" data-i18n="badge.notRun">not run</span></div>
+              <div id="scan-results" class="muted" data-i18n="scan.hint">Run a scan to inspect real multicast visibility.</div>
             </div>
           </div>
           <div class="panel panel-pad" id="device-detail">
-            <div class="empty">Select a peer to browse its entities and advertised use cases.</div>
+            <div class="empty" data-i18n="empty.selectPeer">Select a peer to browse its entities and advertised use cases.</div>
           </div>
         </div>
       </section>
@@ -665,59 +665,50 @@
           </div>
         </div>
         <div class="panel panel-pad usecase-toolbar">
-          <div class="field" style="margin:0"><label for="uc-peer">Target peer</label><select id="uc-peer"></select></div>
-          <div class="field" style="margin:0"><label for="uc-entity">Target entity</label><select id="uc-entity"><option value="">Automatic by use case</option></select></div>
-          <button id="browse-usecases">Refresh advertised use cases</button>
+          <div class="field" style="margin:0"><label for="uc-peer" data-i18n="field.targetPeer">Target peer</label><select id="uc-peer"></select></div>
+          <div class="field" style="margin:0"><label for="uc-entity" data-i18n="field.entity">Target entity</label><select id="uc-entity"><option value="" data-i18n="field.autoByUsecase">Automatic by use case</option></select></div>
+          <button id="browse-usecases" data-i18n="btn.refreshUc">Refresh advertised use cases</button>
         </div>
         <div class="panel panel-pad" id="usecase-browser" style="margin-bottom:14px">
-          <div class="empty">Select a connected device to browse its advertised use cases.</div>
+          <div class="empty" data-i18n="empty.selectDeviceUc">Select a connected device to browse its advertised use cases.</div>
         </div>
         <div class="grid two">
           <div class="panel uc-card">
-            <div class="panel-head"><div><div class="uc-code">LPC</div><h3>Consumption limit</h3></div><span class="badge" data-support="limitationOfPowerConsumption">unknown</span></div>
+            <div class="panel-head"><div><div class="uc-code">LPC</div><h3 data-i18n="uc.lpc.title">Consumption limit</h3></div><span class="badge" data-support="limitationOfPowerConsumption" data-i18n="badge.unknown">unknown</span></div>
             <div class="button-row">
-              <button data-uc-read="lpc">Read limit</button>
-              <button data-uc-read="failsafe">Read failsafe</button>
-              <button data-uc-read="nominal">Read nominal max</button>
-              <button data-uc-read="heartbeat">Heartbeat state</button>
-              <button data-heartbeat="start">Start heartbeat</button>
-              <button data-heartbeat="stop" class="warn">Stop heartbeat</button>
+              <button data-uc-read="lpc" data-i18n="btn.readLimit">Read limit</button>
+              <button data-uc-read="failsafe" data-i18n="btn.readFailsafe">Read failsafe</button>
+              <button data-uc-read="nominal" data-i18n="btn.readNominal">Read nominal max</button>
+              <button data-uc-read="heartbeat" data-i18n="btn.hbState">Heartbeat state</button>
+              <button data-heartbeat="start" data-i18n="btn.hbStart">Start heartbeat</button>
+              <button data-heartbeat="stop" class="warn" data-i18n="btn.hbStop">Stop heartbeat</button>
             </div>
             <div class="template-list" id="lpc-templates"></div>
-            <pre class="raw uc-output" id="out-lpc">No request yet.</pre>
+            <pre class="raw uc-output" id="out-lpc" data-i18n="uc.noRequest">No request yet.</pre>
           </div>
           <div class="panel uc-card">
-            <div class="panel-head"><div><div class="uc-code">LPP</div><h3>Production limit</h3></div><span class="badge" data-support="limitationOfPowerProduction">unknown</span></div>
-            <div class="button-row"><button data-uc-read="lpp">Read limit</button></div>
+            <div class="panel-head"><div><div class="uc-code">LPP</div><h3 data-i18n="uc.lpp.title">Production limit</h3></div><span class="badge" data-support="limitationOfPowerProduction" data-i18n="badge.unknown">unknown</span></div>
+            <div class="button-row"><button data-uc-read="lpp" data-i18n="btn.readLimit">Read limit</button></div>
             <div class="template-list" id="lpp-templates"></div>
-            <pre class="raw uc-output" id="out-lpp">No request yet.</pre>
+            <pre class="raw uc-output" id="out-lpp" data-i18n="uc.noRequest">No request yet.</pre>
           </div>
           <div class="panel uc-card">
-            <div class="panel-head"><div><div class="uc-code">MPC / MGCP</div><h3>Measurements</h3></div><span class="badge" data-support="monitoringOfPowerConsumption">unknown</span></div>
+            <div class="panel-head"><div><div class="uc-code">MPC / MGCP</div><h3 data-i18n="uc.mon.title">Measurements</h3></div><span class="badge" data-support="monitoringOfPowerConsumption" data-i18n="badge.unknown">unknown</span></div>
             <div class="button-row">
-              <button data-uc-read="mpc">Read consumption</button>
-              <button data-uc-read="mgcp">Read grid connection</button>
-              <button data-uc-read="snapshot">Read complete energy state</button>
+              <button data-uc-read="mpc" data-i18n="btn.readMpc">Read consumption</button>
+              <button data-uc-read="mgcp" data-i18n="btn.readMgcp">Read grid connection</button>
+              <button data-uc-read="snapshot" data-i18n="btn.readSnapshot">Read complete energy state</button>
             </div>
-            <pre class="raw uc-output" id="out-monitoring">No request yet.</pre>
+            <pre class="raw uc-output" id="out-monitoring" data-i18n="uc.noRequest">No request yet.</pre>
           </div>
           <div class="panel uc-card">
-            <div class="panel-head"><div><div class="uc-code">EV / PV / BATTERY</div><h3>Energy assets</h3></div><span class="badge purple">typed snapshot</span></div>
+            <div class="panel-head"><div><div class="uc-code">EV / PV / BATTERY</div><h3 data-i18n="uc.assets.title">Energy assets</h3></div><span class="badge purple" data-i18n="badge.typedSnapshot">typed snapshot</span></div>
             <div class="button-row">
-              <button data-uc-read="ev">Read EV inventory</button>
-              <button data-uc-read="assets">Read PV and battery</button>
-              <button data-open-page="devices">Browse device model</button>
+              <button data-uc-read="ev" data-i18n="btn.readEv">Read EV inventory</button>
+              <button data-uc-read="assets" data-i18n="btn.readAssets">Read PV and battery</button>
+              <button data-open-page="devices" data-i18n="btn.browseModel">Browse device model</button>
             </div>
-            <pre class="raw uc-output" id="out-assets">No request yet.</pre>
-          </div>
-          <div class="panel uc-card" style="grid-column:1 / -1">
-            <div class="panel-head"><div><div class="uc-code">RAW JSON-RPC</div><h3>Unmapped stack operations</h3></div><span class="badge warn">advanced</span></div>
-            <div style="display:grid;grid-template-columns:1fr 1.5fr auto;gap:9px;align-items:end">
-              <div class="field" style="margin:0"><label for="raw-method">Method</label><input id="raw-method" type="text" placeholder="cem-cevc/ChargePlan"></div>
-              <div class="field" style="margin:0"><label for="raw-params">Positional parameters (JSON array)</label><textarea id="raw-params" rows="2">[]</textarea></div>
-              <button class="primary" id="send-raw">Send live</button>
-            </div>
-            <pre class="raw uc-output" id="out-raw">Use the device browser to copy an entity address, then call any registered upstream method.</pre>
+            <pre class="raw uc-output" id="out-assets" data-i18n="uc.noRequest">No request yet.</pre>
           </div>
         </div>
       </section>
@@ -730,23 +721,23 @@
             <p data-i18n="page.test.sub">Repeatable examples that run through the same REST paths as the dashboard.</p>
           </div>
           <div class="page-actions">
-            <button id="run-readonly">Run read-only</button>
-            <button class="primary" id="run-all-tests">Run complete suite</button>
+            <button id="run-readonly" data-i18n="btn.runReadonly">Run read-only</button>
+            <button class="primary" id="run-all-tests" data-i18n="btn.runAll">Run complete suite</button>
           </div>
         </div>
         <div class="panel panel-pad" style="margin-bottom:14px">
           <div class="panel-head">
             <div class="tests-summary">
-              <span class="badge" id="tests-total">0 tests</span>
-              <span class="badge ok" id="tests-passed">0 passed</span>
-              <span class="badge warn" id="tests-skipped">0 skipped</span>
-              <span class="badge err" id="tests-failed">0 failed</span>
+              <span class="badge" id="tests-total" data-i18n="tests.total0">0 tests</span>
+              <span class="badge ok" id="tests-passed" data-i18n="tests.passed0">0 passed</span>
+              <span class="badge warn" id="tests-skipped" data-i18n="tests.skipped0">0 skipped</span>
+              <span class="badge err" id="tests-failed" data-i18n="tests.failed0">0 failed</span>
             </div>
-            <code class="muted">EEBUS_API_URL=http://127.0.0.1:9080 PYTHONPATH=src pytest -q usecase_tests</code>
+            <code class="muted">./eebus-testbench run-all scenarios -base-url http://127.0.0.1:8080</code>
           </div>
-          <div class="notice"><strong>Live-control tests change the connected device.</strong> Unsupported use cases are marked skipped, not failed. A failed supported test remains a real failure.</div>
+          <div class="notice" data-i18n="tests.notice"><strong>Live-control tests change the connected device.</strong> Unsupported use cases are marked skipped, not failed. A failed supported test remains a real failure.</div>
         </div>
-        <div class="panel" id="test-list"><div class="empty">Loading test catalog…</div></div>
+        <div class="panel" id="test-list"><div class="empty" data-i18n="empty.loadingTests">Loading test catalog…</div></div>
       </section>
 
       <section class="page" id="page-diagnostics">
@@ -760,53 +751,49 @@
         <div class="grid diagnostics">
           <div>
             <div class="panel panel-pad">
-              <div class="panel-head"><div><h3>Runtime info</h3><div class="sub">Build, network mode, and capabilities</div></div></div>
-              <div id="runtime-info" class="muted">Loading…</div>
+              <div class="panel-head"><div><h3 data-i18n="panel.runtime">Runtime info</h3><div class="sub" data-i18n="panel.runtime.sub">Build, network mode, and capabilities</div></div></div>
+              <div id="runtime-info" class="muted" data-i18n="empty.loading">Loading…</div>
               <div class="notice" style="margin-top:10px">
-                <strong>Scripting the API</strong> -- every panel here is a thin wrapper over the REST API at <span class="mono">/api/v1</span>.
-                Interactive docs: <a href="/docs" target="_blank" rel="noreferrer">Swagger UI ↗</a> ·
+                <strong data-i18n="diag.scripting">Scripting the API</strong> -- <span data-i18n="diag.scripting.text">every panel here is a thin wrapper over the REST API at</span> <span class="mono">/api/v1</span>.
+                <span data-i18n="diag.docs">Interactive docs:</span> <a href="/docs" target="_blank" rel="noreferrer">Swagger UI ↗</a> ·
                 <a href="/redoc" target="_blank" rel="noreferrer">Redoc ↗</a><br>
-                Example (Python, <span class="mono">httpx</span>): <span class="mono">EEBUS_API_URL=http://127.0.0.1:8080 python3 examples/send_lpc_limit.py &lt;ski&gt; 4200 PT2H</span>
+                <span data-i18n="diag.example">Example:</span> <span class="mono">./examples/lpc-set-limit.sh &lt;ski&gt; 4200 PT15M</span>
               </div>
             </div>
             <div class="panel panel-pad" style="margin-top:14px">
-              <div class="panel-head"><h3 data-i18n="panel.stacks">Runtime stacks</h3><span class="sub">One counterparty + observers</span></div>
+              <div class="panel-head"><h3 data-i18n="panel.stacks">Runtime stacks</h3><span class="sub" data-i18n="panel.stacks.sub">One counterparty + observers</span></div>
               <div id="runtime-stacks"></div>
             </div>
             <div class="panel panel-pad" style="margin-top:14px">
-              <div class="panel-head"><h3 data-i18n="panel.namespace">Network namespace</h3><button class="small" id="refresh-network">Refresh</button></div>
-              <div id="network-info" class="muted">Loading…</div>
-            </div>
-            <div class="panel panel-pad" style="margin-top:14px">
               <div class="panel-head">
-                <div><h3>Reachability</h3><div class="sub">What a device sees when it looks for us</div></div>
-                <button class="small" id="refresh-reach">Refresh</button>
+                <div><h3 data-i18n="panel.reach">Reachability</h3><div class="sub" data-i18n="panel.reach.sub">What a device sees when it looks for us</div></div>
+                <button class="small" id="refresh-reach" data-i18n="btn.refresh">Refresh</button>
               </div>
-              <div id="reach-info" class="muted">Loading…</div>
+              <div id="reach-info" class="muted" data-i18n="empty.loading">Loading…</div>
             </div>
           </div>
           <div>
             <div class="panel panel-pad">
-              <div class="panel-head"><h3 data-i18n="panel.logs">Process logs</h3><span class="badge" id="log-state">live</span></div>
+              <div class="panel-head"><h3 data-i18n="panel.logs">Process logs</h3><span class="badge" id="log-state" data-i18n="badge.liveState">live</span></div>
               <div class="log-toolbar">
                 <select id="log-stack"></select>
-                <label class="muted"><input type="checkbox" id="log-live" checked> refresh every 3s</label>
-                <button class="small" id="refresh-logs">Refresh</button>
+                <label class="muted"><input type="checkbox" id="log-live" checked> <span data-i18n="log.auto">refresh every 3s</span></label>
+                <button class="small" id="refresh-logs" data-i18n="btn.refresh">Refresh</button>
               </div>
-              <pre class="raw" id="log-output" style="height:310px">No log selected.</pre>
+              <pre class="raw" id="log-output" style="height:310px" data-i18n="log.none">No log selected.</pre>
             </div>
           </div>
         </div>
         <div class="panel panel-pad" style="margin-top:14px">
           <div class="panel-head"><h3 data-i18n="panel.events">Live protocol events</h3><span class="badge" id="event-count">0</span></div>
           <div class="event-toolbar">
-            <select id="event-level" style="min-width:140px"><option value="">All levels</option><option value="usecase">Use case</option><option value="lifecycle">Lifecycle</option><option value="spine">SPINE</option></select>
-            <button class="small" id="pause-events">Pause</button>
-            <button class="small" id="clear-events">Clear</button>
-            <span class="muted" id="stream-state">connecting…</span>
+            <select id="event-level" style="min-width:140px"><option value="" data-i18n="evt.all">All levels</option><option value="usecase" data-i18n="evt.usecase">Use case</option><option value="lifecycle" data-i18n="evt.lifecycle">Lifecycle</option><option value="spine">SPINE</option></select>
+            <button class="small" id="pause-events" data-i18n="btn.pause">Pause</button>
+            <button class="small" id="clear-events" data-i18n="btn.clear">Clear</button>
+            <span class="muted" id="stream-state" data-i18n="evt.connecting">connecting…</span>
           </div>
           <div id="event-table-wrap">
-            <table><thead><tr><th>Time</th><th>Level</th><th>Stack</th><th>Event</th><th>SKI</th></tr></thead><tbody id="events-body"></tbody></table>
+            <table><thead><tr><th data-i18n="th.time">Time</th><th data-i18n="th.level">Level</th><th data-i18n="th.stack">Stack</th><th data-i18n="th.event">Event</th><th>SKI</th></tr></thead><tbody id="events-body"></tbody></table>
           </div>
         </div>
       </section>
@@ -821,102 +808,942 @@
 const API = "/api/v1";
 
 // ---- i18n ---------------------------------------------------------------------------
-// Covers the static chrome: nav, page titles/subtitles, panel headings, and common
-// action/status words. Deliberately NOT covering EEBUS protocol vocabulary (LPC, SPINE,
-// SKI, use-case names, JSON output, method names) -- those are the same in every language
-// and translating them would make the UI harder to match against the spec and the logs.
-// Add a key here and reference it with data-i18n (or t() inside a template literal).
+// Covers the complete UI: static markup via data-i18n attributes, runtime strings through
+// t()/tf(). When adding a UI string, add its key to all three languages below -- a missing
+// key is reported on the console at load. Deliberately NOT covering EEBUS protocol
+// vocabulary (LPC, SPINE, SKI, use-case names, JSON output, method names) -- those are the
+// same in every language and translating them would make the UI harder to match against
+// the spec and the logs.
 const I18N = {
   en: {
     "brand.tagline": "Live engineering testbench",
-    "nav.label": "Workspace", "nav.dashboard": "Dashboard", "nav.devices": "Devices &amp; network",
-    "nav.usecases": "Use cases", "nav.tests": "Test runner", "nav.diagnostics": "Diagnostics",
+    "nav.label": "Workspace",
+    "nav.dashboard": "Dashboard",
+    "nav.devices": "Devices &amp; network",
+    "nav.usecases": "Use cases",
+    "nav.tests": "Test runner",
+    "nav.diagnostics": "Diagnostics",
     "side.state": "Testbench state",
+    "side.connecting": "Connecting…",
+    "side.noCounterparty": "No active counterparty",
     "side.ski": "This testbench's SKI",
     "side.ski.copy": "Click to copy",
     "side.ski.hint": "Pair this value on the device",
-    "theme.label": "Appearance", "theme.system": "Match system", "theme.light": "Light", "theme.dark": "Dark",
-    "top.target": "Target device", "top.refresh": "Refresh now",
-    "page.dash.eyebrow": "Live state", "page.dash.title": "Home energy and charging",
-    "page.dash.sub": "Measurements, limits, vehicles, generation, and storage from the selected EEBUS peer.",
-    "page.dev.eyebrow": "SHIP + SPINE discovery", "page.dev.title": "Devices and network",
-    "page.dev.sub": "Discover, trust, explore, and inspect the complete advertised device model.",
-    "page.uc.eyebrow": "Protocol operations", "page.uc.title": "Use-case workbench",
-    "page.uc.sub": "Typed controls for common use cases and raw JSON-RPC for the complete stack surface.",
-    "page.test.eyebrow": "Python + scenario DSL", "page.test.title": "Use-case test runner",
-    "page.test.sub": "Repeatable examples that run through the same REST paths as the dashboard.",
-    "page.diag.eyebrow": "Deep inspection", "page.diag.title": "Diagnostics",
-    "page.diag.sub": "Runtime stacks, DLT tracing, network details, events, and process logs.",
-    "panel.history": "Power and limits over time",
-    "panel.limit": "Live consumption limit",
-    "panel.connected": "Connected devices", "panel.connected.sub": "Click a device to inspect it",
-    "panel.intel": "Selected device intelligence", "panel.intel.sub": "Live capability and asset summary",
-    "panel.known": "Known peers", "panel.pending": "Pending pairing", "panel.scan": "mDNS scan results",
-    "panel.stacks": "Runtime stacks",
-    "panel.namespace": "Network namespace", "panel.logs": "Process logs", "panel.events": "Live protocol events",
+    "side.apiref": "API reference ↗",
+    "theme.label": "Appearance",
+    "theme.system": "Match system",
+    "theme.light": "Light",
+    "theme.dark": "Dark",
     "lang.label": "Language",
+    "top.target": "Target device",
+    "top.noDevice": "No connected device",
+    "top.refresh": "Refresh now",
+    "sync.starting": "Starting",
+    "page.dash.eyebrow": "Live state",
+    "page.dash.title": "Home energy and charging",
+    "page.dash.sub": "Measurements, limits, vehicles, generation, and storage from the selected EEBUS peer.",
+    "page.dev.eyebrow": "SHIP + SPINE discovery",
+    "page.dev.title": "Devices and network",
+    "page.dev.sub": "Discover, trust, explore, and inspect the complete advertised device model.",
+    "page.uc.eyebrow": "Protocol operations",
+    "page.uc.title": "Use-case workbench",
+    "page.uc.sub": "Typed controls for the use cases the testbench implements.",
+    "page.test.eyebrow": "Scenario DSL",
+    "page.test.title": "Use-case test runner",
+    "page.test.sub": "Repeatable examples that run through the same REST paths as the dashboard.",
+    "page.diag.eyebrow": "Deep inspection",
+    "page.diag.title": "Diagnostics",
+    "page.diag.sub": "Runtime stacks, network details, events, and process logs.",
+    "panel.history": "Power and limits over time",
+    "panel.history.sub": "Hover or click the chart to inspect a sample",
+    "panel.limit": "Live consumption limit",
+    "panel.connected": "Connected devices",
+    "panel.connected.sub": "Click a device to inspect it",
+    "panel.intel": "Selected device intelligence",
+    "panel.intel.sub": "Live capability and asset summary",
+    "panel.known": "Known peers",
+    "panel.pending": "Pending pairing",
+    "panel.scan": "mDNS scan results",
+    "panel.stacks": "Runtime stacks",
+    "panel.stacks.sub": "One counterparty + observers",
+    "panel.logs": "Process logs",
+    "panel.events": "Live protocol events",
+    "panel.runtime": "Runtime info",
+    "panel.runtime.sub": "Build, network mode, and capabilities",
+    "panel.reach": "Reachability",
+    "panel.reach.sub": "What a device sees when it looks for us",
+    "metric.consumption": "Total consumption",
+    "metric.noMpc": "No MPC value",
+    "metric.ev": "EV charging",
+    "metric.noEv": "No EV entities",
+    "metric.pv": "PV production",
+    "metric.noVapd": "No VAPD value",
+    "metric.limit": "Consumption limit",
+    "metric.noLimit": "No active LPC limit",
+    "legend.consumption": "Consumption",
+    "legend.pv": "PV",
+    "legend.limit": "Limit",
+    "chart.empty": "Select a connected peer to begin collecting history.",
+    "flow.grid": "Grid",
+    "flow.ev": "EV charging",
+    "flow.pv": "Photovoltaic",
+    "flow.battery": "Battery",
+    "badge.live": "LIVE",
+    "limit.warning": "Apply sends the value to the selected device immediately.",
+    "field.entity": "Target entity",
+    "field.spineAddr": "SPINE address",
+    "field.automatic": "Automatic",
+    "field.activePower": "Active power",
+    "field.duration": "Duration",
+    "field.iso8601": "ISO-8601 on the API",
+    "field.targetPeer": "Target peer",
+    "field.autoByUsecase": "Automatic by use case",
+    "dur.1m": "1 minute",
+    "dur.15m": "15 minutes",
+    "dur.30m": "30 minutes",
+    "dur.1h": "1 hour",
+    "dur.2h": "2 hours",
+    "dur.none": "No expiry",
+    "btn.applyLive": "Apply live",
+    "btn.release": "Release limit",
+    "btn.readCurrent": "Read current",
+    "limit.waiting": "Waiting for a connected LPC-capable device.",
+    "btn.openNetwork": "Open network",
+    "empty.noDeviceData": "No device data yet.",
+    "empty.selectDevice": "Select a connected device.",
+    "btn.scan": "Scan mDNS (5s)",
+    "empty.loadingPeers": "Loading peers…",
+    "empty.noPending": "No pending requests.",
+    "badge.notRun": "not run",
+    "scan.hint": "Run a scan to inspect real multicast visibility.",
+    "empty.selectPeer": "Select a peer to browse its entities and advertised use cases.",
+    "empty.selectDeviceUc": "Select a connected device to browse its advertised use cases.",
+    "empty.loading": "Loading…",
+    "empty.loadingTests": "Loading test catalog…",
+    "btn.refreshUc": "Refresh advertised use cases",
+    "uc.lpc.title": "Consumption limit",
+    "uc.lpp.title": "Production limit",
+    "uc.mon.title": "Measurements",
+    "uc.assets.title": "Energy assets",
+    "uc.noRequest": "No request yet.",
+    "badge.unknown": "unknown",
+    "badge.typedSnapshot": "typed snapshot",
+    "btn.readLimit": "Read limit",
+    "btn.readFailsafe": "Read failsafe",
+    "btn.readNominal": "Read nominal max",
+    "btn.hbState": "Heartbeat state",
+    "btn.hbStart": "Start heartbeat",
+    "btn.hbStop": "Stop heartbeat",
+    "btn.readMpc": "Read consumption",
+    "btn.readMgcp": "Read grid connection",
+    "btn.readSnapshot": "Read complete energy state",
+    "btn.readEv": "Read EV inventory",
+    "btn.readAssets": "Read PV and battery",
+    "btn.browseModel": "Browse device model",
+    "btn.runReadonly": "Run read-only",
+    "btn.runAll": "Run complete suite",
+    "tests.total0": "0 tests",
+    "tests.passed0": "0 passed",
+    "tests.skipped0": "0 skipped",
+    "tests.failed0": "0 failed",
+    "tests.notice": "<strong>Live-control tests change the connected device.</strong> Unsupported use cases are marked skipped, not failed. A failed supported test remains a real failure.",
+    "diag.scripting": "Scripting the API",
+    "diag.scripting.text": "every panel here is a thin wrapper over the REST API at",
+    "diag.docs": "Interactive docs:",
+    "diag.example": "Example:",
+    "badge.liveState": "live",
+    "log.auto": "refresh every 3s",
+    "log.none": "No log selected.",
+    "evt.all": "All levels",
+    "evt.usecase": "Use case",
+    "evt.lifecycle": "Lifecycle",
+    "evt.connecting": "connecting…",
+    "btn.pause": "Pause",
+    "btn.resume": "Resume",
+    "btn.clear": "Clear",
+    "btn.refresh": "Refresh",
+    "th.time": "Time",
+    "th.level": "Level",
+    "th.stack": "Stack",
+    "th.event": "Event",
+    "th.usecase": "Use case",
+    "th.actor": "Actor",
+    "th.entity": "Entity",
+    "th.entities": "Entities",
+    "th.version": "Version / scenarios",
+    "th.access": "Testbench access",
+    "th.state": "State",
+    "th.shipPort": "SHIP port",
+    "th.mdnsHost": "mDNS host",
+    "th.platform": "Platform",
+    "th.announced": "Announced",
+    "th.versionLabel": "Version",
+    "th.netMode": "Network mode",
+    "th.iface": "Interface",
+    "th.mdnsProvider": "mDNS provider",
+    "th.capabilities": "Capabilities",
+    "badge.connected": "connected",
+    "badge.offline": "offline",
+    "badge.waiting": "waiting for data",
+    "badge.notConnected": "not connected",
+    "badge.available": "available",
+    "badge.unavailable": "unavailable",
+    "badge.supported": "SUPPORTED",
+    "badge.notAdvertised": "NOT ADVERTISED",
+    "badge.advertised": "advertised",
+    "badge.notAdvertisedLc": "not advertised",
+    "js.working": "Working…",
+    "js.actionFailed": "Action failed",
+    "js.refreshing": "Refreshing",
+    "js.updated": "Updated",
+    "js.dashRefreshed": "Dashboard refreshed",
+    "js.connLost": "Connection lost",
+    "js.noLongerConnected": "{name} is no longer connected",
+    "js.connectedToast": "Connected",
+    "js.disappeared": "{name} disappeared from the peer list",
+    "js.unavailable": "unavailable",
+    "js.peersConnected": "{n} peer(s) connected",
+    "js.noCounterparty": "No counterparty",
+    "js.startCounterparty": "Start a counterparty in Diagnostics",
+    "js.noKnownDevice": "No known device",
+    "js.lostAgo": "connection lost {s}s ago",
+    "js.mdnsPeer": "mDNS peer",
+    "js.noPeers": "No peers configured or discovered.",
+    "js.awaitingPairing": "Awaiting pairing decision",
+    "btn.approve": "Approve",
+    "btn.deny": "Deny",
+    "js.selectPeer": "Select a peer.",
+    "js.notConnectedNotice": "This peer cannot be explored until it is connected. Trust starts the SHIP connection; the connection may still require approval on the device.",
+    "btn.trustConnect": "Trust and connect",
+    "js.profileFailed": "Profile request failed.",
+    "js.loadingDiscovery": "Loading device discovery…",
+    "js.unknownEntity": "Unknown entity",
+    "js.noUcAdvertised": "No use cases advertised",
+    "btn.copySki": "Copy SKI",
+    "btn.untrust": "Untrust",
+    "js.entitySub": "Select an entity in the workbench when a device exposes more than one for a use case.",
+    "js.advertisedUc": "Advertised use cases",
+    "js.ucSub": "Live NodeManagement use-case data, not a static compatibility claim.",
+    "btn.openWorkbench": "Open workbench",
+    "js.noUcReported": "No use cases reported.",
+    "js.rawDiscovery": "Raw protocol discovery data",
+    "js.unknownDeviceType": "Unknown device type",
+    "js.profileCounts": "{e} entities · {u} advertised use cases",
+    "js.noEntities": "No entities returned.",
+    "js.loadingUc": "Loading advertised use cases…",
+    "js.liveEntries": "{n} live entries from NodeManagement discovery",
+    "js.entitiesCount": "{n} entities",
+    "js.noUcInfo": "The peer returned no use-case information.",
+    "js.snapshotFailed": "snapshot failed",
+    "js.mpcEntities": "{n} MPC entities",
+    "js.mpcNotAdvertised": "MPC not advertised",
+    "js.charging": "charging",
+    "js.evNote": "{c} connected · {s} EVSE",
+    "js.pvSystems": "{n} PV system(s)",
+    "js.vapdNotAdvertised": "VAPD not advertised",
+    "js.limitActive": "Active on the device",
+    "js.noProfile": "No live device profile.",
+    "js.useCases": "Use cases",
+    "js.snapshotGaps": "Snapshot gaps",
+    "js.stateUnavailable": "state unavailable",
+    "js.noEvEntities": "No EV entities are currently exposed by this peer.",
+    "js.secondsAgo": "{s}s ago",
+    "js.selectDeviceFirst": "Select a device first",
+    "js.appliedLive": "Applied {p} live · message {m}",
+    "js.accepted": "accepted",
+    "js.limitReleased": "Limit released on the device",
+    "js.limitActiveRead": "Active: {p}",
+    "js.limitInactiveRead": "Inactive · last value {p}",
+    "js.evsCharging": "{n} EVs charging",
+    "js.noPeer": "No peer",
+    "js.selectTarget": "Select a target peer",
+    "js.scanning": "scanning",
+    "js.scanFailed": "scan failed",
+    "js.found": "{n} found",
+    "js.noMdnsTitle": "No mDNS announcements were visible.",
+    "js.noMdnsBody": "Check the interface selection and local firewall; multicast rarely crosses subnets or access points. Statically configured peers remain usable.",
+    "js.noTemplates": "No templates loaded.",
+    "js.liveControl": "live control",
+    "js.observerOnly": "observer only",
+    "js.processOnly": "process only",
+    "js.recentCrashes": "{n} recent crashes",
+    "btn.stop": "Stop",
+    "btn.start": "Start",
+    "js.stopped": "stopped",
+    "js.started": "started",
+    "js.diagUnavailable": "Diagnostics endpoint unavailable.",
+    "js.noneAnnounced": "none -- no peer can connect",
+    "js.rejectedCount": "{n} local address(es) deliberately not published",
+    "js.srcOverride": "from config override",
+    "js.srcUnfiltered": "unfiltered",
+    "js.srcAuto": "auto-detected",
+    "js.inboundTcp": "(inbound TCP)",
+    "js.dialOrder": "dialled in this order",
+    "js.firewallCmds": "Firewall commands for this platform",
+    "js.testsCount": "{n} tests",
+    "js.scenarioExample": "Scenario example",
+    "btn.run": "Run",
+    "js.noScenarios": "No scenarios found.",
+    "js.passedCount": "{n} passed",
+    "js.skippedCount": "{n} skipped",
+    "js.failedCount": "{n} failed",
+    "js.runningBadge": "running",
+    "js.deviceNotConnected": "Device is not connected",
+    "js.connectFirst": "Connect a peer before starting a batch test run.",
+    "js.runningProgress": "Running {i} / {n}",
+    "js.runComplete": "Test run complete",
+    "js.scenariosExecuted": "{n} scenarios executed",
+    "js.logsUnavailable": "Unable to read logs.",
+    "js.noLogLines": "No log lines yet.",
+    "js.streamConnected": "stream connected",
+    "js.reconnecting": "reconnecting…",
+    "js.displayPaused": "display paused",
+    "js.apiUnavailable": "API unavailable",
+    "js.apiUnreachable": "API unreachable · last update {s}s ago",
+    "js.apiLost": "Lost contact with the testbench API",
+    "js.apiBack": "Testbench API is back",
+    "js.loadFailed": "Could not load the testbench",
+    "js.limitApplied": "Live limit applied",
+    "js.limitReleasedShort": "Limit released",
+    "js.trustFirst": "Trust and connect the peer before browsing its live use cases.",
+    "js.ucRefreshed": "Use-case discovery refreshed",
+    "js.readDone": "Read complete",
+    "js.hbStarted": "Heartbeat started",
+    "js.hbStopped": "Heartbeat stopped",
+    "js.trustRequested": "Trust requested",
+    "js.confirmUntrust": "Disconnect and remove this peer from the running stack? Reconnecting the same SKI may require a stack restart.",
+    "js.peerDisconnected": "Peer disconnected",
+    "js.pairApproved": "Pairing approved",
+    "js.pairDenied": "Pairing denied",
+    "js.copied": "Copied to clipboard",
+    "js.templateSent": "{kind} template sent",
+    "js.none": "none",
+    "js.allInterfaces": "(all)",
   },
   de: {
     "brand.tagline": "Live-Engineering-Testumgebung",
-    "nav.label": "Arbeitsbereich", "nav.dashboard": "Übersicht", "nav.devices": "Geräte &amp; Netzwerk",
-    "nav.usecases": "Anwendungsfälle", "nav.tests": "Testrunner", "nav.diagnostics": "Diagnose",
+    "nav.label": "Arbeitsbereich",
+    "nav.dashboard": "Übersicht",
+    "nav.devices": "Geräte &amp; Netzwerk",
+    "nav.usecases": "Anwendungsfälle",
+    "nav.tests": "Testrunner",
+    "nav.diagnostics": "Diagnose",
     "side.state": "Status der Testumgebung",
+    "side.connecting": "Verbinde…",
+    "side.noCounterparty": "Kein aktiver Gegenpart",
     "side.ski": "SKI dieser Testumgebung",
     "side.ski.copy": "Zum Kopieren klicken",
     "side.ski.hint": "Diesen Wert am Gerät koppeln",
-    "theme.label": "Darstellung", "theme.system": "Wie System", "theme.light": "Hell", "theme.dark": "Dunkel",
-    "top.target": "Zielgerät", "top.refresh": "Jetzt aktualisieren",
-    "page.dash.eyebrow": "Live-Zustand", "page.dash.title": "Hausenergie und Ladevorgang",
-    "page.dash.sub": "Messwerte, Limits, Fahrzeuge, Erzeugung und Speicher des ausgewählten EEBUS-Peers.",
-    "page.dev.eyebrow": "SHIP- und SPINE-Erkennung", "page.dev.title": "Geräte und Netzwerk",
-    "page.dev.sub": "Geräte erkennen, vertrauen, erkunden und das vollständige angekündigte Gerätemodell prüfen.",
-    "page.uc.eyebrow": "Protokolloperationen", "page.uc.title": "Anwendungsfall-Werkbank",
-    "page.uc.sub": "Typisierte Bedienelemente für gängige Anwendungsfälle und Raw-JSON-RPC für den gesamten Stack.",
-    "page.test.eyebrow": "Python + Szenario-DSL", "page.test.title": "Anwendungsfall-Testrunner",
-    "page.test.sub": "Wiederholbare Beispiele, die über dieselben REST-Pfade wie das Dashboard laufen.",
-    "page.diag.eyebrow": "Detailanalyse", "page.diag.title": "Diagnose",
-    "page.diag.sub": "Laufende Stacks, DLT-Tracing, Netzwerkdetails, Ereignisse und Prozessprotokolle.",
-    "panel.history": "Leistung und Limits im Zeitverlauf",
-    "panel.limit": "Live-Verbrauchsgrenze",
-    "panel.connected": "Verbundene Geräte", "panel.connected.sub": "Gerät anklicken, um es zu prüfen",
-    "panel.intel": "Details zum ausgewählten Gerät", "panel.intel.sub": "Live-Übersicht der Fähigkeiten und Anlagen",
-    "panel.known": "Bekannte Peers", "panel.pending": "Ausstehende Kopplung", "panel.scan": "mDNS-Scan-Ergebnisse",
-    "panel.stacks": "Laufende Stacks",
-    "panel.namespace": "Netzwerk-Namespace", "panel.logs": "Prozessprotokolle", "panel.events": "Live-Protokollereignisse",
+    "side.apiref": "API-Referenz ↗",
+    "theme.label": "Darstellung",
+    "theme.system": "Wie System",
+    "theme.light": "Hell",
+    "theme.dark": "Dunkel",
     "lang.label": "Sprache",
+    "top.target": "Zielgerät",
+    "top.noDevice": "Kein verbundenes Gerät",
+    "top.refresh": "Jetzt aktualisieren",
+    "sync.starting": "Startet",
+    "page.dash.eyebrow": "Live-Zustand",
+    "page.dash.title": "Hausenergie und Ladevorgang",
+    "page.dash.sub": "Messwerte, Limits, Fahrzeuge, Erzeugung und Speicher des ausgewählten EEBUS-Peers.",
+    "page.dev.eyebrow": "SHIP- und SPINE-Erkennung",
+    "page.dev.title": "Geräte und Netzwerk",
+    "page.dev.sub": "Geräte erkennen, vertrauen, erkunden und das vollständige angekündigte Gerätemodell prüfen.",
+    "page.uc.eyebrow": "Protokolloperationen",
+    "page.uc.title": "Anwendungsfall-Werkbank",
+    "page.uc.sub": "Typisierte Bedienelemente für die vom Testbench implementierten Anwendungsfälle.",
+    "page.test.eyebrow": "Szenario-DSL",
+    "page.test.title": "Anwendungsfall-Testrunner",
+    "page.test.sub": "Wiederholbare Beispiele, die über dieselben REST-Pfade wie das Dashboard laufen.",
+    "page.diag.eyebrow": "Detailanalyse",
+    "page.diag.title": "Diagnose",
+    "page.diag.sub": "Laufende Stacks, Netzwerkdetails, Ereignisse und Prozessprotokolle.",
+    "panel.history": "Leistung und Limits im Zeitverlauf",
+    "panel.history.sub": "Zum Prüfen eines Messpunkts über das Diagramm fahren oder klicken",
+    "panel.limit": "Live-Verbrauchsgrenze",
+    "panel.connected": "Verbundene Geräte",
+    "panel.connected.sub": "Gerät anklicken, um es zu prüfen",
+    "panel.intel": "Details zum ausgewählten Gerät",
+    "panel.intel.sub": "Live-Übersicht der Fähigkeiten und Anlagen",
+    "panel.known": "Bekannte Peers",
+    "panel.pending": "Ausstehende Kopplung",
+    "panel.scan": "mDNS-Scan-Ergebnisse",
+    "panel.stacks": "Laufende Stacks",
+    "panel.stacks.sub": "Ein Gegenpart + Beobachter",
+    "panel.logs": "Prozessprotokolle",
+    "panel.events": "Live-Protokollereignisse",
+    "panel.runtime": "Laufzeitinfo",
+    "panel.runtime.sub": "Build, Netzwerkmodus und Fähigkeiten",
+    "panel.reach": "Erreichbarkeit",
+    "panel.reach.sub": "Was ein Gerät sieht, wenn es uns sucht",
+    "metric.consumption": "Gesamtverbrauch",
+    "metric.noMpc": "Kein MPC-Wert",
+    "metric.ev": "EV-Laden",
+    "metric.noEv": "Keine EV-Entitäten",
+    "metric.pv": "PV-Erzeugung",
+    "metric.noVapd": "Kein VAPD-Wert",
+    "metric.limit": "Verbrauchsgrenze",
+    "metric.noLimit": "Keine aktive LPC-Grenze",
+    "legend.consumption": "Verbrauch",
+    "legend.pv": "PV",
+    "legend.limit": "Grenze",
+    "chart.empty": "Verbundenen Peer auswählen, um Verlauf aufzuzeichnen.",
+    "flow.grid": "Netz",
+    "flow.ev": "EV-Laden",
+    "flow.pv": "Photovoltaik",
+    "flow.battery": "Batterie",
+    "badge.live": "LIVE",
+    "limit.warning": "Anwenden sendet den Wert sofort an das ausgewählte Gerät.",
+    "field.entity": "Zielentität",
+    "field.spineAddr": "SPINE-Adresse",
+    "field.automatic": "Automatisch",
+    "field.activePower": "Wirkleistung",
+    "field.duration": "Dauer",
+    "field.iso8601": "ISO-8601 auf der API",
+    "field.targetPeer": "Ziel-Peer",
+    "field.autoByUsecase": "Automatisch nach Anwendungsfall",
+    "dur.1m": "1 Minute",
+    "dur.15m": "15 Minuten",
+    "dur.30m": "30 Minuten",
+    "dur.1h": "1 Stunde",
+    "dur.2h": "2 Stunden",
+    "dur.none": "Ohne Ablauf",
+    "btn.applyLive": "Live anwenden",
+    "btn.release": "Grenze aufheben",
+    "btn.readCurrent": "Aktuellen Wert lesen",
+    "limit.waiting": "Warte auf ein verbundenes LPC-fähiges Gerät.",
+    "btn.openNetwork": "Netzwerk öffnen",
+    "empty.noDeviceData": "Noch keine Gerätedaten.",
+    "empty.selectDevice": "Verbundenes Gerät auswählen.",
+    "btn.scan": "mDNS scannen (5s)",
+    "empty.loadingPeers": "Lade Peers…",
+    "empty.noPending": "Keine ausstehenden Anfragen.",
+    "badge.notRun": "nicht ausgeführt",
+    "scan.hint": "Scan ausführen, um reale Multicast-Sichtbarkeit zu prüfen.",
+    "empty.selectPeer": "Peer auswählen, um Entitäten und angekündigte Anwendungsfälle zu durchsuchen.",
+    "empty.selectDeviceUc": "Verbundenes Gerät auswählen, um dessen Anwendungsfälle zu durchsuchen.",
+    "empty.loading": "Lade…",
+    "empty.loadingTests": "Lade Testkatalog…",
+    "btn.refreshUc": "Angekündigte Anwendungsfälle aktualisieren",
+    "uc.lpc.title": "Verbrauchsgrenze",
+    "uc.lpp.title": "Erzeugungsgrenze",
+    "uc.mon.title": "Messwerte",
+    "uc.assets.title": "Energieanlagen",
+    "uc.noRequest": "Noch keine Anfrage.",
+    "badge.unknown": "unbekannt",
+    "badge.typedSnapshot": "typisierter Snapshot",
+    "btn.readLimit": "Grenze lesen",
+    "btn.readFailsafe": "Failsafe lesen",
+    "btn.readNominal": "Nennmaximum lesen",
+    "btn.hbState": "Heartbeat-Status",
+    "btn.hbStart": "Heartbeat starten",
+    "btn.hbStop": "Heartbeat stoppen",
+    "btn.readMpc": "Verbrauch lesen",
+    "btn.readMgcp": "Netzanschluss lesen",
+    "btn.readSnapshot": "Kompletten Energiezustand lesen",
+    "btn.readEv": "EV-Bestand lesen",
+    "btn.readAssets": "PV und Batterie lesen",
+    "btn.browseModel": "Gerätemodell durchsuchen",
+    "btn.runReadonly": "Nur-Lese-Tests ausführen",
+    "btn.runAll": "Komplette Suite ausführen",
+    "tests.total0": "0 Tests",
+    "tests.passed0": "0 bestanden",
+    "tests.skipped0": "0 übersprungen",
+    "tests.failed0": "0 fehlgeschlagen",
+    "tests.notice": "<strong>Live-Control-Tests verändern das verbundene Gerät.</strong> Nicht unterstützte Anwendungsfälle werden als übersprungen markiert, nicht als fehlgeschlagen. Ein fehlgeschlagener unterstützter Test bleibt ein echter Fehler.",
+    "diag.scripting": "API skripten",
+    "diag.scripting.text": "jedes Panel hier ist ein dünner Wrapper über der REST-API unter",
+    "diag.docs": "Interaktive Doku:",
+    "diag.example": "Beispiel:",
+    "badge.liveState": "live",
+    "log.auto": "alle 3s aktualisieren",
+    "log.none": "Kein Protokoll ausgewählt.",
+    "evt.all": "Alle Ebenen",
+    "evt.usecase": "Anwendungsfall",
+    "evt.lifecycle": "Lebenszyklus",
+    "evt.connecting": "verbinde…",
+    "btn.pause": "Pause",
+    "btn.resume": "Fortsetzen",
+    "btn.clear": "Leeren",
+    "btn.refresh": "Aktualisieren",
+    "th.time": "Zeit",
+    "th.level": "Ebene",
+    "th.stack": "Stack",
+    "th.event": "Ereignis",
+    "th.usecase": "Anwendungsfall",
+    "th.actor": "Akteur",
+    "th.entity": "Entität",
+    "th.entities": "Entitäten",
+    "th.version": "Version / Szenarien",
+    "th.access": "Testbench-Zugriff",
+    "th.state": "Status",
+    "th.shipPort": "SHIP-Port",
+    "th.mdnsHost": "mDNS-Host",
+    "th.platform": "Plattform",
+    "th.announced": "Angekündigt",
+    "th.versionLabel": "Version",
+    "th.netMode": "Netzwerkmodus",
+    "th.iface": "Schnittstelle",
+    "th.mdnsProvider": "mDNS-Provider",
+    "th.capabilities": "Fähigkeiten",
+    "badge.connected": "verbunden",
+    "badge.offline": "offline",
+    "badge.waiting": "warte auf Daten",
+    "badge.notConnected": "nicht verbunden",
+    "badge.available": "verfügbar",
+    "badge.unavailable": "nicht verfügbar",
+    "badge.supported": "UNTERSTÜTZT",
+    "badge.notAdvertised": "NICHT ANGEKÜNDIGT",
+    "badge.advertised": "angekündigt",
+    "badge.notAdvertisedLc": "nicht angekündigt",
+    "js.working": "Arbeite…",
+    "js.actionFailed": "Aktion fehlgeschlagen",
+    "js.refreshing": "Aktualisiere",
+    "js.updated": "Aktualisiert",
+    "js.dashRefreshed": "Dashboard aktualisiert",
+    "js.connLost": "Verbindung verloren",
+    "js.noLongerConnected": "{name} ist nicht mehr verbunden",
+    "js.connectedToast": "Verbunden",
+    "js.disappeared": "{name} ist aus der Peer-Liste verschwunden",
+    "js.unavailable": "nicht verfügbar",
+    "js.peersConnected": "{n} Peer(s) verbunden",
+    "js.noCounterparty": "Kein Gegenpart",
+    "js.startCounterparty": "Gegenpart in der Diagnose starten",
+    "js.noKnownDevice": "Kein bekanntes Gerät",
+    "js.lostAgo": "Verbindung vor {s}s verloren",
+    "js.mdnsPeer": "mDNS-Peer",
+    "js.noPeers": "Keine Peers konfiguriert oder gefunden.",
+    "js.awaitingPairing": "Wartet auf Kopplungsentscheidung",
+    "btn.approve": "Genehmigen",
+    "btn.deny": "Ablehnen",
+    "js.selectPeer": "Peer auswählen.",
+    "js.notConnectedNotice": "Dieser Peer kann erst nach Verbindungsaufbau erkundet werden. Vertrauen startet die SHIP-Verbindung; sie kann zusätzlich eine Freigabe am Gerät erfordern.",
+    "btn.trustConnect": "Vertrauen und verbinden",
+    "js.profileFailed": "Profilabfrage fehlgeschlagen.",
+    "js.loadingDiscovery": "Lade Geräteerkennung…",
+    "js.unknownEntity": "Unbekannte Entität",
+    "js.noUcAdvertised": "Keine Anwendungsfälle angekündigt",
+    "btn.copySki": "SKI kopieren",
+    "btn.untrust": "Vertrauen entziehen",
+    "js.entitySub": "Entität in der Werkbank auswählen, wenn ein Gerät mehrere für einen Anwendungsfall bereitstellt.",
+    "js.advertisedUc": "Angekündigte Anwendungsfälle",
+    "js.ucSub": "Live-NodeManagement-Daten, keine statische Kompatibilitätsaussage.",
+    "btn.openWorkbench": "Werkbank öffnen",
+    "js.noUcReported": "Keine Anwendungsfälle gemeldet.",
+    "js.rawDiscovery": "Rohe Protokoll-Erkennungsdaten",
+    "js.unknownDeviceType": "Unbekannter Gerätetyp",
+    "js.profileCounts": "{e} Entitäten · {u} angekündigte Anwendungsfälle",
+    "js.noEntities": "Keine Entitäten zurückgegeben.",
+    "js.loadingUc": "Lade angekündigte Anwendungsfälle…",
+    "js.liveEntries": "{n} Live-Einträge aus der NodeManagement-Erkennung",
+    "js.entitiesCount": "{n} Entitäten",
+    "js.noUcInfo": "Der Peer lieferte keine Anwendungsfall-Informationen.",
+    "js.snapshotFailed": "Snapshot fehlgeschlagen",
+    "js.mpcEntities": "{n} MPC-Entität(en)",
+    "js.mpcNotAdvertised": "MPC nicht angekündigt",
+    "js.charging": "lädt",
+    "js.evNote": "{c} verbunden · {s} EVSE",
+    "js.pvSystems": "{n} PV-Anlage(n)",
+    "js.vapdNotAdvertised": "VAPD nicht angekündigt",
+    "js.limitActive": "Auf dem Gerät aktiv",
+    "js.noProfile": "Kein Live-Geräteprofil.",
+    "js.useCases": "Anwendungsfälle",
+    "js.snapshotGaps": "Snapshot-Lücken",
+    "js.stateUnavailable": "Status nicht verfügbar",
+    "js.noEvEntities": "Dieser Peer stellt derzeit keine EV-Entitäten bereit.",
+    "js.secondsAgo": "vor {s}s",
+    "js.selectDeviceFirst": "Zuerst ein Gerät auswählen",
+    "js.appliedLive": "{p} live angewendet · Nachricht {m}",
+    "js.accepted": "akzeptiert",
+    "js.limitReleased": "Grenze auf dem Gerät aufgehoben",
+    "js.limitActiveRead": "Aktiv: {p}",
+    "js.limitInactiveRead": "Inaktiv · letzter Wert {p}",
+    "js.evsCharging": "{n} EVs laden",
+    "js.noPeer": "Kein Peer",
+    "js.selectTarget": "Ziel-Peer auswählen",
+    "js.scanning": "scanne",
+    "js.scanFailed": "Scan fehlgeschlagen",
+    "js.found": "{n} gefunden",
+    "js.noMdnsTitle": "Keine mDNS-Ankündigungen sichtbar.",
+    "js.noMdnsBody": "Schnittstellenauswahl und lokale Firewall prüfen; Multicast überquert selten Subnetze oder Access Points. Statisch konfigurierte Peers bleiben nutzbar.",
+    "js.noTemplates": "Keine Vorlagen geladen.",
+    "js.liveControl": "Live-Steuerung",
+    "js.observerOnly": "nur Beobachter",
+    "js.processOnly": "nur Prozess",
+    "js.recentCrashes": "{n} kürzliche Abstürze",
+    "btn.stop": "Stoppen",
+    "btn.start": "Starten",
+    "js.stopped": "gestoppt",
+    "js.started": "gestartet",
+    "js.diagUnavailable": "Diagnose-Endpunkt nicht verfügbar.",
+    "js.noneAnnounced": "keine -- kein Peer kann sich verbinden",
+    "js.rejectedCount": "{n} lokale Adresse(n) bewusst nicht veröffentlicht",
+    "js.srcOverride": "aus Konfigurations-Override",
+    "js.srcUnfiltered": "ungefiltert",
+    "js.srcAuto": "automatisch erkannt",
+    "js.inboundTcp": "(eingehend TCP)",
+    "js.dialOrder": "in dieser Reihenfolge angewählt",
+    "js.firewallCmds": "Firewall-Befehle für diese Plattform",
+    "js.testsCount": "{n} Tests",
+    "js.scenarioExample": "Szenario-Beispiel",
+    "btn.run": "Ausführen",
+    "js.noScenarios": "Keine Szenarien gefunden.",
+    "js.passedCount": "{n} bestanden",
+    "js.skippedCount": "{n} übersprungen",
+    "js.failedCount": "{n} fehlgeschlagen",
+    "js.runningBadge": "läuft",
+    "js.deviceNotConnected": "Gerät ist nicht verbunden",
+    "js.connectFirst": "Vor einem Batch-Testlauf einen Peer verbinden.",
+    "js.runningProgress": "Läuft {i} / {n}",
+    "js.runComplete": "Testlauf abgeschlossen",
+    "js.scenariosExecuted": "{n} Szenarien ausgeführt",
+    "js.logsUnavailable": "Protokolle können nicht gelesen werden.",
+    "js.noLogLines": "Noch keine Protokollzeilen.",
+    "js.streamConnected": "Stream verbunden",
+    "js.reconnecting": "verbinde neu…",
+    "js.displayPaused": "Anzeige pausiert",
+    "js.apiUnavailable": "API nicht erreichbar",
+    "js.apiUnreachable": "API nicht erreichbar · letzte Aktualisierung vor {s}s",
+    "js.apiLost": "Kontakt zur Testbench-API verloren",
+    "js.apiBack": "Testbench-API wieder erreichbar",
+    "js.loadFailed": "Testbench konnte nicht geladen werden",
+    "js.limitApplied": "Live-Grenze angewendet",
+    "js.limitReleasedShort": "Grenze aufgehoben",
+    "js.trustFirst": "Peer vertrauen und verbinden, bevor Live-Anwendungsfälle durchsucht werden.",
+    "js.ucRefreshed": "Anwendungsfall-Erkennung aktualisiert",
+    "js.readDone": "Lesen abgeschlossen",
+    "js.hbStarted": "Heartbeat gestartet",
+    "js.hbStopped": "Heartbeat gestoppt",
+    "js.trustRequested": "Vertrauen angefragt",
+    "js.confirmUntrust": "Diesen Peer trennen und aus dem laufenden Stack entfernen? Eine erneute Verbindung derselben SKI kann einen Stack-Neustart erfordern.",
+    "js.peerDisconnected": "Peer getrennt",
+    "js.pairApproved": "Kopplung genehmigt",
+    "js.pairDenied": "Kopplung abgelehnt",
+    "js.copied": "In die Zwischenablage kopiert",
+    "js.templateSent": "{kind}-Vorlage gesendet",
+    "js.none": "keine",
+    "js.allInterfaces": "(alle)",
   },
   "zh-Hans": {
     "brand.tagline": "实时工程测试平台",
-    "nav.label": "工作区", "nav.dashboard": "仪表板", "nav.devices": "设备与网络",
-    "nav.usecases": "用例", "nav.tests": "测试运行器", "nav.diagnostics": "诊断",
+    "nav.label": "工作区",
+    "nav.dashboard": "仪表板",
+    "nav.devices": "设备与网络",
+    "nav.usecases": "用例",
+    "nav.tests": "测试运行器",
+    "nav.diagnostics": "诊断",
     "side.state": "测试平台状态",
+    "side.connecting": "连接中…",
+    "side.noCounterparty": "没有活动的对端",
     "side.ski": "本测试平台的 SKI",
     "side.ski.copy": "点击复制",
     "side.ski.hint": "在设备上配对此值",
-    "theme.label": "外观", "theme.system": "跟随系统", "theme.light": "浅色", "theme.dark": "深色",
-    "top.target": "目标设备", "top.refresh": "立即刷新",
-    "page.dash.eyebrow": "实时状态", "page.dash.title": "家庭用能与充电",
-    "page.dash.sub": "所选 EEBUS 对端的测量值、限值、车辆、发电与储能。",
-    "page.dev.eyebrow": "SHIP 与 SPINE 发现", "page.dev.title": "设备与网络",
-    "page.dev.sub": "发现、信任、探索并检查完整的已公告设备模型。",
-    "page.uc.eyebrow": "协议操作", "page.uc.title": "用例工作台",
-    "page.uc.sub": "常见用例的类型化控件,以及覆盖完整协议栈的原始 JSON-RPC。",
-    "page.test.eyebrow": "Python 与场景 DSL", "page.test.title": "用例测试运行器",
-    "page.test.sub": "可重复的示例,通过与仪表板相同的 REST 路径运行。",
-    "page.diag.eyebrow": "深度检查", "page.diag.title": "诊断",
-    "page.diag.sub": "运行中的协议栈、DLT 跟踪、网络详情、事件与进程日志。",
-    "panel.history": "功率与限值历史",
-    "panel.limit": "实时用电限值",
-    "panel.connected": "已连接设备", "panel.connected.sub": "点击设备以查看详情",
-    "panel.intel": "所选设备详情", "panel.intel.sub": "能力与资产实时概览",
-    "panel.known": "已知对端", "panel.pending": "待处理配对", "panel.scan": "mDNS 扫描结果",
-    "panel.stacks": "运行中的协议栈",
-    "panel.namespace": "网络命名空间", "panel.logs": "进程日志", "panel.events": "实时协议事件",
+    "side.apiref": "API 参考 ↗",
+    "theme.label": "外观",
+    "theme.system": "跟随系统",
+    "theme.light": "浅色",
+    "theme.dark": "深色",
     "lang.label": "语言",
+    "top.target": "目标设备",
+    "top.noDevice": "没有已连接的设备",
+    "top.refresh": "立即刷新",
+    "sync.starting": "启动中",
+    "page.dash.eyebrow": "实时状态",
+    "page.dash.title": "家庭用能与充电",
+    "page.dash.sub": "所选 EEBUS 对端的测量值、限值、车辆、发电与储能。",
+    "page.dev.eyebrow": "SHIP 与 SPINE 发现",
+    "page.dev.title": "设备与网络",
+    "page.dev.sub": "发现、信任、探索并检查完整的已公告设备模型。",
+    "page.uc.eyebrow": "协议操作",
+    "page.uc.title": "用例工作台",
+    "page.uc.sub": "测试台已实现用例的类型化控件。",
+    "page.test.eyebrow": "场景 DSL",
+    "page.test.title": "用例测试运行器",
+    "page.test.sub": "可重复的示例，通过与仪表板相同的 REST 路径运行。",
+    "page.diag.eyebrow": "深度检查",
+    "page.diag.title": "诊断",
+    "page.diag.sub": "运行中的协议栈、网络详情、事件与进程日志。",
+    "panel.history": "功率与限值历史",
+    "panel.history.sub": "悬停或点击图表以查看采样点",
+    "panel.limit": "实时用电限值",
+    "panel.connected": "已连接设备",
+    "panel.connected.sub": "点击设备以查看详情",
+    "panel.intel": "所选设备详情",
+    "panel.intel.sub": "能力与资产实时概览",
+    "panel.known": "已知对端",
+    "panel.pending": "待处理配对",
+    "panel.scan": "mDNS 扫描结果",
+    "panel.stacks": "运行中的协议栈",
+    "panel.stacks.sub": "一个对端 + 观察者",
+    "panel.logs": "进程日志",
+    "panel.events": "实时协议事件",
+    "panel.runtime": "运行时信息",
+    "panel.runtime.sub": "构建、网络模式与能力",
+    "panel.reach": "可达性",
+    "panel.reach.sub": "设备寻找我们时看到的内容",
+    "metric.consumption": "总用电",
+    "metric.noMpc": "无 MPC 值",
+    "metric.ev": "电动车充电",
+    "metric.noEv": "无 EV 实体",
+    "metric.pv": "光伏发电",
+    "metric.noVapd": "无 VAPD 值",
+    "metric.limit": "用电限值",
+    "metric.noLimit": "无生效的 LPC 限值",
+    "legend.consumption": "用电",
+    "legend.pv": "光伏",
+    "legend.limit": "限值",
+    "chart.empty": "选择已连接的对端以开始记录历史。",
+    "flow.grid": "电网",
+    "flow.ev": "电动车充电",
+    "flow.pv": "光伏",
+    "flow.battery": "电池",
+    "badge.live": "实时",
+    "limit.warning": "点击应用会立即将该值发送到所选设备。",
+    "field.entity": "目标实体",
+    "field.spineAddr": "SPINE 地址",
+    "field.automatic": "自动",
+    "field.activePower": "有功功率",
+    "field.duration": "持续时间",
+    "field.iso8601": "API 使用 ISO-8601",
+    "field.targetPeer": "目标对端",
+    "field.autoByUsecase": "按用例自动选择",
+    "dur.1m": "1 分钟",
+    "dur.15m": "15 分钟",
+    "dur.30m": "30 分钟",
+    "dur.1h": "1 小时",
+    "dur.2h": "2 小时",
+    "dur.none": "永不过期",
+    "btn.applyLive": "实时应用",
+    "btn.release": "解除限值",
+    "btn.readCurrent": "读取当前值",
+    "limit.waiting": "等待支持 LPC 的已连接设备。",
+    "btn.openNetwork": "打开网络",
+    "empty.noDeviceData": "尚无设备数据。",
+    "empty.selectDevice": "请选择已连接的设备。",
+    "btn.scan": "扫描 mDNS（5 秒）",
+    "empty.loadingPeers": "正在加载对端…",
+    "empty.noPending": "没有待处理请求。",
+    "badge.notRun": "未运行",
+    "scan.hint": "运行扫描以检查实际组播可见性。",
+    "empty.selectPeer": "选择对端以浏览其实体和已公告用例。",
+    "empty.selectDeviceUc": "选择已连接的设备以浏览其已公告用例。",
+    "empty.loading": "加载中…",
+    "empty.loadingTests": "正在加载测试目录…",
+    "btn.refreshUc": "刷新已公告用例",
+    "uc.lpc.title": "用电限值",
+    "uc.lpp.title": "发电限值",
+    "uc.mon.title": "测量值",
+    "uc.assets.title": "能源资产",
+    "uc.noRequest": "尚无请求。",
+    "badge.unknown": "未知",
+    "badge.typedSnapshot": "类型化快照",
+    "btn.readLimit": "读取限值",
+    "btn.readFailsafe": "读取故障保护值",
+    "btn.readNominal": "读取标称最大值",
+    "btn.hbState": "心跳状态",
+    "btn.hbStart": "启动心跳",
+    "btn.hbStop": "停止心跳",
+    "btn.readMpc": "读取用电",
+    "btn.readMgcp": "读取并网点",
+    "btn.readSnapshot": "读取完整能量状态",
+    "btn.readEv": "读取 EV 清单",
+    "btn.readAssets": "读取光伏与电池",
+    "btn.browseModel": "浏览设备模型",
+    "btn.runReadonly": "运行只读测试",
+    "btn.runAll": "运行完整套件",
+    "tests.total0": "0 个测试",
+    "tests.passed0": "0 个通过",
+    "tests.skipped0": "0 个跳过",
+    "tests.failed0": "0 个失败",
+    "tests.notice": "<strong>实时控制测试会改变已连接设备的状态。</strong>不支持的用例标记为跳过而非失败。受支持的测试失败仍是真正的失败。",
+    "diag.scripting": "API 脚本化",
+    "diag.scripting.text": "此处每个面板都是 REST API 的轻量封装，位于",
+    "diag.docs": "交互式文档：",
+    "diag.example": "示例：",
+    "badge.liveState": "实时",
+    "log.auto": "每 3 秒刷新",
+    "log.none": "未选择日志。",
+    "evt.all": "所有级别",
+    "evt.usecase": "用例",
+    "evt.lifecycle": "生命周期",
+    "evt.connecting": "连接中…",
+    "btn.pause": "暂停",
+    "btn.resume": "继续",
+    "btn.clear": "清空",
+    "btn.refresh": "刷新",
+    "th.time": "时间",
+    "th.level": "级别",
+    "th.stack": "协议栈",
+    "th.event": "事件",
+    "th.usecase": "用例",
+    "th.actor": "角色",
+    "th.entity": "实体",
+    "th.entities": "实体",
+    "th.version": "版本 / 场景",
+    "th.access": "测试台访问",
+    "th.state": "状态",
+    "th.shipPort": "SHIP 端口",
+    "th.mdnsHost": "mDNS 主机",
+    "th.platform": "平台",
+    "th.announced": "已公布",
+    "th.versionLabel": "版本",
+    "th.netMode": "网络模式",
+    "th.iface": "接口",
+    "th.mdnsProvider": "mDNS 提供者",
+    "th.capabilities": "能力",
+    "badge.connected": "已连接",
+    "badge.offline": "离线",
+    "badge.waiting": "等待数据",
+    "badge.notConnected": "未连接",
+    "badge.available": "可用",
+    "badge.unavailable": "不可用",
+    "badge.supported": "支持",
+    "badge.notAdvertised": "未公告",
+    "badge.advertised": "已公告",
+    "badge.notAdvertisedLc": "未公告",
+    "js.working": "处理中…",
+    "js.actionFailed": "操作失败",
+    "js.refreshing": "刷新中",
+    "js.updated": "已更新",
+    "js.dashRefreshed": "仪表板已刷新",
+    "js.connLost": "连接丢失",
+    "js.noLongerConnected": "{name} 已断开连接",
+    "js.connectedToast": "已连接",
+    "js.disappeared": "{name} 已从对端列表中消失",
+    "js.unavailable": "不可用",
+    "js.peersConnected": "已连接 {n} 个对端",
+    "js.noCounterparty": "无对端",
+    "js.startCounterparty": "请在诊断页启动对端栈",
+    "js.noKnownDevice": "没有已知设备",
+    "js.lostAgo": "连接于 {s} 秒前丢失",
+    "js.mdnsPeer": "mDNS 对端",
+    "js.noPeers": "未配置或未发现任何对端。",
+    "js.awaitingPairing": "等待配对决定",
+    "btn.approve": "批准",
+    "btn.deny": "拒绝",
+    "js.selectPeer": "请选择对端。",
+    "js.notConnectedNotice": "必须先建立连接才能浏览该对端。信任会启动 SHIP 连接；设备侧可能还需要确认。",
+    "btn.trustConnect": "信任并连接",
+    "js.profileFailed": "设备档案请求失败。",
+    "js.loadingDiscovery": "正在加载设备发现…",
+    "js.unknownEntity": "未知实体",
+    "js.noUcAdvertised": "未公告任何用例",
+    "btn.copySki": "复制 SKI",
+    "btn.untrust": "取消信任",
+    "js.entitySub": "当设备为同一用例提供多个实体时，请在工作台中选择实体。",
+    "js.advertisedUc": "已公告用例",
+    "js.ucSub": "实时 NodeManagement 用例数据，并非静态兼容性声明。",
+    "btn.openWorkbench": "打开工作台",
+    "js.noUcReported": "未报告任何用例。",
+    "js.rawDiscovery": "原始协议发现数据",
+    "js.unknownDeviceType": "未知设备类型",
+    "js.profileCounts": "{e} 个实体 · {u} 个已公告用例",
+    "js.noEntities": "未返回任何实体。",
+    "js.loadingUc": "正在加载已公告用例…",
+    "js.liveEntries": "来自 NodeManagement 发现的 {n} 条实时条目",
+    "js.entitiesCount": "{n} 个实体",
+    "js.noUcInfo": "对端未返回用例信息。",
+    "js.snapshotFailed": "快照失败",
+    "js.mpcEntities": "{n} 个 MPC 实体",
+    "js.mpcNotAdvertised": "未公告 MPC",
+    "js.charging": "充电中",
+    "js.evNote": "{c} 已连接 · {s} 个 EVSE",
+    "js.pvSystems": "{n} 个光伏系统",
+    "js.vapdNotAdvertised": "未公告 VAPD",
+    "js.limitActive": "已在设备上生效",
+    "js.noProfile": "无实时设备档案。",
+    "js.useCases": "用例",
+    "js.snapshotGaps": "快照缺口",
+    "js.stateUnavailable": "状态不可用",
+    "js.noEvEntities": "该对端当前未提供 EV 实体。",
+    "js.secondsAgo": "{s} 秒前",
+    "js.selectDeviceFirst": "请先选择设备",
+    "js.appliedLive": "已实时应用 {p} · 消息 {m}",
+    "js.accepted": "已接受",
+    "js.limitReleased": "已在设备上解除限值",
+    "js.limitActiveRead": "生效中：{p}",
+    "js.limitInactiveRead": "未生效 · 最近值 {p}",
+    "js.evsCharging": "{n} 辆车充电中",
+    "js.noPeer": "无对端",
+    "js.selectTarget": "请选择目标对端",
+    "js.scanning": "扫描中",
+    "js.scanFailed": "扫描失败",
+    "js.found": "发现 {n} 个",
+    "js.noMdnsTitle": "未看到任何 mDNS 公告。",
+    "js.noMdnsBody": "请检查接口选择和本机防火墙；组播很少跨子网或跨接入点。静态配置的对端仍可使用。",
+    "js.noTemplates": "未加载模板。",
+    "js.liveControl": "实时控制",
+    "js.observerOnly": "仅观察",
+    "js.processOnly": "仅进程",
+    "js.recentCrashes": "近期崩溃 {n} 次",
+    "btn.stop": "停止",
+    "btn.start": "启动",
+    "js.stopped": "已停止",
+    "js.started": "已启动",
+    "js.diagUnavailable": "诊断接口不可用。",
+    "js.noneAnnounced": "无 —— 任何对端都无法连接",
+    "js.rejectedCount": "{n} 个本地地址被有意不公布",
+    "js.srcOverride": "来自配置覆盖",
+    "js.srcUnfiltered": "未过滤",
+    "js.srcAuto": "自动检测",
+    "js.inboundTcp": "（入站 TCP）",
+    "js.dialOrder": "按此顺序拨号",
+    "js.firewallCmds": "此平台的防火墙命令",
+    "js.testsCount": "{n} 个测试",
+    "js.scenarioExample": "场景示例",
+    "btn.run": "运行",
+    "js.noScenarios": "未找到场景。",
+    "js.passedCount": "{n} 个通过",
+    "js.skippedCount": "{n} 个跳过",
+    "js.failedCount": "{n} 个失败",
+    "js.runningBadge": "运行中",
+    "js.deviceNotConnected": "设备未连接",
+    "js.connectFirst": "开始批量测试前请先连接对端。",
+    "js.runningProgress": "运行中 {i} / {n}",
+    "js.runComplete": "测试运行完成",
+    "js.scenariosExecuted": "已执行 {n} 个场景",
+    "js.logsUnavailable": "无法读取日志。",
+    "js.noLogLines": "尚无日志行。",
+    "js.streamConnected": "流已连接",
+    "js.reconnecting": "重新连接中…",
+    "js.displayPaused": "显示已暂停",
+    "js.apiUnavailable": "API 不可用",
+    "js.apiUnreachable": "API 无法访问 · 最近更新于 {s} 秒前",
+    "js.apiLost": "与测试台 API 失去联系",
+    "js.apiBack": "测试台 API 已恢复",
+    "js.loadFailed": "无法加载测试台",
+    "js.limitApplied": "已应用实时限值",
+    "js.limitReleasedShort": "已解除限值",
+    "js.trustFirst": "浏览实时用例前请先信任并连接对端。",
+    "js.ucRefreshed": "用例发现已刷新",
+    "js.readDone": "读取完成",
+    "js.hbStarted": "心跳已启动",
+    "js.hbStopped": "心跳已停止",
+    "js.trustRequested": "已请求信任",
+    "js.confirmUntrust": "断开并将该对端从运行中的栈移除？重新连接同一 SKI 可能需要重启栈。",
+    "js.peerDisconnected": "对端已断开",
+    "js.pairApproved": "配对已批准",
+    "js.pairDenied": "配对已拒绝",
+    "js.copied": "已复制到剪贴板",
+    "js.templateSent": "已发送 {kind} 模板",
+    "js.none": "无",
+    "js.allInterfaces": "（全部）",
   },
 };
 let currentLang = localStorage.getItem("eebus-lang") || "en";
 if (!I18N[currentLang]) currentLang = "en";
+
+// A key added to one language only would silently fall back to English elsewhere; make
+// that visible during development instead of letting the dictionaries drift apart.
+{
+  const base = new Set(Object.keys(I18N.en));
+  for (const lang of Object.keys(I18N)) {
+    const keys = new Set(Object.keys(I18N[lang]));
+    for (const key of base) if (!keys.has(key)) console.warn(`i18n: ${lang} is missing "${key}"`);
+    for (const key of keys) if (!base.has(key)) console.warn(`i18n: ${lang} has extra "${key}"`);
+  }
+}
 
 /* ---- Theme -------------------------------------------------------------------------------
    Three states, not two: "system" (the default) follows the OS and must keep following it if
@@ -961,6 +1788,11 @@ function t(key) {
   return (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
 }
 
+// Formats a translated string with {name} placeholders: tf("js.found", {n: 3}).
+function tf(key, vars) {
+  return t(key).replace(/\{(\w+)\}/g, (_, name) => String(vars?.[name] ?? ""));
+}
+
 function applyI18n() {
   document.documentElement.lang = currentLang;
   document.querySelectorAll("[data-i18n]").forEach(el => { el.innerHTML = t(el.dataset.i18n); });
@@ -977,6 +1809,9 @@ function setLang(lang) {
   currentLang = I18N[lang] ? lang : "en";
   localStorage.setItem("eebus-lang", currentLang);
   applyI18n();
+  // Dynamically rendered panels rebuild from state on the next poll; rebuild them now
+  // instead, so a language switch is instant everywhere, not only in the static chrome.
+  try { renderCore(); renderSnapshot(); renderTests(); renderTemplates(); renderEvents(); } catch (_) {}
 }
 const USE_CASE_SHORT = {
   limitationOfPowerConsumption: "LPC",
@@ -1090,9 +1925,9 @@ function formatPower(value) {
   return `${Math.round(n)} W`;
 }
 function formatAge(ts) {
-  if (!ts) return "waiting for data";
+  if (!ts) return t("badge.waiting");
   const seconds = Math.max(0, Math.round(Date.now() / 1000 - ts));
-  return seconds < 2 ? "live" : `${seconds}s ago`;
+  return seconds < 2 ? t("badge.liveState") : tf("js.secondsAgo", {s: seconds});
 }
 function errorDetail(error) {
   if (error instanceof ApiError) return json(error.body || {status: error.status});
@@ -1108,13 +1943,13 @@ function toast(title, detail = "", kind = "ok") {
 }
 async function action(button, task, success) {
   const original = button?.textContent;
-  if (button) { button.disabled = true; button.textContent = "Working…"; }
+  if (button) { button.disabled = true; button.textContent = t("js.working"); }
   try {
     const result = await task();
     if (success) toast(success);
     return result;
   } catch (error) {
-    toast("Action failed", errorDetail(error), "err");
+    toast(t("js.actionFailed"), errorDetail(error), "err");
     throw error;
   } finally {
     if (button) { button.disabled = false; button.textContent = original; }
@@ -1136,17 +1971,17 @@ function renderRuntimeInfo() {
   const caps = Object.entries((state.stacks?.[0] || {}).capabilities || {})
     .filter(([, v]) => v).map(([k]) => k);
   host.innerHTML = `
-    <div class="kv"><span>Version</span><span class="mono">${esc(version.name || "eebus-testbench")} ${esc(version.version || "")}</span></div>
-    <div class="kv"><span>Network mode</span><span class="mono">${esc(net.mode || "?")}</span></div>
-    <div class="kv"><span>Interface</span><span class="mono">${esc(net.interface || "(all)")}</span></div>
-    <div class="kv"><span>mDNS provider</span><span class="mono">${esc(net.mdns_provider || "?")}</span></div>
-    <div class="kv"><span>Capabilities</span><span class="mono">${esc(caps.join(", ") || "none")}</span></div>
+    <div class="kv"><span>${esc(t("th.versionLabel"))}</span><span class="mono">${esc(version.name || "eebus-testbench")} ${esc(version.version || "")}</span></div>
+    <div class="kv"><span>${esc(t("th.netMode"))}</span><span class="mono">${esc(net.mode || "?")}</span></div>
+    <div class="kv"><span>${esc(t("th.iface"))}</span><span class="mono">${esc(net.interface || t("js.allInterfaces"))}</span></div>
+    <div class="kv"><span>${esc(t("th.mdnsProvider"))}</span><span class="mono">${esc(net.mdns_provider || "?")}</span></div>
+    <div class="kv"><span>${esc(t("th.capabilities"))}</span><span class="mono">${esc(caps.join(", ") || t("js.none"))}</span></div>
   `;
 }
 
 async function refreshCore({notify = false} = {}) {
   const sync = document.getElementById("sync-text");
-  sync.textContent = "Refreshing";
+  sync.textContent = t("js.refreshing");
   const [stacks, config, peers, pending, visible] = await Promise.all([
     api("/stacks"), api("/config"), api("/peers"),
     safeApi("/peers/pending", []), safeApi("/peers/visible", [])
@@ -1166,9 +2001,9 @@ async function refreshCore({notify = false} = {}) {
   reportConnectionChanges(peers);
   renderCore();
   state.lastSyncOk = Date.now();
-  sync.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  sync.textContent = `${t("js.updated")} ${new Date().toLocaleTimeString()}`;
   document.getElementById("api-pulse").className = "pulse ok";
-  if (notify) toast("Dashboard refreshed");
+  if (notify) toast(t("js.dashRefreshed"));
 }
 
 // A peer dropping off is the single most important thing to notice while testing -- it
@@ -1185,10 +2020,10 @@ function reportConnectionChanges(peers) {
     if (before === true && connected === false) {
       state.lostAt = state.lostAt || new Map();
       state.lostAt.set(ski, Date.now());
-      toast("Connection lost", `${labelForSki(ski)} is no longer connected`, "err");
+      toast(t("js.connLost"), tf("js.noLongerConnected", {name: labelForSki(ski)}), "err");
     } else if (before === false && connected === true) {
       state.lostAt?.delete(ski);
-      toast("Connected", labelForSki(ski), "ok");
+      toast(t("js.connectedToast"), labelForSki(ski), "ok");
     }
   }
   // A peer that vanishes from /peers entirely counts as lost too, not just one whose
@@ -1197,7 +2032,7 @@ function reportConnectionChanges(peers) {
     if (was && !now.has(ski)) {
       state.lostAt = state.lostAt || new Map();
       state.lostAt.set(ski, Date.now());
-      toast("Connection lost", `${labelForSki(ski)} disappeared from the peer list`, "err");
+      toast(t("js.connLost"), tf("js.disappeared", {name: labelForSki(ski)}), "err");
     }
   }
   state.connectionState = now;
@@ -1221,7 +2056,7 @@ function renderLocalSKI() {
   const el = document.getElementById("local-ski");
   if (!el) return;
   const ski = (activeStack() || state.stacks?.[0] || {}).local_ski || "";
-  el.textContent = ski || "unavailable";
+  el.textContent = ski || t("js.unavailable");
   el.disabled = !ski;
   el.dataset.ski = ski;
 }
@@ -1249,15 +2084,15 @@ function renderCore() {
   const active = activeStack();
   const connected = state.peers.filter(peer => peer.connected);
   document.getElementById("sidebar-pulse").className = `pulse ${active ? "ok" : "warn"}`;
-  document.getElementById("sidebar-state").textContent = active ? `${connected.length} peer${connected.length === 1 ? "" : "s"} connected` : "No counterparty";
-  document.getElementById("sidebar-stack").textContent = active?.id || "Start a counterparty in Diagnostics";
+  document.getElementById("sidebar-state").textContent = active ? tf("js.peersConnected", {n: connected.length}) : t("js.noCounterparty");
+  document.getElementById("sidebar-stack").textContent = active?.id || t("js.startCounterparty");
   renderLocalSKI();
 
   const select = document.getElementById("global-peer");
   const all = knownPeers();
   select.innerHTML = all.length
-    ? all.map(peer => `<option value="${esc(peer.ski)}">${esc(displayName(peer.label || peer.name, peer.ski))}${peer.connected ? " · connected" : " · offline"}</option>`).join("")
-    : `<option value="">No known device</option>`;
+    ? all.map(peer => `<option value="${esc(peer.ski)}">${esc(displayName(peer.label || peer.name, peer.ski))}${peer.connected ? ` · ${t("badge.connected")}` : ` · ${t("badge.offline")}`}</option>`).join("")
+    : `<option value="">${esc(t("js.noKnownDevice"))}</option>`;
   if (all.some(peer => peer.ski === state.selectedSki)) select.value = state.selectedSki;
   const live = selectedLivePeer();
   const globalBadge = document.getElementById("global-peer-state");
@@ -1265,13 +2100,13 @@ function renderCore() {
   // never had, lost is one that dropped under us and is the thing worth reacting to.
   const lostAt = state.lostAt?.get(state.selectedSki);
   if (live?.connected) {
-    globalBadge.textContent = "connected";
+    globalBadge.textContent = t("badge.connected");
     globalBadge.className = "badge ok";
   } else if (lostAt) {
-    globalBadge.textContent = `connection lost ${Math.max(1, Math.round((Date.now() - lostAt) / 1000))}s ago`;
+    globalBadge.textContent = tf("js.lostAgo", {s: Math.max(1, Math.round((Date.now() - lostAt) / 1000))});
     globalBadge.className = "badge err";
   } else {
-    globalBadge.textContent = "offline";
+    globalBadge.textContent = t("badge.offline");
     globalBadge.className = "badge warn";
   }
 
@@ -1289,9 +2124,9 @@ function renderDeviceLists() {
     <div class="device-card ${peer.ski === state.selectedSki ? "selected" : ""}" data-select-ski="${esc(peer.ski)}">
       <span class="dot ${peer.connected ? "ok" : ""}"></span>
       <div><div class="device-title">${esc(displayName(peer.label || peer.name, peer.ski))}</div>
-      <div class="device-meta">${esc(peer.device_address || peer.host || "mDNS peer")} · ${esc(shortSki(peer.ski))}</div></div>
-      <span class="badge ${peer.connected ? "ok" : "warn"}">${peer.connected ? "connected" : "offline"}</span>
-    </div>`).join("") : `<div class="empty">No peers configured or discovered.</div>`;
+      <div class="device-meta">${esc(peer.device_address || peer.host || t("js.mdnsPeer"))} · ${esc(shortSki(peer.ski))}</div></div>
+      <span class="badge ${peer.connected ? "ok" : "warn"}">${peer.connected ? esc(t("badge.connected")) : esc(t("badge.offline"))}</span>
+    </div>`).join("") : `<div class="empty">${esc(t("js.noPeers"))}</div>`;
   document.getElementById("device-list").innerHTML = html;
   document.getElementById("dashboard-devices").innerHTML = html;
   document.getElementById("peer-count").textContent = peers.length;
@@ -1303,9 +2138,9 @@ function renderPending() {
   host.innerHTML = state.pending.length ? state.pending.map(item => `
     <div class="runtime-row">
       <span class="dot warn"></span>
-      <div><strong>${esc(shortSki(item.ski))}</strong><div class="device-meta">Awaiting pairing decision</div></div>
-      <div class="button-row"><button class="small primary" data-approve="${esc(item.ski)}">Approve</button><button class="small danger" data-deny="${esc(item.ski)}">Deny</button></div>
-    </div>`).join("") : `<span class="muted">No pending requests.</span>`;
+      <div><strong>${esc(shortSki(item.ski))}</strong><div class="device-meta">${esc(t("js.awaitingPairing"))}</div></div>
+      <div class="button-row"><button class="small primary" data-approve="${esc(item.ski)}">${esc(t("btn.approve"))}</button><button class="small danger" data-deny="${esc(item.ski)}">${esc(t("btn.deny"))}</button></div>
+    </div>`).join("") : `<span class="muted">${esc(t("empty.noPending"))}</span>`;
 }
 
 async function selectPeer(ski) {
@@ -1334,30 +2169,30 @@ function useCasesForEntity(entity) {
 
 function renderProfile(error = null) {
   const host = document.getElementById("device-detail");
-  if (!state.selectedSki) { host.innerHTML = `<div class="empty">Select a peer.</div>`; return; }
+  if (!state.selectedSki) { host.innerHTML = `<div class="empty">${esc(t("js.selectPeer"))}</div>`; return; }
   const configured = selectedConfigPeer();
   const live = selectedLivePeer();
   if (!live?.connected) {
     host.innerHTML = `
       <div class="device-detail-head">
         <div><h3>${esc(cleanName(configured?.label || configured?.name) || shortSki(state.selectedSki))}</h3><div class="ski mono">${esc(state.selectedSki)}</div></div>
-        <span class="badge warn">not connected</span>
+        <span class="badge warn">${esc(t("badge.notConnected"))}</span>
       </div>
-      <div class="notice" style="margin-top:14px">This peer cannot be explored until it is connected. Trust starts the SHIP connection; the connection may still require approval on the device.</div>
-      <div class="button-row" style="margin-top:12px"><button class="primary" data-trust="${esc(state.selectedSki)}">Trust and connect</button></div>`;
+      <div class="notice" style="margin-top:14px">${esc(t("js.notConnectedNotice"))}</div>
+      <div class="button-row" style="margin-top:12px"><button class="primary" data-trust="${esc(state.selectedSki)}">${esc(t("btn.trustConnect"))}</button></div>`;
     return;
   }
-  if (error) { host.innerHTML = `<div class="notice"><strong>Profile request failed.</strong><br>${esc(errorDetail(error))}</div>`; return; }
-  if (!state.profile) { host.innerHTML = `<div class="empty">Loading device discovery…</div>`; return; }
+  if (error) { host.innerHTML = `<div class="notice"><strong>${esc(t("js.profileFailed"))}</strong><br>${esc(errorDetail(error))}</div>`; return; }
+  if (!state.profile) { host.innerHTML = `<div class="empty">${esc(t("js.loadingDiscovery"))}</div>`; return; }
 
   const p = state.profile;
   const supported = new Set((p.use_cases || []).filter(item => item.available).map(item => item.name));
   const entityCards = (p.entities || []).map(entity => {
     const useCases = useCasesForEntity(entity.address);
     return `<div class="entity-card">
-      <strong>${esc(entity.type || "Unknown entity")}</strong>
+      <strong>${esc(entity.type || t("js.unknownEntity"))}</strong>
       <span class="mono">entity [${esc(entityValue(entity.address))}]</span>
-      <div class="entity-tags">${useCases.length ? useCases.map(item => `<span class="badge ${item.available ? "ok" : "warn"}">${esc(item.acronym || item.name)}</span>`).join("") : `<span class="muted">No use cases advertised</span>`}</div>
+      <div class="entity-tags">${useCases.length ? useCases.map(item => `<span class="badge ${item.available ? "ok" : "warn"}">${esc(item.acronym || item.name)}</span>`).join("") : `<span class="muted">${esc(t("js.noUcAdvertised"))}</span>`}</div>
     </div>`;
   }).join("");
   const usecaseRows = (p.use_cases || []).map(item => `
@@ -1367,30 +2202,30 @@ function renderProfile(error = null) {
       <td class="mono">[${esc(entityValue(item.address))}]</td>
       <td>${esc(item.version || "—")} · scenarios ${esc((item.scenarios || []).join(", ") || "—")}</td>
       <td>${(item.typed_operations || []).map(op => `<span class="badge">${esc(op)}</span>`).join(" ")}</td>
-      <td><span class="badge ${item.available ? "ok" : "warn"}">${item.available ? "available" : "unavailable"}</span></td>
+      <td><span class="badge ${item.available ? "ok" : "warn"}">${item.available ? esc(t("badge.available")) : esc(t("badge.unavailable"))}</span></td>
     </tr>`).join("");
 
   host.innerHTML = `
     <div class="device-detail-head">
       <div><h3>${esc(configured?.label || configured?.name || p.device_type || "EEBUS peer")}</h3>
         <div class="ski mono">${esc(p.ski)}</div>
-        <div class="muted" style="margin-top:5px">${esc(p.device_type || "Unknown device type")} · ${p.entities.length} entities · ${p.use_cases.length} advertised use cases</div>
+        <div class="muted" style="margin-top:5px">${esc(p.device_type || t("js.unknownDeviceType"))} · ${esc(tf("js.profileCounts", {e: p.entities.length, u: p.use_cases.length}))}</div>
       </div>
-      <div class="button-row"><button data-copy="${esc(p.ski)}">Copy SKI</button><button class="danger" data-untrust="${esc(p.ski)}">Untrust</button></div>
+      <div class="button-row"><button data-copy="${esc(p.ski)}">${esc(t("btn.copySki"))}</button><button class="danger" data-untrust="${esc(p.ski)}">${esc(t("btn.untrust"))}</button></div>
     </div>
-    <div class="capability-strip">${CORE_USE_CASES.map(name => `<div class="capability ${supported.has(name) ? "yes" : ""}" title="${esc(name)}">${esc(USE_CASE_SHORT[name])}<br>${supported.has(name) ? "SUPPORTED" : "NOT ADVERTISED"}</div>`).join("")}</div>
-    <div class="panel-head" style="margin-top:16px"><div><h3>Entities</h3><div class="sub">Select an entity in the workbench when a device exposes more than one for a use case.</div></div></div>
-    <div class="entity-grid">${entityCards || `<div class="empty">No entities returned.</div>`}</div>
-    <div class="panel-head" style="margin-top:22px"><div><h3>Advertised use cases</h3><div class="sub">Live NodeManagement use-case data, not a static compatibility claim.</div></div><button data-open-page="usecases">Open workbench</button></div>
-    <div style="overflow:auto"><table><thead><tr><th>Use case</th><th>Actor</th><th>Entity</th><th>Version / scenarios</th><th>Testbench access</th><th>State</th></tr></thead><tbody>${usecaseRows || `<tr><td colspan="6">No use cases reported.</td></tr>`}</tbody></table></div>
-    <details><summary>Raw protocol discovery data</summary><pre class="raw">${esc(json({device_type:p.device_type, feature_set:p.feature_set, discovery:p.raw_discovery, use_cases:p.use_cases, errors:p.errors}))}</pre></details>`;
+    <div class="capability-strip">${CORE_USE_CASES.map(name => `<div class="capability ${supported.has(name) ? "yes" : ""}" title="${esc(name)}">${esc(USE_CASE_SHORT[name])}<br>${supported.has(name) ? esc(t("badge.supported")) : esc(t("badge.notAdvertised"))}</div>`).join("")}</div>
+    <div class="panel-head" style="margin-top:16px"><div><h3>${esc(t("th.entities"))}</h3><div class="sub">${esc(t("js.entitySub"))}</div></div></div>
+    <div class="entity-grid">${entityCards || `<div class="empty">${esc(t("js.noEntities"))}</div>`}</div>
+    <div class="panel-head" style="margin-top:22px"><div><h3>${esc(t("js.advertisedUc"))}</h3><div class="sub">${esc(t("js.ucSub"))}</div></div><button data-open-page="usecases">${esc(t("btn.openWorkbench"))}</button></div>
+    <div style="overflow:auto"><table><thead><tr><th>${esc(t("th.usecase"))}</th><th>${esc(t("th.actor"))}</th><th>${esc(t("th.entity"))}</th><th>${esc(t("th.version"))}</th><th>${esc(t("th.access"))}</th><th>${esc(t("th.state"))}</th></tr></thead><tbody>${usecaseRows || `<tr><td colspan="6">${esc(t("js.noUcReported"))}</td></tr>`}</tbody></table></div>
+    <details><summary>${esc(t("js.rawDiscovery"))}</summary><pre class="raw">${esc(json({device_type:p.device_type, feature_set:p.feature_set, discovery:p.raw_discovery, use_cases:p.use_cases, errors:p.errors}))}</pre></details>`;
 }
 
 function renderUsecaseSupport() {
   const supported = new Set((state.profile?.use_cases || []).filter(item => item.available).map(item => item.name));
   document.querySelectorAll("[data-support]").forEach(badge => {
     const yes = supported.has(badge.dataset.support);
-    badge.textContent = state.profile ? (yes ? "advertised" : "not advertised") : "unknown";
+    badge.textContent = state.profile ? (yes ? t("badge.advertised") : t("badge.notAdvertisedLc")) : t("badge.unknown");
     badge.className = `badge ${yes ? "ok" : (state.profile ? "warn" : "")}`;
   });
   renderUsecaseBrowser();
@@ -1399,14 +2234,14 @@ function renderUsecaseSupport() {
 function renderUsecaseBrowser() {
   const host = document.getElementById("usecase-browser");
   if (!state.profile) {
-    host.innerHTML = `<div class="empty">${selectedConnected() ? "Loading advertised use cases…" : "Select a connected device to browse its advertised use cases."}</div>`;
+    host.innerHTML = `<div class="empty">${selectedConnected() ? esc(t("js.loadingUc")) : esc(t("empty.selectDeviceUc"))}</div>`;
     return;
   }
   const items = state.profile.use_cases || [];
   host.innerHTML = `
     <div class="panel-head">
-      <div><h3>Advertised use cases</h3><div class="sub">${esc(items.length)} live entries from NodeManagement discovery</div></div>
-      <span class="badge ok">${esc(state.profile.entities?.length || 0)} entities</span>
+      <div><h3>${esc(t("js.advertisedUc"))}</h3><div class="sub">${esc(tf("js.liveEntries", {n: items.length}))}</div></div>
+      <span class="badge ok">${esc(tf("js.entitiesCount", {n: state.profile.entities?.length || 0}))}</span>
     </div>
     <div class="entity-grid">${items.map(item => `
       <div class="entity-card">
@@ -1415,19 +2250,19 @@ function renderUsecaseBrowser() {
         <span>${esc(item.description)}</span>
         <span class="mono">entity [${esc(entityValue(item.address))}] · actor ${esc(item.actor || "—")} · version ${esc(item.version || "—")}</span>
         <div class="entity-tags">${(item.typed_operations || []).map(operation => `<span class="badge">${esc(operation)}</span>`).join("")}</div>
-      </div>`).join("") || `<div class="empty">The peer returned no use-case information.</div>`}
+      </div>`).join("") || `<div class="empty">${esc(t("js.noUcInfo"))}</div>`}
     </div>`;
 }
 
 function populateEntitySelects() {
   const entities = (state.profile?.entities || []).filter(item => entityValue(item.address) !== "0");
-  const options = `<option value="">Automatic by use case</option>` + entities.map(item =>
+  const options = `<option value="">${esc(t("field.autoByUsecase"))}</option>` + entities.map(item =>
     `<option value="${esc(entityValue(item.address))}">[${esc(entityValue(item.address))}] ${esc(item.type || "entity")}</option>`
   ).join("");
   document.getElementById("uc-entity").innerHTML = options;
 
   const lpcEntities = (state.profile?.use_cases || []).filter(item => item.name === "limitationOfPowerConsumption" && item.available);
-  document.getElementById("limit-entity").innerHTML = `<option value="">Automatic by use case</option>` + lpcEntities.map(item =>
+  document.getElementById("limit-entity").innerHTML = `<option value="">${esc(t("field.autoByUsecase"))}</option>` + lpcEntities.map(item =>
     `<option value="${esc(entityValue(item.address))}">[${esc(entityValue(item.address))}] ${esc(item.actor || "LPC")}</option>`
   ).join("");
 }
@@ -1458,19 +2293,19 @@ function renderSnapshot(error = null) {
   const snapshot = state.snapshot;
   if (!snapshot) {
     ["metric-power","metric-ev","metric-pv","metric-limit","flow-grid","flow-ev","flow-pv","flow-battery"].forEach(id => document.getElementById(id).textContent = "—");
-    document.getElementById("snapshot-age").textContent = error ? "snapshot failed" : "waiting for data";
-    document.getElementById("dashboard-intelligence").innerHTML = `<div class="empty">${error ? esc(errorDetail(error)) : "Select a connected device."}</div>`;
+    document.getElementById("snapshot-age").textContent = error ? t("js.snapshotFailed") : t("badge.waiting");
+    document.getElementById("dashboard-intelligence").innerHTML = `<div class="empty">${error ? esc(errorDetail(error)) : esc(t("empty.selectDevice"))}</div>`;
     return;
   }
   const power = snapshot.power || {}, limits = snapshot.limits || {}, ev = snapshot.ev || {};
   document.getElementById("metric-power").innerHTML = `${formatPower(power.consumption_w)}`;
-  document.getElementById("metric-power-note").textContent = (snapshot.monitoring || []).length ? `${snapshot.monitoring.length} MPC entit${snapshot.monitoring.length === 1 ? "y" : "ies"}` : "MPC not advertised";
-  document.getElementById("metric-ev").innerHTML = `${ev.charging_count ?? 0} <small>charging</small>`;
-  document.getElementById("metric-ev-note").textContent = `${ev.connected_count ?? 0} connected · ${(ev.charging_stations || []).length} EVSE`;
+  document.getElementById("metric-power-note").textContent = (snapshot.monitoring || []).length ? tf("js.mpcEntities", {n: snapshot.monitoring.length}) : t("js.mpcNotAdvertised");
+  document.getElementById("metric-ev").innerHTML = `${ev.charging_count ?? 0} <small>${esc(t("js.charging"))}</small>`;
+  document.getElementById("metric-ev-note").textContent = tf("js.evNote", {c: ev.connected_count ?? 0, s: (ev.charging_stations || []).length});
   document.getElementById("metric-pv").innerHTML = formatPower(power.pv_w);
-  document.getElementById("metric-pv-note").textContent = (snapshot.pv || []).length ? `${snapshot.pv.length} PV system${snapshot.pv.length === 1 ? "" : "s"}` : "VAPD not advertised";
+  document.getElementById("metric-pv-note").textContent = (snapshot.pv || []).length ? tf("js.pvSystems", {n: snapshot.pv.length}) : t("js.vapdNotAdvertised");
   document.getElementById("metric-limit").innerHTML = formatPower(limits.consumption_w);
-  document.getElementById("metric-limit-note").textContent = limits.consumption_active ? "Active on the device" : "No active LPC limit";
+  document.getElementById("metric-limit-note").textContent = limits.consumption_active ? t("js.limitActive") : t("metric.noLimit");
   document.getElementById("flow-grid").textContent = formatPower(power.grid_w);
   document.getElementById("flow-ev").textContent = formatPower(power.ev_w);
   document.getElementById("flow-pv").textContent = formatPower(power.pv_w);
@@ -1491,7 +2326,7 @@ function renderSnapshot(error = null) {
 
 function renderDashboardIntelligence() {
   const host = document.getElementById("dashboard-intelligence");
-  if (!state.profile || !state.snapshot) { host.innerHTML = `<div class="empty">No live device profile.</div>`; return; }
+  if (!state.profile || !state.snapshot) { host.innerHTML = `<div class="empty">${esc(t("js.noProfile"))}</div>`; return; }
   const domains = new Map();
   for (const uc of state.profile.use_cases || []) {
     if (!uc.available) continue;
@@ -1500,12 +2335,12 @@ function renderDashboardIntelligence() {
   const evs = state.snapshot.ev?.vehicles || [];
   host.innerHTML = `
     <div class="flow" style="grid-template-columns:repeat(3,1fr);margin:0">
-      <div class="flow-node"><span>Entities</span><strong>${state.profile.entities.length}</strong></div>
-      <div class="flow-node"><span>Use cases</span><strong>${state.profile.use_cases.filter(item => item.available).length}</strong></div>
-      <div class="flow-node"><span>Snapshot gaps</span><strong>${state.snapshot.errors.length}</strong></div>
+      <div class="flow-node"><span>${esc(t("th.entities"))}</span><strong>${state.profile.entities.length}</strong></div>
+      <div class="flow-node"><span>${esc(t("js.useCases"))}</span><strong>${state.profile.use_cases.filter(item => item.available).length}</strong></div>
+      <div class="flow-node"><span>${esc(t("js.snapshotGaps"))}</span><strong>${state.snapshot.errors.length}</strong></div>
     </div>
-    <div class="entity-tags" style="margin-top:13px">${[...domains.entries()].map(([domain,count]) => `<span class="badge ok">${esc(domain)} · ${count}</span>`).join("") || `<span class="muted">No use cases advertised</span>`}</div>
-    <div style="margin-top:13px">${evs.map(ev => `<div class="notice"><strong>EV entity [${esc((ev.entity || []).join(","))}]</strong><br>${esc(ev.charge_state || "state unavailable")} · ${formatPower(Array.isArray(ev.power_per_phase_w) ? ev.power_per_phase_w.reduce((a,b)=>a+b,0) : null)}${ev.state_of_charge != null ? ` · ${esc(ev.state_of_charge)}% SoC` : ""}</div>`).join("") || `<div class="notice">No EV entities are currently exposed by this peer.</div>`}</div>`;
+    <div class="entity-tags" style="margin-top:13px">${[...domains.entries()].map(([domain,count]) => `<span class="badge ok">${esc(domain)} · ${count}</span>`).join("") || `<span class="muted">${esc(t("js.noUcAdvertised"))}</span>`}</div>
+    <div style="margin-top:13px">${evs.map(ev => `<div class="notice"><strong>EV entity [${esc((ev.entity || []).join(","))}]</strong><br>${esc(ev.charge_state || t("js.stateUnavailable"))} · ${formatPower(Array.isArray(ev.power_per_phase_w) ? ev.power_per_phase_w.reduce((a,b)=>a+b,0) : null)}${ev.state_of_charge != null ? ` · ${esc(ev.state_of_charge)}% SoC` : ""}</div>`).join("") || `<div class="notice">${esc(t("js.noEvEntities"))}</div>`}</div>`;
 }
 
 function syncLimitValue(value) {
@@ -1517,7 +2352,7 @@ function syncLimitValue(value) {
 }
 
 async function writeLimit(active) {
-  if (!state.selectedSki) throw new Error("Select a device first");
+  if (!state.selectedSki) throw new Error(t("js.selectDeviceFirst"));
   const watts = Number(document.getElementById("limit-value").value);
   const duration = document.getElementById("limit-duration").value;
   const entity = document.getElementById("limit-entity").value;
@@ -1528,7 +2363,7 @@ async function writeLimit(active) {
     method: "PUT", headers: {"content-type": "application/json"}, body: JSON.stringify(body)
   });
   const box = document.getElementById("limit-result");
-  box.textContent = active ? `Applied ${formatPower(watts)} live · message ${result.msg_counter ?? "accepted"}` : "Limit released on the device";
+  box.textContent = active ? tf("js.appliedLive", {p: formatPower(watts), m: result.msg_counter ?? t("js.accepted")}) : t("js.limitReleased");
   box.className = "action-result ok";
   await loadSnapshot();
   return result;
@@ -1539,7 +2374,7 @@ async function readLimit() {
   const result = await api(withEntity(`/lpc/${encodeURIComponent(state.selectedSki)}/limit`, entity));
   syncLimitValue(result.value_w);
   const box = document.getElementById("limit-result");
-  box.textContent = result.is_active ? `Active: ${formatPower(result.value_w)}${result.duration ? ` · ${result.duration}` : ""}` : `Inactive · last value ${formatPower(result.value_w)}`;
+  box.textContent = result.is_active ? `${tf("js.limitActiveRead", {p: formatPower(result.value_w)})}${result.duration ? ` · ${result.duration}` : ""}` : tf("js.limitInactiveRead", {p: formatPower(result.value_w)});
   box.className = "action-result ok";
   return result;
 }
@@ -1608,7 +2443,7 @@ function inspectChart(event, lock = false) {
   if (state.lockedChartIndex != null && !lock) index = state.lockedChartIndex;
   if (lock) state.lockedChartIndex = state.lockedChartIndex === index ? null : index;
   const sample = chart.samples[index], tip = document.getElementById("chart-tooltip");
-  tip.innerHTML = `<strong>${new Date(sample.ts * 1000).toLocaleTimeString()}</strong><br>Consumption ${formatPower(sample.power_w)}<br>PV ${formatPower(sample.pv_power_w)}<br>Limit ${formatPower(sample.consumption_limit_w)}<br>EVs ${sample.ev_charging ?? 0} charging`;
+  tip.innerHTML = `<strong>${new Date(sample.ts * 1000).toLocaleTimeString()}</strong><br>${esc(t("legend.consumption"))} ${formatPower(sample.power_w)}<br>${esc(t("legend.pv"))} ${formatPower(sample.pv_power_w)}<br>${esc(t("legend.limit"))} ${formatPower(sample.consumption_limit_w)}<br>${esc(tf("js.evsCharging", {n: sample.ev_charging ?? 0}))}`;
   tip.style.display = "block";
   tip.style.left = `${Math.min(rect.width - 145, Math.max(58, chart.x(sample.ts) + 8))}px`;
   tip.style.top = "18px";
@@ -1617,13 +2452,13 @@ function inspectChart(event, lock = false) {
 function populateUsecaseTargets() {
   const select = document.getElementById("uc-peer");
   const peers = knownPeers();
-  select.innerHTML = peers.length ? peers.map(peer => `<option value="${esc(peer.ski)}">${esc(displayName(peer.label || peer.name, peer.ski))}</option>`).join("") : `<option value="">No peer</option>`;
+  select.innerHTML = peers.length ? peers.map(peer => `<option value="${esc(peer.ski)}">${esc(displayName(peer.label || peer.name, peer.ski))}</option>`).join("") : `<option value="">${esc(t("js.noPeer"))}</option>`;
   if (peers.some(peer => peer.ski === state.selectedSki)) select.value = state.selectedSki;
 }
 
 async function usecaseRead(kind) {
   const ski = state.selectedSki, entity = document.getElementById("uc-entity").value;
-  if (!ski) throw new Error("Select a target peer");
+  if (!ski) throw new Error(t("js.selectTarget"));
   const paths = {
     lpc: `/lpc/${ski}/limit`, failsafe: `/lpc/${ski}/failsafe`,
     nominal: `/lpc/${ski}/nominal-max`, heartbeat: `/lpc/${ski}/heartbeat`,
@@ -1662,47 +2497,36 @@ function renderTemplates() {
     const host = document.getElementById(`${kind}-templates`);
     host.innerHTML = Object.entries(state.templates[key] || {}).map(([name,tpl]) =>
       `<button class="small" data-template-kind="${kind}" data-template-name="${esc(name)}" title="${esc(tpl.description || "")}">${esc(tpl.summary || name)}</button>`
-    ).join("") || `<span class="muted">No templates loaded.</span>`;
+    ).join("") || `<span class="muted">${esc(t("js.noTemplates"))}</span>`;
   }
-}
-
-async function sendRaw() {
-  const method = document.getElementById("raw-method").value.trim();
-  if (!method) throw new Error("Enter a JSON-RPC method");
-  let params;
-  try { params = JSON.parse(document.getElementById("raw-params").value || "[]"); }
-  catch (_) { throw new Error("Parameters must be a valid JSON array"); }
-  if (!Array.isArray(params)) throw new Error("Parameters must be a positional JSON array");
-  const result = await api("/raw", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({method,params})});
-  document.getElementById("out-raw").textContent = json(result);
 }
 
 async function scanNetwork(button) {
   const badge = document.getElementById("scan-state");
-  badge.textContent = "scanning"; badge.className = "badge warn";
+  badge.textContent = t("js.scanning"); badge.className = "badge warn";
   let result;
   try {
     result = await action(button, () => api("/discover", {method:"POST"}));
   } catch (_) {
-    badge.textContent = "scan failed";
+    badge.textContent = t("js.scanFailed");
     badge.className = "badge err";
     return;
   }
   const found = result.found || [];
-  badge.textContent = `${found.length} found`; badge.className = `badge ${found.length ? "ok" : "warn"}`;
+  badge.textContent = tf("js.found", {n: found.length}); badge.className = `badge ${found.length ? "ok" : "warn"}`;
   document.getElementById("scan-results").innerHTML = found.length ? found.map(item => `
     <div class="runtime-row"><span class="dot ok"></span><div><strong>${esc(displayName(item.name || item.model, item.ski))}</strong>
     <div class="device-meta" title="${esc((item.addresses || []).join(", "))}">${esc(formatAddresses(item.addresses, item.hostName))}:${esc(item.port || "?")}</div></div>
     ${item.ski ? `<button class="small primary" data-trust="${esc(item.ski)}">Trust</button>` : ""}</div>`).join("")
-    : `<div class="notice"><strong>No mDNS announcements were visible.</strong><br>Use native Linux host networking for real multicast. Static peers remain usable over bridge networking.</div>`;
+    : `<div class="notice"><strong>${esc(t("js.noMdnsTitle"))}</strong><br>${esc(t("js.noMdnsBody"))}</div>`;
 }
 
 function renderRuntimeStacks() {
   const host = document.getElementById("runtime-stacks");
   host.innerHTML = state.stacks.map(stack => `
     <div class="runtime-row"><span class="dot ${stack.status === "running" ? "ok" : ""}"></span>
-      <div><strong>${esc(stack.id)}</strong><div class="device-meta">${esc(stack.role)} · ${stack.drivable ? "live control" : stack.role === "observer" ? "observer only" : "process only"}${stack.crash_count_recent ? ` · ${stack.crash_count_recent} recent crashes` : ""}</div></div>
-      <button class="small ${stack.status === "running" ? "" : "primary"}" data-stack-id="${esc(stack.id)}" data-stack-status="${esc(stack.status)}">${stack.status === "running" ? "Stop" : "Start"}</button>
+      <div><strong>${esc(stack.id)}</strong><div class="device-meta">${esc(stack.role)} · ${stack.drivable ? esc(t("js.liveControl")) : stack.role === "observer" ? esc(t("js.observerOnly")) : esc(t("js.processOnly"))}${stack.crash_count_recent ? ` · ${esc(tf("js.recentCrashes", {n: stack.crash_count_recent}))}` : ""}</div></div>
+      <button class="small ${stack.status === "running" ? "" : "primary"}" data-stack-id="${esc(stack.id)}" data-stack-status="${esc(stack.status)}">${stack.status === "running" ? esc(t("btn.stop")) : esc(t("btn.start"))}</button>
     </div>`).join("");
 }
 
@@ -1714,19 +2538,8 @@ async function toggleStack(id, status, button) {
       return api("/config/active-stack", {method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({stack:id,persist:false})});
     }
     return api(`/stacks/${id}/${status === "running" ? "stop" : "start"}`, {method:"POST"});
-  }, `${id} ${status === "running" ? "stopped" : "started"}`);
+  }, `${id} ${status === "running" ? t("js.stopped") : t("js.started")}`);
   await refreshCore();
-}
-
-async function refreshNetworkInfo() {
-  const net = await safeApi("/network", null);
-  const host = document.getElementById("network-info");
-  if (!net) { host.textContent = "Network endpoint unavailable."; return; }
-  host.innerHTML = `<table><tbody>
-    <tr><th>Container host</th><td class="mono">${esc(net.container_hostname)}</td></tr>
-    <tr><th>Container IP</th><td class="mono">${esc(net.container_ip || "unknown")}</td></tr>
-    ${net.stacks.map(stack => `<tr><th>${esc(stack.id)}</th><td>${stack.running ? "running" : "stopped"} · <span class="mono">${esc(Object.entries(stack.ports || {}).map(([k,v])=>`${k}=${v}`).join(", ") || "no ports")}</span></td></tr>`).join("")}
-  </tbody></table>`;
 }
 
 // The panel that answers "the device can see me, so why can't it connect?". Both halves of that
@@ -1735,14 +2548,14 @@ async function refreshNetworkInfo() {
 async function refreshReachability() {
   const d = await safeApi("/diagnostics/network", null);
   const host = document.getElementById("reach-info");
-  if (!d) { host.textContent = "Diagnostics endpoint unavailable."; return; }
+  if (!d) { host.textContent = t("js.diagUnavailable"); return; }
 
   const announced = (d.announced || []).length
     ? d.announced.map(a => `<div><span class="mono">${esc(a.ip)}</span> <span class="muted">${esc(a.interface)}</span></div>`).join("")
-    : `<div class="muted">none -- no peer can connect</div>`;
+    : `<div class="muted">${esc(t("js.noneAnnounced"))}</div>`;
 
   const rejected = (d.rejected || []).length
-    ? `<details style="margin-top:8px"><summary class="muted">${d.rejected.length} local address(es) deliberately not published</summary>
+    ? `<details style="margin-top:8px"><summary class="muted">${esc(tf("js.rejectedCount", {n: d.rejected.length}))}</summary>
        ${d.rejected.map(r => `<div style="margin-top:6px"><span class="mono">${esc(r.ip)}</span> <span class="muted">${esc(r.interface || "")}</span><br><span class="muted" style="font-size:11px">${esc(r.reason)}</span></div>`).join("")}
        </details>`
     : "";
@@ -1751,18 +2564,18 @@ async function refreshReachability() {
     ? d.warnings.map(w => `<div class="notice" style="margin-top:8px">${esc(w)}</div>`).join("")
     : "";
 
-  const source = d.announce_overridden ? "from config override"
-    : d.announce_filter_disabled ? "unfiltered" : "auto-detected";
+  const source = d.announce_overridden ? t("js.srcOverride")
+    : d.announce_filter_disabled ? t("js.srcUnfiltered") : t("js.srcAuto");
 
   host.innerHTML = `<table><tbody>
-      <tr><th>SHIP port</th><td class="mono">${esc(d.ship_port)} <span class="muted">(inbound TCP)</span></td></tr>
-      <tr><th>mDNS host</th><td class="mono">${esc(d.mdns_hostname)}.local</td></tr>
-      <tr><th>Platform</th><td class="mono">${esc(d.platform)}</td></tr>
-      <tr><th>Announced</th><td>${announced}<div class="muted" style="font-size:11px;margin-top:4px">${esc(source)} · dialled in this order</div></td></tr>
+      <tr><th>${esc(t("th.shipPort"))}</th><td class="mono">${esc(d.ship_port)} <span class="muted">${esc(t("js.inboundTcp"))}</span></td></tr>
+      <tr><th>${esc(t("th.mdnsHost"))}</th><td class="mono">${esc(d.mdns_hostname)}.local</td></tr>
+      <tr><th>${esc(t("th.platform"))}</th><td class="mono">${esc(d.platform)}</td></tr>
+      <tr><th>${esc(t("th.announced"))}</th><td>${announced}<div class="muted" style="font-size:11px;margin-top:4px">${esc(source)} · ${esc(t("js.dialOrder"))}</div></td></tr>
     </tbody></table>
     ${rejected}
     ${warnings}
-    <details style="margin-top:8px"><summary class="muted">Firewall commands for this platform</summary>
+    <details style="margin-top:8px"><summary class="muted">${esc(t("js.firewallCmds"))}</summary>
       <pre class="raw" style="margin-top:6px">${esc((d.firewall_commands || []).join("\n"))}</pre>
     </details>`;
 }
@@ -1773,17 +2586,17 @@ async function loadTestCatalog() {
 }
 
 function renderTests() {
-  document.getElementById("tests-total").textContent = `${state.tests.length} tests`;
+  document.getElementById("tests-total").textContent = tf("js.testsCount", {n: state.tests.length});
   const host = document.getElementById("test-list");
   host.innerHTML = state.tests.length ? state.tests.map(test => `
     <div class="test-row" data-test-row="${esc(test.id)}">
       <div class="test-head">
-        <div><div class="test-name">${esc(test.name)}</div><div class="test-description">${esc(test.description || "Scenario example")}</div></div>
+        <div><div class="test-name">${esc(test.name)}</div><div class="test-description">${esc(test.description || t("js.scenarioExample"))}</div></div>
         <div><span class="badge">${esc(test.category)}</span> <span class="badge ${test.risk === "read-only" ? "ok" : test.risk === "disruptive" ? "err" : "warn"}">${esc(test.risk)}</span></div>
-        <button class="small" data-run-test="${esc(test.id)}">Run</button>
+        <button class="small" data-run-test="${esc(test.id)}">${esc(t("btn.run"))}</button>
       </div>
       <div class="test-result" id="test-result-${esc(test.id)}"></div>
-    </div>`).join("") : `<div class="empty">No scenarios found.</div>`;
+    </div>`).join("") : `<div class="empty">${esc(t("js.noScenarios"))}</div>`;
 }
 
 function renderTestResult(id, result) {
@@ -1797,14 +2610,14 @@ function renderTestResult(id, result) {
 
 function updateTestSummary() {
   const results = [...document.querySelectorAll(".test-result.show .badge")].map(item => item.textContent.split(" · ")[0]);
-  document.getElementById("tests-passed").textContent = `${results.filter(x=>x==="passed").length} passed`;
-  document.getElementById("tests-skipped").textContent = `${results.filter(x=>x==="skipped").length} skipped`;
-  document.getElementById("tests-failed").textContent = `${results.filter(x=>x==="failed").length} failed`;
+  document.getElementById("tests-passed").textContent = tf("js.passedCount", {n: results.filter(x=>x==="passed").length});
+  document.getElementById("tests-skipped").textContent = tf("js.skippedCount", {n: results.filter(x=>x==="skipped").length});
+  document.getElementById("tests-failed").textContent = tf("js.failedCount", {n: results.filter(x=>x==="failed").length});
 }
 
 async function runOneTest(id, button) {
   const host = document.getElementById(`test-result-${id}`);
-  host.className = "test-result show"; host.innerHTML = `<span class="badge warn">running</span>`;
+  host.className = "test-result show"; host.innerHTML = `<span class="badge warn">${esc(t("js.runningBadge"))}</span>`;
   try {
     const result = await action(button, () => api(`/scenarios/${encodeURIComponent(id)}/run`, {method:"POST"}));
     renderTestResult(id, result);
@@ -1818,17 +2631,17 @@ async function runOneTest(id, button) {
 async function runTests(readOnly, button) {
   const tests = readOnly ? state.tests.filter(test => test.risk === "read-only") : state.tests;
   if (!selectedConnected()) {
-    toast("Device is not connected", "Connect a peer before starting a batch test run.", "warn");
+    toast(t("js.deviceNotConnected"), t("js.connectFirst"), "warn");
     return;
   }
   button.disabled = true;
-  const original = button.textContent; button.textContent = `Running 0 / ${tests.length}`;
+  const original = button.textContent; button.textContent = tf("js.runningProgress", {i: 0, n: tests.length});
   try {
     for (let i = 0; i < tests.length; i++) {
-      button.textContent = `Running ${i + 1} / ${tests.length}`;
+      button.textContent = tf("js.runningProgress", {i: i + 1, n: tests.length});
       await runOneTest(tests[i].id, null);
     }
-    toast("Test run complete", `${tests.length} scenarios executed`);
+    toast(t("js.runComplete"), tf("js.scenariosExecuted", {n: tests.length}));
   } finally { button.disabled = false; button.textContent = original; }
 }
 
@@ -1842,9 +2655,9 @@ function populateLogStacks() {
 async function loadLogs() {
   const id = document.getElementById("log-stack").value;
   if (!id) return;
-  const result = await safeApi(`/stacks/${encodeURIComponent(id)}/logs?tail=250`, {lines:["Unable to read logs."]});
+  const result = await safeApi(`/stacks/${encodeURIComponent(id)}/logs?tail=250`, {lines:[t("js.logsUnavailable")]});
   const output = document.getElementById("log-output");
-  output.textContent = (result.lines || []).join("\n") || "No log lines yet.";
+  output.textContent = (result.lines || []).join("\n") || t("js.noLogLines");
   output.scrollTop = output.scrollHeight;
 }
 
@@ -1852,10 +2665,10 @@ function connectEvents() {
   state.eventSource?.close();
   const source = new EventSource(`${API}/events/stream`);
   state.eventSource = source;
-  source.onopen = () => document.getElementById("stream-state").textContent = "stream connected";
+  source.onopen = () => document.getElementById("stream-state").textContent = t("js.streamConnected");
   source.onmessage = event => appendEvent(JSON.parse(event.data));
   source.onerror = () => {
-    document.getElementById("stream-state").textContent = "reconnecting…";
+    document.getElementById("stream-state").textContent = t("js.reconnecting");
     source.close(); setTimeout(connectEvents, 2500);
   };
 }
@@ -1895,13 +2708,13 @@ async function boot() {
     [state.templates] = await Promise.all([safeApi("/templates", {})]);
     renderTemplates();
     renderRuntimeInfo();
-    await Promise.all([loadProfile(), loadSnapshot(), loadHistory(), loadTestCatalog(), refreshNetworkInfo(), refreshReachability(), loadRecentEvents()]);
+    await Promise.all([loadProfile(), loadSnapshot(), loadHistory(), loadTestCatalog(), refreshReachability(), loadRecentEvents()]);
     connectEvents();
-    document.getElementById("sync-text").textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    document.getElementById("sync-text").textContent = `${t("js.updated")} ${new Date().toLocaleTimeString()}`;
   } catch (error) {
-    document.getElementById("sync-text").textContent = "API unavailable";
+    document.getElementById("sync-text").textContent = t("js.apiUnavailable");
     document.getElementById("api-pulse").className = "pulse warn";
-    toast("Could not load the testbench", errorDetail(error), "err");
+    toast(t("js.loadFailed"), errorDetail(error), "err");
   }
 
   clearInterval(state.snapshotTimer);
@@ -1915,16 +2728,16 @@ async function boot() {
       await refreshCore().catch(error => {
         const stale = state.lastSyncOk ? Math.round((Date.now() - state.lastSyncOk) / 1000) : null;
         document.getElementById("sync-text").textContent =
-          stale === null ? "API unavailable" : `API unreachable · last update ${stale}s ago`;
+          stale === null ? t("js.apiUnavailable") : tf("js.apiUnreachable", {s: stale});
         document.getElementById("api-pulse").className = "pulse err";
         if (!state.apiWasDown) {
           state.apiWasDown = true;
-          toast("Lost contact with the testbench API", errorDetail(error), "err");
+          toast(t("js.apiLost"), errorDetail(error), "err");
         }
       });
       if (state.apiWasDown && state.lastSyncOk && Date.now() - state.lastSyncOk < 6000) {
         state.apiWasDown = false;
-        toast("Testbench API is back", "", "ok");
+        toast(t("js.apiBack"), "", "ok");
       }
       await loadSnapshot();
     } finally {
@@ -1952,23 +2765,21 @@ document.getElementById("local-ski").addEventListener("click", event => copyLoca
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (currentTheme === "system") applyTheme();
 });
-document.getElementById("refresh-network").addEventListener("click", refreshNetworkInfo);
 document.getElementById("refresh-reach").addEventListener("click", refreshReachability);
 document.getElementById("scan-network").addEventListener("click", event => scanNetwork(event.currentTarget));
 document.getElementById("limit-range").addEventListener("input", event => syncLimitValue(event.target.value));
 document.getElementById("limit-value").addEventListener("input", event => syncLimitValue(event.target.value));
-document.getElementById("apply-limit").addEventListener("click", event => action(event.currentTarget, () => writeLimit(true), "Live limit applied").catch(() => {}));
-document.getElementById("release-limit").addEventListener("click", event => action(event.currentTarget, () => writeLimit(false), "Limit released").catch(() => {}));
+document.getElementById("apply-limit").addEventListener("click", event => action(event.currentTarget, () => writeLimit(true), t("js.limitApplied")).catch(() => {}));
+document.getElementById("release-limit").addEventListener("click", event => action(event.currentTarget, () => writeLimit(false), t("js.limitReleasedShort")).catch(() => {}));
 document.getElementById("read-limit").addEventListener("click", event => action(event.currentTarget, readLimit).catch(() => {}));
 document.getElementById("browse-usecases").addEventListener("click", event => {
   const button = event.currentTarget;
   if (!selectedConnected()) {
-    toast("Device is not connected", "Trust and connect the peer before browsing its live use cases.", "warn");
+    toast(t("js.deviceNotConnected"), t("js.trustFirst"), "warn");
     return;
   }
-  action(button, loadProfile, "Use-case discovery refreshed").catch(() => {});
+  action(button, loadProfile, t("js.ucRefreshed")).catch(() => {});
 });
-document.getElementById("send-raw").addEventListener("click", event => action(event.currentTarget, sendRaw, "Raw RPC completed").catch(() => {}));
 document.getElementById("run-readonly").addEventListener("click", event => runTests(true, event.currentTarget));
 document.getElementById("run-all-tests").addEventListener("click", event => runTests(false, event.currentTarget));
 document.getElementById("refresh-logs").addEventListener("click", loadLogs);
@@ -1976,8 +2787,8 @@ document.getElementById("log-stack").addEventListener("change", loadLogs);
 document.getElementById("event-level").addEventListener("change", renderEvents);
 document.getElementById("pause-events").addEventListener("click", event => {
   state.eventsPaused = !state.eventsPaused;
-  event.currentTarget.textContent = state.eventsPaused ? "Resume" : "Pause";
-  document.getElementById("stream-state").textContent = state.eventsPaused ? "display paused" : "stream connected";
+  event.currentTarget.textContent = state.eventsPaused ? t("btn.resume") : t("btn.pause");
+  document.getElementById("stream-state").textContent = state.eventsPaused ? t("js.displayPaused") : t("js.streamConnected");
 });
 document.getElementById("clear-events").addEventListener("click", async () => {
   await api("/events", {method:"DELETE"}); state.events = []; renderEvents();
@@ -1995,13 +2806,13 @@ document.querySelectorAll("#range-buttons button").forEach(button => button.addE
 }));
 document.querySelectorAll("[data-uc-read]").forEach(button => button.addEventListener("click", () => {
   const kind = button.dataset.ucRead;
-  action(button, () => usecaseRead(kind), "Read complete").catch(error => {
+  action(button, () => usecaseRead(kind), t("js.readDone")).catch(error => {
     const output = ["lpc","failsafe","nominal","heartbeat"].includes(kind) ? "out-lpc" : kind === "lpp" ? "out-lpp" : ["ev","assets"].includes(kind) ? "out-assets" : "out-monitoring";
     document.getElementById(output).textContent = errorDetail(error);
   });
 }));
 document.querySelectorAll("[data-heartbeat]").forEach(button => button.addEventListener("click", event =>
-  action(event.currentTarget, () => heartbeat(event.currentTarget.dataset.heartbeat), `Heartbeat ${event.currentTarget.dataset.heartbeat}ed`).catch(() => {})
+  action(event.currentTarget, () => heartbeat(event.currentTarget.dataset.heartbeat), event.currentTarget.dataset.heartbeat === "start" ? t("js.hbStarted") : t("js.hbStopped")).catch(() => {})
 ));
 
 document.addEventListener("click", async event => {
@@ -2011,21 +2822,21 @@ document.addEventListener("click", async event => {
   if (peerCard) { await selectPeer(peerCard.dataset.selectSki); return; }
   const trust = event.target.closest("[data-trust]");
   if (trust) {
-    await action(trust, () => api(`/peers/${encodeURIComponent(trust.dataset.trust)}/trust`, {method:"POST"}), "Trust requested").catch(() => {});
+    await action(trust, () => api(`/peers/${encodeURIComponent(trust.dataset.trust)}/trust`, {method:"POST"}), t("js.trustRequested")).catch(() => {});
     await refreshCore(); return;
   }
   const untrust = event.target.closest("[data-untrust]");
   if (untrust) {
-    if (!confirm("Disconnect and remove this peer from the running stack? Reconnecting the same SKI may require a stack restart.")) return;
-    await action(untrust, () => api(`/peers/${encodeURIComponent(untrust.dataset.untrust)}/trust`, {method:"DELETE"}), "Peer disconnected").catch(() => {});
+    if (!confirm(t("js.confirmUntrust"))) return;
+    await action(untrust, () => api(`/peers/${encodeURIComponent(untrust.dataset.untrust)}/trust`, {method:"DELETE"}), t("js.peerDisconnected")).catch(() => {});
     await refreshCore(); return;
   }
   const approve = event.target.closest("[data-approve]");
-  if (approve) { await action(approve, () => api(`/peers/${approve.dataset.approve}/trust`, {method:"POST"}), "Pairing approved").catch(() => {}); await refreshCore(); return; }
+  if (approve) { await action(approve, () => api(`/peers/${approve.dataset.approve}/trust`, {method:"POST"}), t("js.pairApproved")).catch(() => {}); await refreshCore(); return; }
   const deny = event.target.closest("[data-deny]");
-  if (deny) { await action(deny, () => api(`/peers/${deny.dataset.deny}/deny`, {method:"POST"}), "Pairing denied").catch(() => {}); await refreshCore(); return; }
+  if (deny) { await action(deny, () => api(`/peers/${deny.dataset.deny}/deny`, {method:"POST"}), t("js.pairDenied")).catch(() => {}); await refreshCore(); return; }
   const copy = event.target.closest("[data-copy]");
-  if (copy) { await navigator.clipboard.writeText(copy.dataset.copy); toast("Copied to clipboard"); return; }
+  if (copy) { await navigator.clipboard.writeText(copy.dataset.copy); toast(t("js.copied")); return; }
   const stack = event.target.closest("[data-stack-id]");
   if (stack) {
     await toggleStack(stack.dataset.stackId, stack.dataset.stackStatus, stack).catch(() => {});
@@ -2035,7 +2846,7 @@ document.addEventListener("click", async event => {
   if (template) {
     const kind = template.dataset.templateKind;
     const value = state.templates[`${kind}.limit`]?.[template.dataset.templateName]?.value;
-    await action(template, () => writeTemplate(kind, value), `${kind.toUpperCase()} template sent`).catch(error => {
+    await action(template, () => writeTemplate(kind, value), tf("js.templateSent", {kind: kind.toUpperCase()})).catch(error => {
       document.getElementById(`out-${kind}`).textContent = errorDetail(error);
     });
     return;

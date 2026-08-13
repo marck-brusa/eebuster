@@ -65,8 +65,6 @@ Provides:
 - MPC and MGCP reads;
 - combined EV/PV/battery snapshot reads;
 
-Raw calls use positional parameter arrays and upstream wire field names.
-
 ### Test runner
 
 Loads metadata from `scenarios/*.yaml`. Tests can be run individually, as a read-only set, or
@@ -77,7 +75,7 @@ as the complete suite. Each result includes step status, duration, and failure d
 Shows:
 
 - runtime stack status and controls;
-- container hostname, address, and configured ports;
+- announced/rejected addresses, interfaces, and firewall guidance (reachability);
 - process logs;
 - recent and streaming lifecycle/use-case/SPINE events;
 

@@ -80,6 +80,36 @@ jobs:
           print(f"{len(blocks)} script block(s) OK")
           PY
 
+      # The three I18N dictionaries must carry identical key sets, and every key referenced by
+      # data-i18n attributes or t()/tf() calls must exist. A key missing from one language
+      # silently falls back to English at runtime, so only CI can make the drift visible.
+      - name: Check i18n dictionary consistency
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, subprocess, sys, tempfile
+          html = pathlib.Path("internal/webui/ui.html").read_text()
+          start = html.index("const I18N = {")
+          end = html.index("\n};\nlet currentLang", start) + len("\n};")
+          harness = html[start:end] + """
+          const base = new Set(Object.keys(I18N.en));
+          let problems = 0;
+          for (const lang of Object.keys(I18N)) {
+            const keys = new Set(Object.keys(I18N[lang]));
+            for (const k of base) if (!keys.has(k)) { console.log(`${lang} missing ${k}`); problems++; }
+            for (const k of keys) if (!base.has(k)) { console.log(`${lang} extra ${k}`); problems++; }
+          }
+          const used = new Set(process.argv.slice(2));
+          for (const k of used) if (!base.has(k)) { console.log(`referenced but undefined: ${k}`); problems++; }
+          console.log(`${Object.keys(I18N).length} languages, ${base.size} keys, ${used.size} referenced`);
+          process.exit(problems ? 1 : 0);
+          """
+          used = set(re.findall(r'data-i18n(?:-title)?="([^"]+)"', html))
+          used |= set(re.findall(r'\bt(?:f)?\("([^"]+)"', html))
+          path = tempfile.NamedTemporaryFile("w", suffix=".js", delete=False)
+          path.write(harness); path.close()
+          subprocess.run(["node", path.name, *sorted(used)], check=True)
+          PY
+
       - name: Validate scenario YAML
         run: |
           python3 - <<'PY'
