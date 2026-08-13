@@ -1,0 +1,17 @@
+name: mpc-phase-consistency
+description: >
+  The per-phase powers must add up to the reported total (MPC scenario 1, EEBus UC TS
+  Monitoring of Power Consumption V1.0.0). A device publishing a live total while every phase
+  reads a hardcoded 0 W is publishing decoration, not measurements — the HEMS cannot do phase
+  balancing against it. Tolerance 30% covers measurement jitter and rounding.
+category: Conformance
+risk: read-only
+requires:
+  use_cases: [monitoringOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      not_null: [power_w, power_per_phase_w]
+      sum_matches: {power_per_phase_w: {total: power_w, tolerance_percent: 30}}

@@ -51,6 +51,12 @@ table listed all three as available "via Raw RPC", which was wrong.
 | `lpc-limit-expiry` | live-control | Verify a short limit expires |
 | `lpc-failsafe` | live-control | Write/read failsafe and duration |
 | `lpc-heartbeat-loss` | disruptive | Stop heartbeat for failsafe observation |
+| `lpc-failsafe-window` | read-only | Announced failsafe duration must lie in the 2–24 h window (LPC UC TS) |
+| `lpc-duration-roundtrip` | live-control | A written limit duration must be visible on readback |
+| `conformance-window` | read-only | Exercise reads, then require the wire trace to be free of conformance errors |
+| `mpc-phase-plausibility` | read-only | Per-phase currents/voltages must be plausible for their units (catches mA-as-A scale faults) |
+| `mpc-phase-consistency` | read-only | Per-phase powers must add up to the reported total |
+| `ev-charged-energy` | read-only | EVCEM scenario 3, when advertised, must deliver a charged-energy value |
 | `lpp-read-current` | read-only | Read current production limit |
 | `lpp-basic-limit` | live-control | Apply and verify a production limit |
 | `mpc-live-power` | read-only | Read total consumption |
@@ -99,10 +105,14 @@ steps:
 - put:
     path: "/api/v1/lpc/{peer.ski}/limit"
     body: {value_w: 4200, is_active: true, is_changeable: true, duration: "PT15M"}
+- post: {path: "/api/v1/lpc/heartbeat/start"}
+- delete: {path: "/api/v1/trace"}
 ```
 
 Use `template:` instead of `body:` to load an entry from the built-in template library
-(`internal/templates/templates.yaml`, served at `GET /api/v1/templates`).
+(`internal/templates/templates.yaml`, served at `GET /api/v1/templates`). An optional
+`expect_status: 502` asserts an exact HTTP status instead of the default any-2xx rule — that
+is how a scenario states that the device MUST refuse an operation.
 
 ### Raw call
 
@@ -133,7 +143,13 @@ less_or_equal
 not_null
 contains
 length_greater_than
+each_less_than       # every numeric element of an array stays under the bound
+sum_matches          # {array: {total: other_field, tolerance_percent: N}}
+duration_at_least    # ISO-8601, e.g. {duration: "PT2H"}
+duration_at_most
 ```
+
+Dotted key paths descend into arrays with numeric segments: `ev.vehicles.0.power_w`.
 
 ### Event
 

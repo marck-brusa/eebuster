@@ -1,0 +1,25 @@
+name: lpc-duration-roundtrip
+description: >
+  A limit written with a duration must come back with one on an immediate read (SPINE
+  loadControlLimitData timePeriod; EEBus UC TS Limitation of Power Consumption V1.0.0,
+  scenario 1). A device that applies the duration internally but reports the limit without it
+  leaves the controller unable to tell a temporary curtailment from a permanent one. The
+  limit is released again at the end.
+category: LPC
+risk: live-control
+requires:
+  capabilities: [lpc.write, lpc.read]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      body: {value_w: 3000, is_active: true, is_changeable: true, duration: "PT5M"}
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      equals: {value_w: 3000, is_active: true}
+      not_null: [duration]
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      body: {value_w: 3000, is_active: false, is_changeable: true, delete_duration: true}

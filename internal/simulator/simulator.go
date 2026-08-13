@@ -43,6 +43,11 @@ type Device struct {
 	mu          sync.Mutex
 	limitW      float64
 	limitActive bool
+	// limitTimer expires a limit that arrived with a duration: a spec-correct device stops
+	// following the limit AND reports it inactive afterwards. Devices in the field get the
+	// first half right and forget the second -- the lpc-limit-expiry scenario exists to catch
+	// exactly that, so the simulator has to model the correct behaviour.
+	limitTimer *time.Timer
 }
 
 var _ eebusapi.ServiceReaderInterface = (*Device)(nil)
@@ -157,7 +162,7 @@ func New(cfg config.SimulatedDevice, dataDir string, logLevel eebusgo.LogLevel, 
 		nil,
 		&mumpc.MonitorCurrentConfig{ValueSourcePerPhase: measured},
 		&mumpc.MonitorVoltageConfig{ValueSourcePerPhase: measured},
-		nil,
+		&mumpc.MonitorFrequencyConfig{ValueSource: util.Ptr(spinemodel.MeasurementValueSourceTypeMeasuredValue)},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("simulator %s: configuring mu/mpc: %w", cfg.ID, err)
@@ -202,6 +207,13 @@ func (d *Device) onLPCEvent(ski string, _ spineapi.DeviceRemoteInterface, _ spin
 		for msgCounter := range d.lpc.PendingConsumptionLimits() {
 			d.lpc.ApproveOrDenyConsumptionLimit(msgCounter, true, "")
 		}
+	case cslpc.ConfigurationWriteApprovalRequired:
+		// Failsafe writes go through the device-configuration approval path, separate from
+		// limit approval. Without this branch a written failsafe stays pending forever and
+		// reads keep returning the old value.
+		for msgCounter := range d.lpc.PendingDeviceConfigurations() {
+			d.lpc.ApproveOrDenyDeviceConfiguration(msgCounter, true, "")
+		}
 	case cslpc.DataUpdateLimit:
 		limit, err := d.lpc.ConsumptionLimit()
 		if err != nil {
@@ -210,10 +222,38 @@ func (d *Device) onLPCEvent(ski string, _ spineapi.DeviceRemoteInterface, _ spin
 		d.mu.Lock()
 		d.limitW = limit.Value
 		d.limitActive = limit.IsActive
+		if d.limitTimer != nil {
+			d.limitTimer.Stop()
+			d.limitTimer = nil
+		}
+		if limit.IsActive && limit.Duration > 0 {
+			d.limitTimer = time.AfterFunc(limit.Duration, d.expireLimit)
+		}
 		d.mu.Unlock()
-		log.Printf("simulator[%s]: limit from ski %s -> %.0fW active=%v", d.id, ski, limit.Value, limit.IsActive)
+		log.Printf("simulator[%s]: limit from ski %s -> %.0fW active=%v duration=%s", d.id, ski, limit.Value, limit.IsActive, limit.Duration)
 		d.reportPower()
 	}
+}
+
+// expireLimit is the duration timer firing: deactivate the limit in our own published data,
+// so a controller reading back after expiry sees is_active=false, then return to baseline.
+func (d *Device) expireLimit() {
+	limit, err := d.lpc.ConsumptionLimit()
+	if err != nil {
+		return
+	}
+	limit.IsActive = false
+	limit.Duration = 0
+	if err := d.lpc.SetConsumptionLimit(limit); err != nil {
+		log.Printf("simulator[%s]: expiring the limit failed: %v", d.id, err)
+		return
+	}
+	d.mu.Lock()
+	d.limitActive = false
+	d.limitTimer = nil
+	d.mu.Unlock()
+	log.Printf("simulator[%s]: limit expired, back to baseline", d.id)
+	d.reportPower()
 }
 
 func (d *Device) onMPCEvent(_ string, _ spineapi.DeviceRemoteInterface, _ spineapi.EntityRemoteInterface, _ eebusapi.EventType) {
@@ -249,6 +289,7 @@ func (d *Device) reportPower() {
 		d.mpc.UpdateDataVoltagePhaseA(nominalV, nil, nil),
 		d.mpc.UpdateDataVoltagePhaseB(nominalV, nil, nil),
 		d.mpc.UpdateDataVoltagePhaseC(nominalV, nil, nil),
+		d.mpc.UpdateDataFrequency(50, nil, nil),
 	); err != nil {
 		log.Printf("simulator[%s]: reporting %.0fW failed: %v", d.id, power, err)
 		return

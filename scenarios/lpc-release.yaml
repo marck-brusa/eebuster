@@ -11,6 +11,7 @@ steps:
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"
       template: lpc.limit.release
+  - expect_event: {event: eg-lpc-DataUpdateLimit, within: 5s}
   - assert:
       get: "/api/v1/lpc/{peer.ski}/limit"
       equals: {is_active: false}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -26,7 +27,11 @@ func (rn *Runner) runStep(stepSpec map[string]any, context map[string]any) StepR
 	case "call":
 		return rn.stepCall(args, context)
 	case "put":
-		return rn.stepPut(args, context)
+		return rn.stepRequest(http.MethodPut, args, context)
+	case "post":
+		return rn.stepRequest(http.MethodPost, args, context)
+	case "delete":
+		return rn.stepRequest(http.MethodDelete, args, context)
 	case "assert":
 		return rn.stepAssert(args, context)
 	case "expect_event":
@@ -120,10 +125,13 @@ func (rn *Runner) postNoBody(path, name string) StepResult {
 	return StepResult{Name: name, Status: "passed"}
 }
 
-func (rn *Runner) stepPut(args any, context map[string]any) StepResult {
+// stepRequest backs the put/post/delete verbs. An optional expect_status asserts the exact
+// HTTP status instead of the default any-2xx rule, which is what lets a scenario state that a
+// device MUST refuse an operation (e.g. a limit write while its heartbeat monitor is open).
+func (rn *Runner) stepRequest(method string, args any, context map[string]any) StepResult {
 	a := argsMap(args)
 	path, _ := resolve(a["path"], context).(string)
-	name := "put " + path
+	name := strings.ToLower(method) + " " + path
 
 	var body any
 	if templateName, ok := a["template"].(string); ok {
@@ -146,11 +154,17 @@ func (rn *Runner) stepPut(args any, context map[string]any) StepResult {
 		body = a["body"]
 	}
 
-	payload, err := json.Marshal(resolve(body, context))
-	if err != nil {
-		return StepResult{Name: name, Status: "failed", Detail: err.Error()}
+	var reader *bytes.Reader
+	if body == nil {
+		reader = bytes.NewReader(nil)
+	} else {
+		payload, err := json.Marshal(resolve(body, context))
+		if err != nil {
+			return StepResult{Name: name, Status: "failed", Detail: err.Error()}
+		}
+		reader = bytes.NewReader(payload)
 	}
-	req, err := http.NewRequest(http.MethodPut, rn.baseURL+path, bytes.NewReader(payload))
+	req, err := http.NewRequest(method, rn.baseURL+path, reader)
 	if err != nil {
 		return StepResult{Name: name, Status: "failed", Detail: err.Error()}
 	}
@@ -160,6 +174,14 @@ func (rn *Runner) stepPut(args any, context map[string]any) StepResult {
 		return StepResult{Name: name, Status: "failed", Detail: err.Error()}
 	}
 	defer resp.Body.Close()
+
+	if want, ok := toFloat64(a["expect_status"]); ok && want > 0 {
+		if resp.StatusCode != int(want) {
+			return StepResult{Name: name, Status: "failed",
+				Detail: fmt.Sprintf("expected HTTP %d, got %d: %s", int(want), resp.StatusCode, readBody(resp))}
+		}
+		return StepResult{Name: name, Status: "passed", Detail: fmt.Sprintf("HTTP %d as expected", resp.StatusCode)}
+	}
 	if resp.StatusCode >= 400 {
 		return StepResult{Name: name, Status: "failed", Detail: readBody(resp)}
 	}

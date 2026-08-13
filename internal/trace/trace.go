@@ -45,9 +45,13 @@ type RuleCount struct {
 }
 
 type Summary struct {
-	Frames        int         `json:"frames"`
-	NonConformant int         `json:"non_conformant"`
-	Rules         []RuleCount `json:"rules"`
+	Frames        int `json:"frames"`
+	NonConformant int `json:"non_conformant"`
+	// Errors and Warnings count frames by their worst finding, so an automated gate can
+	// require errors == 0 while tolerating advisory warnings.
+	Errors   int         `json:"errors"`
+	Warnings int         `json:"warnings"`
+	Rules    []RuleCount `json:"rules"`
 	// PerSKI counts non-conformant frames per peer, so a bench with several devices shows
 	// which one is at fault.
 	PerSKI map[string]int `json:"per_ski"`
@@ -168,6 +172,17 @@ func (s *Store) Summary() Summary {
 		}
 		summary.NonConformant++
 		summary.PerSKI[e.SKI]++
+		worstIsError := false
+		for _, f := range e.Findings {
+			if f.Severity == conformance.SeverityError {
+				worstIsError = true
+			}
+		}
+		if worstIsError {
+			summary.Errors++
+		} else {
+			summary.Warnings++
+		}
 		for _, f := range e.Findings {
 			rc, ok := byRule[f.Rule]
 			if !ok {

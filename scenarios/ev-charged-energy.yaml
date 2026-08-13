@@ -1,0 +1,18 @@
+name: ev-charged-energy
+description: >
+  When a device advertises the charged-energy scenario of Measurement of Electricity During
+  EV Charging (EEBus UC TS EVCEM V1.0.1, scenario 3), it must actually deliver a value — an
+  announced-but-empty scenario breaks the HEMS's session energy accounting silently. Like the
+  other measurement scenarios, this needs a charging session running and fails (rather than
+  skips) without one.
+category: EV charging
+risk: read-only
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [measurementOfElectricityDuringEvCharging]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      not_null: [ev.vehicles.0.energy_charged_wh]

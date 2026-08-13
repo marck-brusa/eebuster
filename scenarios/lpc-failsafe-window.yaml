@@ -1,0 +1,20 @@
+name: lpc-failsafe-window
+description: >
+  The announced FailsafeDurationMinimum must lie within the window the use case prescribes,
+  2 to 24 hours (EEBus UC TS Limitation of Power Consumption V1.0.0, failsafe configuration).
+  A device announcing a value outside the window — or none at all, leaving the reply carrying
+  only key identifiers — cannot pass an energy guard's plausibility check, and its real
+  failsafe behaviour after heartbeat loss should then be timed against what it announced
+  (see lpc-heartbeat-loss).
+category: LPC
+risk: read-only
+requires:
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/failsafe"
+      not_null: [value_w, duration]
+      duration_at_least: {duration: "PT2H"}
+      duration_at_most: {duration: "PT24H"}

@@ -11,6 +11,7 @@ steps:
   - put:
       path: "/api/v1/lpc/{peer.ski}/failsafe"
       template: lpc.failsafe.typical
+  - expect_event: {event: eg-lpc-DataUpdateFailsafeConsumptionActivePowerLimit, within: 5s}
   - assert:
       get: "/api/v1/lpc/{peer.ski}/failsafe"
       equals: {value_w: 2000, duration: "PT2H"}

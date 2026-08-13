@@ -1,0 +1,18 @@
+name: mpc-phase-plausibility
+description: >
+  Per-phase currents and voltages must be plausible for their declared units. A phase current
+  at or above 1000 A on a residential connection means a milliampere value reached the wire
+  with scale 0 (ScaledNumberType, SPINE TS ResourceSpecification 1.3.0) — a real fault class:
+  16 A leaving the device as 16000 A, a thousand-fold over-limit command risk for any HEMS
+  that believes it.
+category: Conformance
+risk: read-only
+requires:
+  use_cases: [monitoringOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      not_null: [current_per_phase_a]
+      each_less_than: {current_per_phase_a: 1000, voltage_per_phase_v: 1000}
