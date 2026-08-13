@@ -724,6 +724,40 @@ tr.phase-asym .phase-bar{background:var(--amber)}
             <pre class="raw uc-output" id="out-assets" data-i18n="uc.noRequest">No request yet.</pre>
           </div>
         </div>
+        <div class="panel panel-pad" style="margin-top:14px">
+          <div class="panel-head">
+            <div><h3 data-i18n="panel.profile">Charge profile builder</h3><div class="sub" data-i18n="panel.profile.sub">A timed sequence of LPC limits — run it live or export it as a scenario</div></div>
+            <span class="badge warn" data-i18n="badge.live">LIVE</span>
+          </div>
+          <div class="grid two">
+            <div>
+              <div id="profile-steps"></div>
+              <div class="button-row" style="margin-top:9px">
+                <button class="small" id="profile-add" data-i18n="btn.addStep">Add step</button>
+                <span class="muted" style="align-self:center" data-i18n="profile.preset">Preset:</span>
+                <button class="small" data-profile-preset="stepdown" data-i18n="preset.stepdown">Step down</button>
+                <button class="small" data-profile-preset="pulse" data-i18n="preset.pulse">Pulse</button>
+                <button class="small" data-profile-preset="bench" data-i18n="preset.bench">Short bench test</button>
+              </div>
+              <label class="muted" style="display:block;margin-top:9px"><input type="checkbox" id="profile-release" checked> <span data-i18n="profile.releaseEnd">Release the limit at the end</span></label>
+            </div>
+            <div>
+              <div class="muted" style="margin-bottom:4px"><span data-i18n="profile.preview">Preview</span> · <span id="profile-total"></span></div>
+              <div id="profile-preview" style="display:flex;align-items:flex-end;gap:2px;height:96px;border-bottom:1px solid var(--grid-line);margin-bottom:10px"></div>
+              <div class="button-row">
+                <button class="primary" id="profile-run" data-i18n="btn.runProfile">Run profile</button>
+                <button class="warn" id="profile-stop" data-i18n="btn.stopProfile">Stop and release</button>
+                <button id="profile-export" data-i18n="btn.exportYaml">Export as scenario</button>
+              </div>
+              <div class="action-result" id="profile-status" data-i18n="profile.idle">Not running.</div>
+              <details id="profile-yaml-box" style="margin-top:9px">
+                <summary class="muted" data-i18n="profile.yamlTitle">Scenario YAML</summary>
+                <div class="button-row" style="margin:7px 0"><button class="small" id="profile-copy" data-i18n="btn.copyYaml">Copy YAML</button></div>
+                <pre class="raw" id="profile-yaml" style="max-height:260px"></pre>
+              </details>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="page" id="page-trace">
@@ -867,6 +901,27 @@ const API = "/api/v1";
 // the spec and the logs.
 const I18N = {
   en: {
+    "panel.profile": "Charge profile builder",
+    "panel.profile.sub": "A timed sequence of LPC limits — run it live or export it as a scenario",
+    "profile.watts": "Limit (W)",
+    "profile.preset": "Preset:",
+    "preset.stepdown": "Step down",
+    "preset.pulse": "Pulse",
+    "preset.bench": "Short bench test",
+    "profile.releaseEnd": "Release the limit at the end",
+    "profile.preview": "Preview",
+    "profile.total": "Total:",
+    "profile.empty": "No steps yet — add one or load a preset.",
+    "profile.idle": "Not running.",
+    "profile.yamlTitle": "Scenario YAML",
+    "btn.addStep": "Add step",
+    "btn.runProfile": "Run profile",
+    "btn.stopProfile": "Stop and release",
+    "btn.exportYaml": "Export as scenario",
+    "btn.copyYaml": "Copy YAML",
+    "js.profileStep": "Step {i} / {n}: {p} for {d}",
+    "js.profileDone": "Profile complete",
+    "js.profileStopped": "Profile stopped, limit released",
     "panel.phases": "Phase balance",
     "panel.phases.sub": "Per-phase power, current, and voltage — asymmetric loading is flagged",
     "phase.power": "Power",
@@ -1214,6 +1269,27 @@ const I18N = {
     "js.allInterfaces": "(all)",
   },
   de: {
+    "panel.profile": "Ladeprofil-Editor",
+    "panel.profile.sub": "Eine zeitgesteuerte Folge von LPC-Grenzen — live ausführen oder als Szenario exportieren",
+    "profile.watts": "Grenze (W)",
+    "profile.preset": "Vorlage:",
+    "preset.stepdown": "Stufenweise senken",
+    "preset.pulse": "Pulsieren",
+    "preset.bench": "Kurzer Prüfstandstest",
+    "profile.releaseEnd": "Grenze am Ende aufheben",
+    "profile.preview": "Vorschau",
+    "profile.total": "Gesamt:",
+    "profile.empty": "Noch keine Schritte — hinzufügen oder Vorlage laden.",
+    "profile.idle": "Läuft nicht.",
+    "profile.yamlTitle": "Szenario-YAML",
+    "btn.addStep": "Schritt hinzufügen",
+    "btn.runProfile": "Profil ausführen",
+    "btn.stopProfile": "Stoppen und aufheben",
+    "btn.exportYaml": "Als Szenario exportieren",
+    "btn.copyYaml": "YAML kopieren",
+    "js.profileStep": "Schritt {i} / {n}: {p} für {d}",
+    "js.profileDone": "Profil abgeschlossen",
+    "js.profileStopped": "Profil gestoppt, Grenze aufgehoben",
     "panel.phases": "Phasensymmetrie",
     "panel.phases.sub": "Leistung, Strom und Spannung je Phase — asymmetrische Belastung wird markiert",
     "phase.power": "Leistung",
@@ -1561,6 +1637,27 @@ const I18N = {
     "js.allInterfaces": "(alle)",
   },
   "zh-Hans": {
+    "panel.profile": "充电曲线编辑器",
+    "panel.profile.sub": "按时间排列的 LPC 限值序列——可实时执行或导出为场景",
+    "profile.watts": "限值（W）",
+    "profile.preset": "预设：",
+    "preset.stepdown": "逐步降低",
+    "preset.pulse": "脉冲",
+    "preset.bench": "快速台架测试",
+    "profile.releaseEnd": "结束时解除限值",
+    "profile.preview": "预览",
+    "profile.total": "总计：",
+    "profile.empty": "尚无步骤——请添加或载入预设。",
+    "profile.idle": "未在运行。",
+    "profile.yamlTitle": "场景 YAML",
+    "btn.addStep": "添加步骤",
+    "btn.runProfile": "运行曲线",
+    "btn.stopProfile": "停止并解除",
+    "btn.exportYaml": "导出为场景",
+    "btn.copyYaml": "复制 YAML",
+    "js.profileStep": "第 {i} / {n} 步：{p}，持续 {d}",
+    "js.profileDone": "曲线执行完成",
+    "js.profileStopped": "曲线已停止，限值已解除",
     "panel.phases": "相位平衡",
     "panel.phases.sub": "各相功率、电流与电压——不对称负载会被标记",
     "phase.power": "功率",
@@ -1989,7 +2086,7 @@ function setLang(lang) {
   applyI18n();
   // Dynamically rendered panels rebuild from state on the next poll; rebuild them now
   // instead, so a language switch is instant everywhere, not only in the static chrome.
-  try { renderCore(); renderSnapshot(); renderTests(); renderTemplates(); renderEvents(); renderTrace(); renderTraceSummary(); renderPhases(); } catch (_) {}
+  try { renderCore(); renderSnapshot(); renderTests(); renderTemplates(); renderEvents(); renderTrace(); renderTraceSummary(); renderPhases(); renderProfile(); } catch (_) {}
 }
 const USE_CASE_SHORT = {
   limitationOfPowerConsumption: "LPC",
@@ -2012,7 +2109,8 @@ const state = {
   range: Number(localStorage.getItem("eebus-chart-range") || 900),
   events: [], eventsPaused: false, eventSource: null,
   logTimer: null, snapshotTimer: null, lockedChartIndex: null, polling: false,
-  traceCursor: 0, traceEntries: [], tracePaused: false, traceSummary: null
+  traceCursor: 0, traceEntries: [], tracePaused: false, traceSummary: null,
+  profileSteps: [], profileRun: null, profileTimer: null, profileWake: null
 };
 
 class ApiError extends Error {
@@ -2880,6 +2978,169 @@ async function loadRecentEvents() {
   renderEvents();
 }
 
+// ---- Charge profile builder ------------------------------------------------------------
+// A profile is a timed sequence of LPC limit steps, edited here, persisted in localStorage,
+// and either executed live or exported as scenario YAML (the durable form -- scenarios/
+// remains the source of truth for anything worth keeping). Every live step is written WITH
+// its own duration, so if this browser tab dies mid-profile the device's limit expires on
+// its own instead of sticking forever.
+
+const PROFILE_PRESETS = {
+  stepdown: [{watts: 6000, seconds: 900}, {watts: 4200, seconds: 900}, {watts: 2000, seconds: 900}],
+  pulse: [{watts: 11000, seconds: 300}, {watts: 0, seconds: 300}, {watts: 11000, seconds: 300}, {watts: 0, seconds: 300}],
+  bench: [{watts: 4200, seconds: 30}, {watts: 2000, seconds: 30}],
+};
+
+function loadProfileSteps() {
+  try {
+    const stored = JSON.parse(localStorage.getItem("eebus-profile") || "[]");
+    if (Array.isArray(stored)) return stored.filter(s => Number.isFinite(s.watts) && Number.isFinite(s.seconds));
+  } catch (_) {}
+  return [];
+}
+
+function saveProfileSteps() {
+  localStorage.setItem("eebus-profile", JSON.stringify(state.profileSteps));
+}
+
+function secondsToISO(seconds) {
+  if (seconds % 3600 === 0) return `PT${seconds / 3600}H`;
+  if (seconds % 60 === 0) return `PT${seconds / 60}M`;
+  return `PT${Math.round(seconds)}S`;
+}
+
+function formatSeconds(seconds) {
+  if (seconds % 3600 === 0) return `${seconds / 3600} h`;
+  if (seconds % 60 === 0) return `${seconds / 60} min`;
+  return `${Math.round(seconds)} s`;
+}
+
+function renderProfile() {
+  const host = document.getElementById("profile-steps");
+  const steps = state.profileSteps;
+  const runningIndex = state.profileRun ? state.profileRun.index : -1;
+  host.innerHTML = steps.length ? `<div style="overflow:auto"><table><thead><tr><th>#</th><th>${esc(t("profile.watts"))}</th><th>${esc(t("field.duration"))}</th><th></th></tr></thead><tbody>
+    ${steps.map((s, i) => `<tr${i === runningIndex ? ' style="outline:1px solid var(--amber)"' : ""}>
+      <td>${i + 1}</td>
+      <td><input type="number" min="0" step="100" value="${esc(s.watts)}" data-profile-field="watts" data-profile-index="${i}" style="width:100px" aria-label="${esc(t("profile.watts"))}"></td>
+      <td><input type="number" min="1" step="1" value="${esc(s.seconds % 60 === 0 ? s.seconds / 60 : s.seconds)}" data-profile-field="amount" data-profile-index="${i}" style="width:70px">
+          <select data-profile-field="unit" data-profile-index="${i}">
+            <option value="s"${s.seconds % 60 !== 0 ? " selected" : ""}>s</option>
+            <option value="m"${s.seconds % 60 === 0 ? " selected" : ""}>min</option>
+          </select></td>
+      <td><button class="small danger" data-profile-remove="${i}">✕</button></td>
+    </tr>`).join("")}
+  </tbody></table></div>` : `<div class="empty">${esc(t("profile.empty"))}</div>`;
+
+  const preview = document.getElementById("profile-preview");
+  const total = steps.reduce((a, s) => a + s.seconds, 0);
+  const maxW = Math.max(...steps.map(s => s.watts), 1);
+  preview.innerHTML = steps.map((s, i) => {
+    const width = total ? Math.max(3, Math.round(s.seconds / total * 100)) : 0;
+    const height = Math.max(4, Math.round(s.watts / maxW * 100));
+    const color = i === runningIndex ? "var(--amber)" : "var(--cyan)";
+    return `<div title="${esc(formatPower(s.watts))} · ${esc(formatSeconds(s.seconds))}" style="width:${width}%;height:${height}%;background:${color};border-radius:3px 3px 0 0;opacity:.85"></div>`;
+  }).join("");
+  document.getElementById("profile-total").textContent = `${t("profile.total")} ${formatSeconds(total)}`;
+  document.getElementById("profile-run").disabled = !!state.profileRun;
+  document.getElementById("profile-stop").disabled = !state.profileRun;
+}
+
+function profileStatus(text, isError = false) {
+  const box = document.getElementById("profile-status");
+  box.textContent = text;
+  box.className = `action-result ${isError ? "" : "ok"}`;
+}
+
+function profileSleep(ms) {
+  return new Promise(resolve => {
+    state.profileWake = resolve;
+    state.profileTimer = setTimeout(resolve, ms);
+  });
+}
+
+async function profileWriteLimit(body) {
+  return api(`/lpc/${encodeURIComponent(state.selectedSki)}/limit`, {
+    method: "PUT", headers: {"content-type": "application/json"}, body: JSON.stringify(body),
+  });
+}
+
+async function runProfile() {
+  if (state.profileRun) return;
+  if (!state.selectedSki || !selectedConnected()) {
+    toast(t("js.deviceNotConnected"), t("js.connectFirst"), "warn");
+    return;
+  }
+  const steps = state.profileSteps.filter(s => s.seconds > 0);
+  if (!steps.length) return;
+  state.profileRun = {index: 0, cancelled: false};
+  renderProfile();
+  for (let i = 0; i < steps.length && !state.profileRun.cancelled; i++) {
+    state.profileRun.index = i;
+    renderProfile();
+    profileStatus(tf("js.profileStep", {i: i + 1, n: steps.length, p: formatPower(steps[i].watts), d: formatSeconds(steps[i].seconds)}));
+    try {
+      // duration doubles as a dead-man's switch: if this tab disappears, the limit expires.
+      await profileWriteLimit({value_w: steps[i].watts, is_active: true, is_changeable: true, duration: secondsToISO(steps[i].seconds)});
+    } catch (error) {
+      profileStatus(errorDetail(error), true);
+      state.profileRun = null;
+      renderProfile();
+      return;
+    }
+    await profileSleep(steps[i].seconds * 1000);
+  }
+  const cancelled = state.profileRun.cancelled;
+  state.profileRun = null;
+  if (cancelled || document.getElementById("profile-release").checked) {
+    try { await profileWriteLimit({value_w: 0, is_active: false, is_changeable: true, delete_duration: true}); } catch (_) {}
+  }
+  profileStatus(cancelled ? t("js.profileStopped") : t("js.profileDone"));
+  renderProfile();
+  await loadSnapshot();
+}
+
+function stopProfile() {
+  if (!state.profileRun) return;
+  state.profileRun.cancelled = true;
+  clearTimeout(state.profileTimer);
+  state.profileWake?.();
+}
+
+function profileYAML() {
+  const steps = state.profileSteps.filter(s => s.seconds > 0);
+  const total = steps.reduce((a, s) => a + s.seconds, 0);
+  const lines = [
+    "name: custom-charge-profile",
+    "description: >",
+    `  Generated by the profile builder: ${steps.length} LPC limit steps over ${formatSeconds(total)}.`,
+    "  Each step carries its own duration, so an aborted run expires on the device by itself.",
+    "category: LPC",
+    "risk: live-control",
+    "requires:",
+    "  capabilities: [lpc.write]",
+    "  use_cases: [limitationOfPowerConsumption]",
+    "peer: device-under-test",
+    "steps:",
+    "  - wait_connected: {timeout: 30s}",
+  ];
+  for (const s of steps) {
+    lines.push(`  - put:`);
+    lines.push(`      path: "/api/v1/lpc/{peer.ski}/limit"`);
+    lines.push(`      body: {value_w: ${s.watts}, is_active: true, is_changeable: true, duration: "${secondsToISO(s.seconds)}"}`);
+    lines.push(`  - sleep: ${s.seconds}`);
+  }
+  if (document.getElementById("profile-release").checked) {
+    lines.push(`  - put:`);
+    lines.push(`      path: "/api/v1/lpc/{peer.ski}/limit"`);
+    lines.push(`      body: {value_w: 0, is_active: false, is_changeable: true, delete_duration: true}`);
+    lines.push(`  - assert:`);
+    lines.push(`      get: "/api/v1/lpc/{peer.ski}/limit"`);
+    lines.push(`      equals: {is_active: false}`);
+  }
+  return lines.join("\n") + "\n";
+}
+
 // ---- Phase balance -------------------------------------------------------------------
 // The per-phase arrays have been in the snapshot all along (monitoring[], grid[],
 // ev.vehicles[]); this panel finally renders them instead of leaving them buried in the raw
@@ -3126,6 +3387,8 @@ async function boot() {
   state.logTimer = setInterval(() => {
     if (document.getElementById("log-live").checked && document.getElementById("page-diagnostics").classList.contains("active")) loadLogs();
   }, 3000);
+  state.profileSteps = loadProfileSteps();
+  renderProfile();
   setInterval(pollTrace, 2000);
   setInterval(() => { refreshTraceSummary(); if (tracePageActive()) populateTracePeers(); }, 6000);
   setInterval(() => {
@@ -3185,6 +3448,39 @@ document.getElementById("trace-clear").addEventListener("click", async () => {
 ["trace-peer","trace-dir","trace-findings-only"].forEach(id =>
   document.getElementById(id).addEventListener("change", renderTrace));
 document.getElementById("trace-search").addEventListener("input", renderTrace);
+document.getElementById("profile-add").addEventListener("click", () => {
+  state.profileSteps.push({watts: 4200, seconds: 900});
+  saveProfileSteps(); renderProfile();
+});
+document.getElementById("profile-run").addEventListener("click", () => runProfile());
+document.getElementById("profile-stop").addEventListener("click", stopProfile);
+document.getElementById("profile-export").addEventListener("click", () => {
+  document.getElementById("profile-yaml").textContent = profileYAML();
+  document.getElementById("profile-yaml-box").open = true;
+});
+document.getElementById("profile-copy").addEventListener("click", async () => {
+  document.getElementById("profile-yaml").textContent = profileYAML();
+  try { await navigator.clipboard.writeText(profileYAML()); toast(t("js.copied")); } catch (_) {}
+});
+document.getElementById("profile-steps").addEventListener("input", event => {
+  const field = event.target.dataset.profileField;
+  if (!field) return;
+  const index = Number(event.target.dataset.profileIndex);
+  const step = state.profileSteps[index];
+  if (!step) return;
+  if (field === "watts") step.watts = Math.max(0, Number(event.target.value) || 0);
+  if (field === "amount" || field === "unit") {
+    const row = event.target.closest("tr");
+    const amount = Math.max(1, Number(row.querySelector('[data-profile-field="amount"]').value) || 1);
+    const unit = row.querySelector('[data-profile-field="unit"]').value;
+    step.seconds = unit === "m" ? amount * 60 : amount;
+  }
+  saveProfileSteps();
+  // Re-render only the preview while typing; rebuilding the inputs would steal focus.
+  const total = state.profileSteps.reduce((a, s) => a + s.seconds, 0);
+  document.getElementById("profile-total").textContent = `${t("profile.total")} ${formatSeconds(total)}`;
+});
+document.getElementById("profile-steps").addEventListener("change", () => { saveProfileSteps(); renderProfile(); });
 document.getElementById("power-chart").addEventListener("mousemove", event => inspectChart(event));
 document.getElementById("power-chart").addEventListener("click", event => inspectChart(event, true));
 document.getElementById("power-chart").addEventListener("mouseleave", () => {
@@ -3245,6 +3541,16 @@ document.addEventListener("click", async event => {
   }
   const run = event.target.closest("[data-run-test]");
   if (run) { await runOneTest(run.dataset.runTest, run); return; }
+  const profileRemove = event.target.closest("[data-profile-remove]");
+  if (profileRemove) {
+    state.profileSteps.splice(Number(profileRemove.dataset.profileRemove), 1);
+    saveProfileSteps(); renderProfile(); return;
+  }
+  const profilePreset = event.target.closest("[data-profile-preset]");
+  if (profilePreset) {
+    state.profileSteps = PROFILE_PRESETS[profilePreset.dataset.profilePreset].map(s => ({...s}));
+    saveProfileSteps(); renderProfile(); return;
+  }
   const traceJump = event.target.closest("[data-trace-jump]");
   if (traceJump) { await jumpToTraceFrame(traceJump.dataset.traceJump); return; }
   const traceRow = event.target.closest("[data-trace-seq]");
