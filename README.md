@@ -23,7 +23,8 @@ hardware is available.
 - **Web dashboard** — live view of connections, limits, measurements, use cases and logs. Shows
   the tool's own SKI permanently, and follows your system light/dark setting or an explicit choice.
 - **REST API** — everything the dashboard does is an HTTP call, so it scripts cleanly. An
-  OpenAPI description is served at `/api/v1/openapi.yaml`.
+  OpenAPI description is served at `/api/v1/openapi.yaml`, with browsable references at
+  `/docs` (Swagger UI) and `/redoc` — both embedded, so they work without internet access.
 - **Scenario runner** — a library of YAML test cases, runnable from the dashboard, the CLI or
   CI, with JUnit XML output.
 - **Simulated devices** — LPC-accepting, MPC-reporting devices built into the binary.

@@ -8,6 +8,11 @@ defaulting to 8080/8081) -- there is no separate host-port mapping to know about
 The dashboard is a single static HTML application served by the binary. It has no external
 frontend runtime or build step.
 
+The API reference is served by the same binary, fully offline: `/docs` (Swagger UI, with
+try-it-out) and `/redoc` (Redoc, reading-oriented) both render the spec at `/openapi.yaml`
+(also reachable as `/api/v1/openapi.yaml`). The viewer assets are embedded — see
+`internal/openapi/assets/README.md` for provenance.
+
 ## Dashboard workspaces
 
 ### Dashboard
@@ -88,14 +93,15 @@ All endpoints are under `/api/v1`.
 | GET | `/version` | Tool version |
 | GET | `/identity` | Local SKI for running adapters |
 | GET | `/stacks` | Runtime state and capabilities |
+| GET | `/stacks/{id}` | One stack's state |
 | POST | `/stacks/{id}/start` | Start a stack |
 | POST | `/stacks/{id}/stop` | Stop a stack |
-| POST | `/stacks/{id}/restart` | Restart a stack |
 | GET | `/stacks/{id}/logs` | Tail process log |
 | GET | `/config` | Redacted configuration |
+| POST | `/config/validate` | Validate the file without applying |
 | POST | `/config/reload` | Validate and reload the file |
 | PUT | `/config/active-stack` | Select one counterparty |
-| GET | `/network` | Namespace, ports, and configured peers |
+| GET | `/diagnostics/network` | Announced/rejected addresses, interfaces, mDNS health |
 
 ### Discovery and trust
 
@@ -122,6 +128,8 @@ All endpoints are under `/api/v1`.
 | POST | `/lpc/heartbeat/stop` | Stop heartbeat |
 | GET | `/lpc/{ski}/heartbeat` | Heartbeat state |
 | GET/PUT | `/lpp/{ski}/limit` | Production limit |
+| GET/PUT | `/lpp/{ski}/failsafe` | Production failsafe value and duration |
+| GET | `/lpp/{ski}/nominal-max` | Declared maximum production |
 | GET | `/mpc/{ski}` | Consumption measurements |
 | GET | `/mgcp/{ski}` | Grid-connection measurements |
 | GET | `/energy/{ski}/snapshot` | Best-effort energy intelligence |
