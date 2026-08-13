@@ -99,9 +99,9 @@ simulator:
       ship_port: 4713
       baseline_w: 11000    # reports this until an LPC limit pulls it lower
 
-# EEBusTracer integration (the bundled deep-dive protocol analyzer, a separate tool with its
-# own web UI). Start it with `./eebustracer serve --port 8090`; setting the URL here adds an
-# "EEBusTracer" link to the dashboard sidebar, opening in a new tab. Feed it frames by running
-# the testbench with `-frame-log frames.log` and importing that file:
-#   ./eebustracer import frames.log
+# EEBusTracer (the bundled deep-dive protocol analyzer, a separate tool with its own web UI)
+# starts automatically when its binary sits next to eebus-testbench, serves on
+# http://127.0.0.1:8090 (-tracer-port to change, -tracer=false to disable) and is linked from
+# the dashboard sidebar. Raw frames land in <data-dir>/frames.log for importing in its UI.
+# Set a URL here only to link a self-managed instance instead of spawning the bundled one:
 # tracer_url: "http://127.0.0.1:8090"

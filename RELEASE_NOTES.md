@@ -1,5 +1,76 @@
 # Release notes
 
+## 1.0.0-rc2
+
+The debugging release: the testbench can now show what is actually on the wire, judge it
+against the standard, and drive shaped load profiles — and it speaks three languages while
+doing it.
+
+### Message trace and conformance checking
+
+- **New "Message trace" dashboard page and `/api/v1/trace` endpoints.** Every SHIP frame is
+  captured at the websocket layer, *before* the stack's own JSON repairs — the vendored stack
+  silently rewrites malformed payloads (including `[]` → `{}`), which used to destroy exactly
+  the evidence needed when a device sends structurally broken messages.
+- **Built-in conformance checker** (see `internal/conformance`): every frame is checked
+  against the EEBUS JSON encoding rules (SHIP TS 1.0.1 §11.4/§11.5) and the SPINE datagram
+  rules (SPINE TS ProtocolSpecification 1.3.0 §5). Detected fault classes include objects
+  carrying several elements, empty objects, empty array instances such as
+  `"permittedValueSet":[[]]` ("arrays where objects are expected"), missing mandatory header
+  elements, invalid `cmdClassifier`, replies without `msgCounterReference`, trailing NUL
+  bytes, and msgCounter reuse. A per-peer session correlates the device's own declared
+  measurement units with later values, catching thousand-fold scale faults (16 A sent as
+  16000 A). Every finding carries its reference into the standard.
+- **Conformance summary with jump-to-evidence**, and non-conformant frames surfacing as
+  `spine`-level events.
+
+### New test scenarios
+
+`conformance-window`, `mpc-phase-plausibility`, `mpc-phase-consistency`,
+`lpc-failsafe-window`, `lpc-duration-roundtrip`, `ev-charged-energy` — each aimed at a fault
+class seen from real devices, with the standard reference in its description. The runner
+gained `post`/`delete` verbs, `expect_status`, `each_less_than`, `sum_matches`,
+`duration_at_least/at_most`, and array indexing in assertion paths.
+
+### Dashboard
+
+- **Complete localization** in English, German, and simplified Chinese — every string, not
+  just the headings — with CI guarding the dictionaries against drift.
+- **Phase balance panel**: per-phase power, current, and voltage per source with asymmetric
+  loading flagged (a two-phase charger on a three-phase connection is now visible at a
+  glance). The simulated device publishes a deliberately asymmetric profile to demonstrate.
+- **Charge profile builder**: timed sequences of LPC limits with presets and a preview, run
+  live (each step carries its own duration as a dead-man's switch) or exported as scenario
+  YAML.
+- The API reference (`/docs`, `/redoc`) is now fully embedded and works offline; the spec is
+  also served under the documented `/api/v1/openapi.yaml` path.
+
+### EEBusTracer bundled and auto-started
+
+The release archive now includes [EEBusTracer](https://github.com/uhl/EEBusTracer) (MIT,
+pinned v0.7.0) for offline deep dives. `serve` spawns it automatically on
+`http://127.0.0.1:8090` when the binary sits next to the executable, links it from the
+dashboard sidebar (new tab — it is a separate product), and appends every raw frame to
+`<data-dir>/frames.log` for importing in its UI. `-tracer=false` / `-tracer-port` /
+`-frame-log` control it; an explicit `tracer_url` in `eebus.yaml` links a self-managed
+instance instead.
+
+### Validated against real hardware
+
+Verified end to end against a live charging system over Wi-Fi: mutual SHIP pairing, LPC
+reads and writes, and the complete scenario suite. The new scenarios caught real device
+behaviour from the outside on the first run — a limit write silently not applied on
+readback, failsafe reads answering "data not available" because the device announces keys
+whose out-of-range values its stack drops, and missing limit-update notifications after
+state-only writes — each reported with its reference into the standard.
+
+### Housekeeping
+
+- Release targets are now linux/amd64, windows/amd64, and **darwin/arm64** (Apple Silicon);
+  linux/arm64 was dropped. `scripts/build-dist.sh` builds the same archives locally.
+- Removed two dead UI areas whose endpoints did not exist in the Go rewrite (RAW JSON-RPC
+  card, Network namespace panel), and the last stale Python-facade prose.
+
 ## 1.0.0
 
 First released version. The tool is a single static executable that acts as an EEBUS energy

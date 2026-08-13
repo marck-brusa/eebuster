@@ -2399,7 +2399,20 @@ function renderCore() {
   renderRuntimeInfo();
 
   const tracerLink = document.getElementById("tracer-link");
-  const tracerURL = state.config?.tracer_url;
+  let tracerURL = state.config?.tracer_url;
+  // The auto-spawned tracer reports itself as 127.0.0.1, which is wrong the moment this
+  // dashboard is opened from another machine (bench PC driven remotely). It listens on all
+  // interfaces, so follow the host that served this page.
+  if (tracerURL) {
+    try {
+      const parsed = new URL(tracerURL);
+      if ((parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost") &&
+          location.hostname && !["127.0.0.1", "localhost"].includes(location.hostname)) {
+        parsed.hostname = location.hostname;
+        tracerURL = parsed.toString();
+      }
+    } catch (_) {}
+  }
   tracerLink.style.display = tracerURL ? "" : "none";
   if (tracerURL) tracerLink.href = tracerURL;
 }

@@ -23,6 +23,10 @@ This is a development and integration tool, not an EEBUS certification or confor
 | `internal/httpapi/` | REST API — the tool's public contract |
 | `internal/webui/` | dashboard, a single hand-written `ui.html` |
 | `internal/scenario/` | YAML scenario runner, a pure REST client |
+| `internal/conformance/` | wire-frame checks against SHIP TS §11 / SPINE TS §5, spec ref on every finding |
+| `internal/trace/` | bounded raw-frame store behind the Message trace page and `/api/v1/trace` |
+| `internal/conformance/` | wire-frame checks against SHIP TS §11 / SPINE TS §5, spec ref on every finding |
+| `internal/trace/` | bounded raw-frame store behind the Message trace page and `/api/v1/trace` |
 | `internal/simulator/` | simulated devices |
 | `internal/announce/`, `internal/netfilter/` | which local addresses get published over mDNS |
 | `internal/truststore/` | persists runtime trust decisions |

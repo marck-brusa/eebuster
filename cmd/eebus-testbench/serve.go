@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -53,7 +54,9 @@ func runServe(args []string) {
 	logLevelFlag := fs.String("log-level", "", "EEBUS stack log verbosity: trace|debug|info|error (default debug; trace dumps every SPINE datagram as JSON)")
 	announceAddrFlag := fs.String("announce-address", "", "comma-separated IPs to publish in our own mDNS records, overriding auto-detection (e.g. 192.168.9.100)")
 	noFilterFlag := fs.Bool("no-announce-filter", false, "publish every local address, including IPv6 link-local/unique-local and virtual adapters (upstream zeroconf behaviour)")
-	frameLogFlag := fs.String("frame-log", "", "append every raw SHIP frame to this file in EEBus Hub log format, ready for `eebustracer serve --log-file <file>`")
+	frameLogFlag := fs.String("frame-log", "", "append every raw SHIP frame to this file in EEBus Hub log format, ready for EEBusTracer to import (defaults to <data-dir>/frames.log when the bundled tracer runs)")
+	tracerFlag := fs.Bool("tracer", true, "run the bundled eebustracer web UI on localhost and link it from the dashboard sidebar (skipped when the binary is not next to this executable, or when config sets tracer_url)")
+	tracerPortFlag := fs.Int("tracer-port", 8090, "port for the bundled eebustracer UI")
 	fs.Parse(args)
 	autoAcceptSet, requireApprovalSet, noFilterSet, configSet := false, false, false, false
 	fs.Visit(func(f *flag.Flag) {
@@ -160,17 +163,33 @@ func runServe(args []string) {
 	// chain composes real zeroconf with these synthetic entries in either case, so the
 	// simulator runs under the zero-config mdns default a double-click gets, not just static
 	// mode. Verified by a full SPINE handshake in mdns mode.
+	// The bundled EEBusTracer, spawned automatically when its binary sits next to ours. It is
+	// a separate product with its own web UI; the sidebar link (via cfg.TracerURL) opens it in
+	// a new tab. An explicit tracer_url in the config means the user manages their own
+	// instance, so nothing is spawned. Failure to start is logged and otherwise ignored --
+	// a broken sidecar must never take the testbench down.
+	tracerProcess := startBundledTracer(*tracerFlag, *tracerPortFlag, *dataDir, cfg)
+
 	// One trace store for every stack in the process: the primary stack's frames and the
 	// simulated devices' frames land in the same ring, tagged by stack id.
 	frames := trace.New()
-	if *frameLogFlag != "" {
-		frameLog, err := os.OpenFile(*frameLogFlag, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	frameLogPath := *frameLogFlag
+	if frameLogPath == "" && tracerProcess != nil {
+		// The tracer without data is an empty page; default the frame log next to the
+		// identity so there is always a session file to import in its UI.
+		frameLogPath = filepath.Join(*dataDir, "frames.log")
+	}
+	if frameLogPath != "" {
+		if err := os.MkdirAll(filepath.Dir(frameLogPath), 0o755); err != nil {
+			log.Fatalf("frame log: %v", err)
+		}
+		frameLog, err := os.OpenFile(frameLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 		if err != nil {
 			log.Fatalf("frame log: %v", err)
 		}
 		defer frameLog.Close()
 		frames.SetLogWriter(frameLog)
-		log.Printf("frame log: appending every raw SHIP frame to %s (EEBus Hub format; feed it to EEBusTracer with --log-file)", *frameLogFlag)
+		log.Printf("frame log: appending every raw SHIP frame to %s (EEBus Hub format; import it in EEBusTracer)", frameLogPath)
 	}
 
 	var simDevices []*simulator.Device
@@ -287,11 +306,64 @@ func runServe(args []string) {
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	<-sig
 	log.Println("shutting down")
+	if tracerProcess != nil {
+		_ = tracerProcess.Kill()
+	}
 	for _, dev := range simDevices {
 		dev.Shutdown()
 	}
 	stack.Shutdown()
 	_ = httpServer.Close()
+}
+
+// startBundledTracer spawns the eebustracer binary shipped in the release archive, if present
+// next to our own executable, and points cfg.TracerURL at it so the dashboard sidebar links
+// it. Returns the child process for shutdown, or nil when nothing was started.
+func startBundledTracer(enabled bool, port int, dataDir string, cfg *config.Config) *os.Process {
+	if !enabled || cfg.TracerURL != "" {
+		return nil
+	}
+	self, err := os.Executable()
+	if err != nil {
+		return nil
+	}
+	name := "eebustracer"
+	if strings.HasSuffix(strings.ToLower(self), ".exe") {
+		name += ".exe"
+	}
+	binary := filepath.Join(filepath.Dir(self), name)
+	if _, err := os.Stat(binary); err != nil {
+		return nil // not bundled here (e.g. a `go run` build); nothing to do
+	}
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		log.Printf("eebustracer: cannot prepare data dir: %v", err)
+		return nil
+	}
+	logFile, err := os.OpenFile(filepath.Join(dataDir, "eebustracer.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		log.Printf("eebustracer: cannot open its log file: %v", err)
+		return nil
+	}
+	cmd := exec.Command(binary, "--db", filepath.Join(dataDir, "eebustracer.db"), "serve", "--port", strconv.Itoa(port))
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+	if err := cmd.Start(); err != nil {
+		logFile.Close()
+		log.Printf("eebustracer: start failed: %v", err)
+		return nil
+	}
+	// Reap in the background so a crashed tracer never leaves a zombie; the testbench keeps
+	// running either way.
+	go func() {
+		err := cmd.Wait()
+		logFile.Close()
+		if err != nil {
+			log.Printf("eebustracer: exited: %v (dashboard link may be dead; see %s)", err, logFile.Name())
+		}
+	}()
+	cfg.TracerURL = "http://127.0.0.1:" + strconv.Itoa(port)
+	log.Printf("eebustracer: bundled tracer running at %s (pid %d), linked from the dashboard sidebar", cfg.TracerURL, cmd.Process.Pid)
+	return cmd.Process
 }
 
 func effectiveBaseline(d config.SimulatedDevice) float64 {

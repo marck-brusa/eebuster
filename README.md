@@ -94,18 +94,16 @@ Python references for pulling data in and out of the CEM.
 The dashboard's **Message trace** page shows live frames with conformance findings. For
 offline deep dives — message-flow diagrams, latency correlation, lifecycle checklists — the
 release archive bundles [EEBusTracer](https://github.com/uhl/EEBusTracer) (MIT), a standalone
-protocol analyzer with its own web UI:
+protocol analyzer with its own web UI.
 
-```bash
-./eebus-testbench serve -frame-log frames.log   # append every raw frame to a file
-./eebustracer import frames.log                 # ingest a session
-./eebustracer serve --port 8090                 # its own UI, on its own port
-```
-
-Setting `tracer_url: "http://127.0.0.1:8090"` in `eebus.yaml` adds an EEBusTracer link to the
-dashboard sidebar (a separate product, so it opens in a new tab). The frame log uses the
-EEBus Hub line format, which EEBusTracer auto-detects; `eebustracer analyze frames.log` also
-works directly for a quick use-case audit from the terminal.
+`serve` starts it automatically when the `eebustracer` binary sits next to the executable
+(as it does in the release archive): its UI runs on <http://127.0.0.1:8090> and is linked
+from the dashboard sidebar, opening in a new tab since it is a separate product. Every raw
+frame is also appended to `<data-dir>/frames.log`, ready to import in the tracer's UI or via
+`./eebustracer import frames.log`. Control it with `-tracer=false`, `-tracer-port`, or
+`-frame-log`; setting `tracer_url` in `eebus.yaml` links a self-managed instance instead of
+spawning the bundled one. `./eebustracer analyze frames.log` gives a quick use-case audit
+from the terminal.
 
 ## Layout
 
