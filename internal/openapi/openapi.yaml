@@ -339,14 +339,14 @@ paths:
 
   /api/v1/opev/{ski}:
     get:
-      tags: [usecases]
+      tags: [use-cases]
       summary: Per-phase charging-current obligations (OPEV) — active limits and the EV's declared min/max/default constraints
       parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
       responses: { "200": { description: OK } }
 
   /api/v1/opev/{ski}/limits:
     put:
-      tags: [usecases]
+      tags: [use-cases]
       summary: Write per-phase current obligations the EV must not exceed (overload protection)
       parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
       requestBody:
@@ -368,14 +368,14 @@ paths:
 
   /api/v1/oscev/{ski}:
     get:
-      tags: [usecases]
+      tags: [use-cases]
       summary: Per-phase charging-current recommendations (OSCEV) — advisory setpoints and constraints
       parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
       responses: { "200": { description: OK } }
 
   /api/v1/oscev/{ski}/limits:
     put:
-      tags: [usecases]
+      tags: [use-cases]
       summary: Write per-phase current recommendations the EV may follow (self-consumption optimization)
       parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
       requestBody:
@@ -397,9 +397,68 @@ paths:
 
   /api/v1/ohpcf/{ski}:
     get:
-      tags: [usecases]
+      tags: [use-cases]
       summary: Heat pump compressor flexibility offer (OHPCF) — optional power consumption, pausability, run windows
       parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
+      responses: { "200": { description: OK } }
+
+  /api/v1/evsecc/{ski}:
+    get:
+      tags: [use-cases]
+      summary: Station identity (EVSECC) — manufacturer data (vendor, brand, serial, software/hardware revision) and operating state
+      parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
+      responses: { "200": { description: OK } }
+
+  /api/v1/opev/heartbeat/start:
+    post:
+      tags: [use-cases]
+      summary: Start the Energy Guard heartbeat towards the EV (OPEV scenario 2)
+      responses: { "200": { description: OK } }
+
+  /api/v1/opev/heartbeat/stop:
+    post:
+      tags: [use-cases]
+      summary: Stop the Energy Guard heartbeat — the EV must fall to a safe current after 4 s (OPEV-005)
+      responses: { "200": { description: OK } }
+
+  /api/v1/opev/operating-state:
+    put:
+      tags: [use-cases]
+      summary: Announce or clear the Energy Guard error state (OPEV scenario 3, OPEV-007)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                failure: {type: boolean}
+      responses: { "200": { description: OK } }
+
+  /api/v1/oscev/heartbeat/start:
+    post:
+      tags: [use-cases]
+      summary: Start the CEM heartbeat for the OSCEV use case
+      responses: { "200": { description: OK } }
+
+  /api/v1/oscev/heartbeat/stop:
+    post:
+      tags: [use-cases]
+      summary: Stop the CEM heartbeat for the OSCEV use case
+      responses: { "200": { description: OK } }
+
+  /api/v1/oscev/operating-state:
+    put:
+      tags: [use-cases]
+      summary: Announce or clear the CEM error state for the OSCEV use case
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                failure: {type: boolean}
       responses: { "200": { description: OK } }
 
   /api/v1/trace:

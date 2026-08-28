@@ -58,8 +58,8 @@ var useCaseCatalog = map[string]useCaseCatalogEntry{
 	},
 	"evseCommissioningAndConfiguration": {
 		Acronym: "EVSECC", Title: "EVSE Commissioning and Configuration", Domain: "e-mobility",
-		Description:     "Charging-station identity and operating state.",
-		TypedOperations: []string{"snapshot"},
+		Description:     "Charging-station identity (vendor, brand, serial, software revision) and operating state.",
+		TypedOperations: []string{"station identity", "snapshot"},
 	},
 	"coordinatedEvCharging": {
 		Acronym: "CEVC", Title: "Coordinated EV Charging", Domain: "e-mobility",
@@ -89,12 +89,12 @@ var useCaseCatalog = map[string]useCaseCatalogEntry{
 	"overloadProtectionByEvChargingCurrentCurtailment": {
 		Acronym: "OPEV", Title: "Overload Protection by EV Charging Current Curtailment", Domain: "e-mobility",
 		Description:     "Per-phase charging-current obligations the EV must not exceed.",
-		TypedOperations: []string{"current limits read/write", "constraints"},
+		TypedOperations: []string{"current limits read/write", "constraints", "heartbeat", "error state"},
 	},
 	"optimizationOfSelfConsumptionDuringEvCharging": {
 		Acronym: "OSCEV", Title: "Optimization of Self-Consumption During EV Charging", Domain: "e-mobility",
 		Description:     "Per-phase charging-current recommendations the EV may follow.",
-		TypedOperations: []string{"current limits read/write", "constraints"},
+		TypedOperations: []string{"current limits read/write", "constraints", "heartbeat", "error state"},
 	},
 	"optimizationOfSelfConsumptionByHeatPumpCompressorFlexibility": {
 		Acronym: "OHPCF", Title: "Optimization of Self-Consumption by Heat Pump Compressor Flexibility", Domain: "hvac",

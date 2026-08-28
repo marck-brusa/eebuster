@@ -191,6 +191,31 @@ For offline deep dives, every frame is also appended to `data/frames.log`; impor
 bundled analyzer with `./eebustracer import frames.log` and browse at its UI, or run
 `./eebustracer analyze frames.log` for a quick terminal audit.
 
+## Reaching a device through an SSH tunnel
+
+When SHIP (TCP 12345) cannot be reached directly — VPN, NAT'd namespace, strict network — but
+SSH to the device (or a host next to it) works, tunnel it:
+
+```bash
+ssh -N -L 14712:127.0.0.1:12345 root@<device>     # keep running
+```
+
+and point a static peer at the tunnel in `eebus.yaml`:
+
+```yaml
+network: {mode: static, interface: "*"}
+peers:
+  - name: device-under-test
+    ski: <device ski>
+    host: 127.0.0.1
+    port: 14712
+    trust: auto
+```
+
+SHIP runs TLS with SKI pinning, so the tunnel is transparent to it. Mind the identity: the
+device only accepts the SKI it was paired with, so run with `-data-dir` pointing at the data
+directory holding that identity — and never run two instances with the same identity at once.
+
 ## Platform notes
 
 ### SHIP needs an inbound TCP port

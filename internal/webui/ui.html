@@ -428,6 +428,21 @@
   .empty { padding: 28px 14px; color: var(--quiet); text-align: center; }
   .muted { color: var(--muted); }
   .hidden { display: none !important; }
+.mselect { position: relative; }
+.mselect > summary {
+  list-style: none; cursor: pointer; padding: 6px 10px; border: 1px solid var(--line);
+  border-radius: 7px; background: var(--panel-2); font-size: 12px; user-select: none;
+}
+.mselect > summary::-webkit-details-marker { display: none; }
+.mselect[open] > summary { border-color: var(--cyan); }
+.mselect-list {
+  position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; min-width: 230px;
+  max-height: 260px; overflow: auto; padding: 7px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--panel); box-shadow: 0 8px 22px rgba(0,0,0,.25);
+}
+.mselect-list label { display: flex; gap: 7px; align-items: center; padding: 3px 4px; font-size: 12px; cursor: pointer; }
+.mselect-list label:hover { background: var(--panel-2); border-radius: 5px; }
+.mselect-list .mono { font-size: 11px; }
   .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 30; display: grid; gap: 8px; width: 390px; }
   .toast {
     padding: 11px 13px; border: 1px solid var(--line-bright); border-radius: 9px;
@@ -570,6 +585,20 @@ tr.phase-asym .phase-bar{background:var(--amber)}
               <canvas id="power-chart"></canvas>
               <div class="chart-tooltip" id="chart-tooltip"></div>
               <div class="empty-chart" id="chart-empty" data-i18n="chart.empty">Select a connected peer to begin collecting history.</div>
+            </div>
+            <div id="chart-detail" class="hidden">
+              <div class="chart-toolbar" style="margin-top:8px">
+                <div class="chart-legend" id="detail-legend"></div>
+                <div class="segmented" id="detail-units">
+                  <button data-unit="current" data-i18n="unit.current">Current</button>
+                  <button data-unit="voltage" data-i18n="unit.voltage">Voltage</button>
+                  <button data-unit="soc" data-i18n="unit.soc">Charge</button>
+                </div>
+              </div>
+              <div class="chart-wrap" style="height:150px">
+                <canvas id="detail-chart"></canvas>
+                <div class="chart-tooltip" id="detail-tooltip"></div>
+              </div>
             </div>
             <div class="flow">
               <div class="flow-node"><span data-i18n="flow.grid">Grid</span><strong id="flow-grid">—</strong></div>
@@ -721,6 +750,7 @@ tr.phase-asym .phase-bar{background:var(--amber)}
             <div class="panel-head"><div><div class="uc-code">EV / PV / BATTERY</div><h3 data-i18n="uc.assets.title">Energy assets</h3></div><span class="badge purple" data-i18n="badge.typedSnapshot">typed snapshot</span></div>
             <div class="button-row">
               <button data-uc-read="ev" data-i18n="btn.readEv">Read EV inventory</button>
+              <button data-uc-read="evsecc" data-i18n="btn.stationId">Station identity</button>
               <button data-uc-read="assets" data-i18n="btn.readAssets">Read PV and battery</button>
               <button data-open-page="devices" data-i18n="btn.browseModel">Browse device model</button>
             </div>
@@ -730,18 +760,36 @@ tr.phase-asym .phase-bar{background:var(--amber)}
             <div class="panel-head"><div><div class="uc-code">OPEV / OSCEV</div><h3 data-i18n="uc.current.title">Per-phase charging current</h3></div><span class="badge" data-support="overloadProtectionByEvChargingCurrentCurtailment" data-i18n="badge.unknown">unknown</span></div>
             <div class="live-warning"><strong>!</strong><span data-i18n="current.warning">Obligations cap the EV's charging current immediately; recommendations are advisory.</span></div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">
-              <div class="field" style="margin:0"><label for="opev-a">L1 (A)</label><input id="opev-a" type="number" min="0" step="0.1" value="16"></div>
-              <div class="field" style="margin:0"><label for="opev-b">L2 (A)</label><input id="opev-b" type="number" min="0" step="0.1" value="16"></div>
-              <div class="field" style="margin:0"><label for="opev-c">L3 (A)</label><input id="opev-c" type="number" min="0" step="0.1" value="16"></div>
+              <div class="field" style="margin:0">
+                <label for="opev-a"><input type="checkbox" id="opev-en-a" checked> L1 (A)</label>
+                <input id="opev-a" type="number" min="0" step="0.1" value="16">
+              </div>
+              <div class="field" style="margin:0">
+                <label for="opev-b"><input type="checkbox" id="opev-en-b" checked> L2 (A)</label>
+                <input id="opev-b" type="number" min="0" step="0.1" value="16">
+              </div>
+              <div class="field" style="margin:0">
+                <label for="opev-c"><input type="checkbox" id="opev-en-c" checked> L3 (A)</label>
+                <input id="opev-c" type="number" min="0" step="0.1" value="16">
+              </div>
             </div>
+            <div class="muted" id="opev-constraints" style="font-size:11px;margin-top:5px" data-i18n="current.noConstraints">EV constraints appear after a read (often only published during a session).</div>
             <div class="button-row" style="margin-top:9px">
               <button class="primary" data-current-write="opev" data-i18n="btn.applyObligation">Apply obligation</button>
               <button data-current-write="oscev" data-i18n="btn.applyRecommendation">Apply recommendation</button>
+              <button data-current-pause="opev" data-i18n="btn.pause">Pause (0 A)</button>
               <button class="warn" data-current-release="opev" data-i18n="btn.releaseCurrent">Release</button>
             </div>
             <div class="button-row" style="margin-top:6px">
               <button data-uc-read="opev" data-i18n="btn.readObligations">Read obligations</button>
               <button data-uc-read="oscev" data-i18n="btn.readRecommendations">Read recommendations</button>
+            </div>
+            <div class="muted" style="font-size:11px;margin-top:8px" data-i18n="current.scen23">Scenario 2/3 controls — the EV must fall to a safe current when the heartbeat stays away over 4 s or an error is announced:</div>
+            <div class="button-row" style="margin-top:5px">
+              <button class="small" data-opev-hb="start" data-i18n="btn.hbStart">Start heartbeat</button>
+              <button class="small" data-opev-hb="stop" data-i18n="btn.hbStop">Stop heartbeat</button>
+              <button class="small warn" data-opev-failure="true" data-i18n="btn.errOn">Announce error</button>
+              <button class="small" data-opev-failure="false" data-i18n="btn.errOff">Clear error</button>
             </div>
             <pre class="raw uc-output" id="out-current" data-i18n="uc.noRequest">No request yet.</pre>
           </div>
@@ -808,7 +856,9 @@ tr.phase-asym .phase-bar{background:var(--amber)}
         </div>
         <div class="panel panel-pad">
           <div class="event-toolbar">
-            <select id="trace-peer" style="min-width:170px"><option value="" data-i18n="trace.allPeers">All peers</option></select>
+            <details class="mselect" id="msel-peer"><summary data-count></summary><div class="mselect-list"></div></details>
+            <details class="mselect" id="msel-cls"><summary data-count></summary><div class="mselect-list"></div></details>
+            <details class="mselect" id="msel-fn"><summary data-count></summary><div class="mselect-list"></div></details>
             <select id="trace-dir" style="min-width:110px">
               <option value="" data-i18n="trace.bothDirs">Both directions</option>
               <option value="send" data-i18n="trace.sent">sent</option>
@@ -928,6 +978,38 @@ const API = "/api/v1";
 // the spec and the logs.
 const I18N = {
   en: {
+    "unit.current": "Current",
+    "unit.voltage": "Voltage",
+    "unit.soc": "Charge",
+    "trace.fPeer": "Peers",
+    "trace.fClassifier": "Classifiers",
+    "trace.fFunction": "Functions",
+    "trace.noValues": "Nothing captured yet",
+    "station.title": "Station identity",
+    "station.device": "Device",
+    "station.brand": "Brand",
+    "station.vendor": "Vendor",
+    "station.serial": "Serial number",
+    "station.software": "Software",
+    "station.hardware": "Hardware",
+    "station.state": "Operating state",
+    "js.charged": "charged",
+    "btn.stationId": "Station identity",
+    "btn.pause": "Pause (0 A)",
+    "btn.hbStart": "Start heartbeat",
+    "btn.hbStop": "Stop heartbeat",
+    "btn.errOn": "Announce error",
+    "btn.errOff": "Clear error",
+    "current.scen23": "Scenario 2/3 controls — the EV must fall to a safe current when the heartbeat stays away over 4 s or an error is announced:",
+    "current.constraints": "EV constraints",
+    "current.default": "default",
+    "current.noConstraints": "EV constraints appear after a read (often only published during a session).",
+    "current.phasesNone": "Select at least one phase",
+    "js.pauseSent": "Pause (0 A) sent",
+    "js.hbStarted": "OPEV heartbeat started",
+    "js.hbStopped": "OPEV heartbeat stopped",
+    "js.errorAnnounced": "Error state announced",
+    "js.errorCleared": "Error state cleared",
     "uc.current.title": "Per-phase charging current",
     "current.warning": "Obligations cap the EV's charging current immediately; recommendations are advisory.",
     "btn.applyObligation": "Apply obligation",
@@ -982,7 +1064,6 @@ const I18N = {
     "trace.bad0": "0 non-conformant",
     "trace.clean": "No conformance findings in the retained window.",
     "trace.empty": "No frames captured yet. Frames appear as soon as a peer connects.",
-    "trace.allPeers": "All peers",
     "trace.bothDirs": "Both directions",
     "trace.sent": "sent",
     "trace.received": "received",
@@ -1308,6 +1389,38 @@ const I18N = {
     "js.allInterfaces": "(all)",
   },
   de: {
+    "unit.current": "Strom",
+    "unit.voltage": "Spannung",
+    "unit.soc": "Ladung",
+    "trace.fPeer": "Peers",
+    "trace.fClassifier": "Klassifizierer",
+    "trace.fFunction": "Funktionen",
+    "trace.noValues": "Noch nichts aufgezeichnet",
+    "station.title": "Stationsidentität",
+    "station.device": "Gerät",
+    "station.brand": "Marke",
+    "station.vendor": "Hersteller",
+    "station.serial": "Seriennummer",
+    "station.software": "Software",
+    "station.hardware": "Hardware",
+    "station.state": "Betriebszustand",
+    "js.charged": "geladen",
+    "btn.stationId": "Stationsidentität",
+    "btn.pause": "Pause (0 A)",
+    "btn.hbStart": "Heartbeat starten",
+    "btn.hbStop": "Heartbeat stoppen",
+    "btn.errOn": "Fehler melden",
+    "btn.errOff": "Fehler löschen",
+    "current.scen23": "Szenario-2/3-Steuerung — das EV muss auf einen sicheren Strom zurückfallen, wenn der Heartbeat länger als 4 s ausbleibt oder ein Fehler gemeldet wird:",
+    "current.constraints": "EV-Grenzen",
+    "current.default": "Standard",
+    "current.noConstraints": "EV-Grenzen erscheinen nach einem Lesen (oft nur während einer Ladesitzung).",
+    "current.phasesNone": "Mindestens eine Phase auswählen",
+    "js.pauseSent": "Pause (0 A) gesendet",
+    "js.hbStarted": "OPEV-Heartbeat gestartet",
+    "js.hbStopped": "OPEV-Heartbeat gestoppt",
+    "js.errorAnnounced": "Fehlerzustand gemeldet",
+    "js.errorCleared": "Fehlerzustand gelöscht",
     "uc.current.title": "Ladestrom je Phase",
     "current.warning": "Verpflichtungen begrenzen den Ladestrom des EV sofort; Empfehlungen sind unverbindlich.",
     "btn.applyObligation": "Verpflichtung anwenden",
@@ -1362,7 +1475,6 @@ const I18N = {
     "trace.bad0": "0 nicht konform",
     "trace.clean": "Keine Konformitätsbefunde im aufbewahrten Fenster.",
     "trace.empty": "Noch keine Frames erfasst. Frames erscheinen, sobald sich ein Peer verbindet.",
-    "trace.allPeers": "Alle Peers",
     "trace.bothDirs": "Beide Richtungen",
     "trace.sent": "gesendet",
     "trace.received": "empfangen",
@@ -1688,6 +1800,38 @@ const I18N = {
     "js.allInterfaces": "(alle)",
   },
   "zh-Hans": {
+    "unit.current": "电流",
+    "unit.voltage": "电压",
+    "unit.soc": "电量",
+    "trace.fPeer": "对端",
+    "trace.fClassifier": "分类器",
+    "trace.fFunction": "功能",
+    "trace.noValues": "尚未捕获任何内容",
+    "station.title": "充电站标识",
+    "station.device": "设备",
+    "station.brand": "品牌",
+    "station.vendor": "制造商",
+    "station.serial": "序列号",
+    "station.software": "软件",
+    "station.hardware": "硬件",
+    "station.state": "运行状态",
+    "js.charged": "已充",
+    "btn.stationId": "充电站标识",
+    "btn.pause": "暂停（0 A）",
+    "btn.hbStart": "启动心跳",
+    "btn.hbStop": "停止心跳",
+    "btn.errOn": "宣告故障",
+    "btn.errOff": "清除故障",
+    "current.scen23": "场景 2/3 控制 — 心跳中断超过 4 秒或宣告故障时，电动车必须降至安全电流：",
+    "current.constraints": "电动车约束",
+    "current.default": "默认",
+    "current.noConstraints": "读取后显示电动车约束（通常仅在充电会话期间发布）。",
+    "current.phasesNone": "请至少选择一相",
+    "js.pauseSent": "已发送暂停（0 A）",
+    "js.hbStarted": "已启动 OPEV 心跳",
+    "js.hbStopped": "已停止 OPEV 心跳",
+    "js.errorAnnounced": "已宣告故障状态",
+    "js.errorCleared": "已清除故障状态",
     "uc.current.title": "各相充电电流",
     "current.warning": "义务限值会立即限制电动车的充电电流；建议限值仅供参考。",
     "btn.applyObligation": "应用义务限值",
@@ -1742,7 +1886,6 @@ const I18N = {
     "trace.bad0": "0 个不合规",
     "trace.clean": "在保留窗口内未发现一致性问题。",
     "trace.empty": "尚未捕获任何帧。对端连接后即会出现。",
-    "trace.allPeers": "所有对端",
     "trace.bothDirs": "两个方向",
     "trace.sent": "发送",
     "trace.received": "接收",
@@ -2118,6 +2261,7 @@ function themeColors() {
     cyan:  pick("--cyan", "#43d5e8"),
     green: pick("--green", "#79d888"),
     amber: pick("--amber", "#f1bd5d"),
+    purple: pick("--purple", "#b07cf0"),
   };
 }
 
@@ -2172,10 +2316,14 @@ const state = {
   range: Number(localStorage.getItem("eebus-chart-range") || 900),
   events: [], eventsPaused: false, eventSource: null,
   logTimer: null, snapshotTimer: null, lockedChartIndex: null, polling: false,
+  hoverIndex: null, detailUnit: localStorage.getItem("eebus-detail-unit") || "current",
   traceCursor: 0, traceEntries: [], tracePaused: false, traceSummary: null,
   traceExpanded: new Set(), traceDetails: new Map(), eventsExpanded: new Set(),
+  traceHidden: null, traceRenderedKey: null, traceRenderedMax: 0,
   profileSteps: [], profileRun: null, profileTimer: null, profileWake: null
 };
+
+state.traceHidden = traceHiddenLoad();
 
 class ApiError extends Error {
   constructor(path, status, body) {
@@ -2577,6 +2725,7 @@ function renderProfile(error = null) {
       <div class="button-row"><button data-copy="${esc(p.ski)}">${esc(t("btn.copySki"))}</button><button class="danger" data-untrust="${esc(p.ski)}">${esc(t("btn.untrust"))}</button></div>
     </div>
     <div class="capability-strip">${CORE_USE_CASES.map(name => `<div class="capability ${supported.has(name) ? "yes" : ""}" title="${esc(name)}">${esc(USE_CASE_SHORT[name])}<br>${supported.has(name) ? esc(t("badge.supported")) : esc(t("badge.notAdvertised"))}</div>`).join("")}</div>
+    ${renderStationIdentity()}
     <div class="panel-head" style="margin-top:16px"><div><h3>${esc(t("th.entities"))}</h3><div class="sub">${esc(t("js.entitySub"))}</div></div></div>
     <div class="entity-grid">${entityCards || `<div class="empty">${esc(t("js.noEntities"))}</div>`}</div>
     <div class="panel-head" style="margin-top:22px"><div><h3>${esc(t("js.advertisedUc"))}</h3><div class="sub">${esc(t("js.ucSub"))}</div></div><button data-open-page="usecases">${esc(t("btn.openWorkbench"))}</button></div>
@@ -2665,7 +2814,11 @@ function renderSnapshot(error = null) {
   document.getElementById("metric-power").innerHTML = `${formatPower(power.consumption_w)}`;
   document.getElementById("metric-power-note").textContent = (snapshot.monitoring || []).length ? tf("js.mpcEntities", {n: snapshot.monitoring.length}) : t("js.mpcNotAdvertised");
   document.getElementById("metric-ev").innerHTML = `${ev.charging_count ?? 0} <small>${esc(t("js.charging"))}</small>`;
-  document.getElementById("metric-ev-note").textContent = tf("js.evNote", {c: ev.connected_count ?? 0, s: (ev.charging_stations || []).length});
+  // EVSOC: append the state of charge of every vehicle that reports one to the EV tile.
+  const socs = (ev.vehicles || []).map(v => v.state_of_charge).filter(v => v != null);
+  document.getElementById("metric-ev-note").textContent =
+    tf("js.evNote", {c: ev.connected_count ?? 0, s: (ev.charging_stations || []).length}) +
+    (socs.length ? ` · SoC ${socs.map(v => `${Math.round(v)}%`).join(" / ")}` : "");
   document.getElementById("metric-pv").innerHTML = formatPower(power.pv_w);
   document.getElementById("metric-pv-note").textContent = (snapshot.pv || []).length ? tf("js.pvSystems", {n: snapshot.pv.length}) : t("js.vapdNotAdvertised");
   document.getElementById("metric-limit").innerHTML = formatPower(limits.consumption_w);
@@ -2705,7 +2858,8 @@ function renderDashboardIntelligence() {
       <div class="flow-node"><span>${esc(t("js.snapshotGaps"))}</span><strong>${state.snapshot.errors.length}</strong></div>
     </div>
     <div class="entity-tags" style="margin-top:13px">${[...domains.entries()].map(([domain,count]) => `<span class="badge ok">${esc(domain)} · ${count}</span>`).join("") || `<span class="muted">${esc(t("js.noUcAdvertised"))}</span>`}</div>
-    <div style="margin-top:13px">${evs.map(ev => `<div class="notice"><strong>EV entity [${esc((ev.entity || []).join(","))}]</strong><br>${esc(ev.charge_state || t("js.stateUnavailable"))} · ${formatPower(Array.isArray(ev.power_per_phase_w) ? ev.power_per_phase_w.reduce((a,b)=>a+b,0) : null)}${ev.state_of_charge != null ? ` · ${esc(ev.state_of_charge)}% SoC` : ""}</div>`).join("") || `<div class="notice">${esc(t("js.noEvEntities"))}</div>`}</div>`;
+    <div style="margin-top:13px">${evs.map(ev => `<div class="notice"><strong>EV entity [${esc((ev.entity || []).join(","))}]</strong><br>${esc(ev.charge_state || t("js.stateUnavailable"))} · ${formatPower(Array.isArray(ev.power_per_phase_w) ? ev.power_per_phase_w.reduce((a,b)=>a+b,0) : null)}${ev.state_of_charge != null ? ` · ${esc(ev.state_of_charge)}% SoC` : ""}${ev.energy_charged_wh != null ? ` · ${esc((ev.energy_charged_wh / 1000).toFixed(2))} kWh ${esc(t("js.charged"))}` : ""}${Array.isArray(ev.current_per_phase_a) && ev.current_per_phase_a.length ? `<br><span class="mono" style="font-size:11px">${esc(ev.current_per_phase_a.map(v => `${Number(v).toFixed(1)} A`).join(" / "))}</span>` : ""}</div>`).join("") || `<div class="notice">${esc(t("js.noEvEntities"))}</div>`}</div>
+    ${renderStationIdentity()}`;
 }
 
 function syncLimitValue(value) {
@@ -2795,10 +2949,151 @@ function drawChart() {
   line("pv_power_w", ink.green);
   line("consumption_limit_w", ink.amber, [5,4]);
   canvas._chart = {samples, x, pad, chartW};
+  drawCrosshair(ctx, canvas, height);
+  drawDetailChart();
 }
 
-function inspectChart(event, lock = false) {
-  const canvas = document.getElementById("power-chart");
+// One vertical line at the inspected sample, on every chart, so a value read on one panel
+// can be located on the other without a second tooltip competing for attention.
+function drawCrosshair(ctx, canvas, height) {
+  const chart = canvas._chart;
+  const index = state.lockedChartIndex ?? state.hoverIndex;
+  if (!chart || index == null || !chart.samples[index]) return;
+  const ink = themeColors();
+  ctx.save();
+  ctx.strokeStyle = ink.quiet;
+  ctx.globalAlpha = 0.55;
+  ctx.setLineDash([3, 3]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(chart.x(chart.samples[index].ts), chart.pad.top);
+  ctx.lineTo(chart.x(chart.samples[index].ts), height - chart.pad.bottom);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// The detail panel shows exactly one unit at a time. Mixing volts (~230), amps (0-32) and
+// percent on one axis needs either normalisation (which hides the values people came to
+// read) or several axes (which invites false correlations), so the unit is a choice, not a
+// legend entry. Units with no data in the retained window are disabled; when nothing has
+// data the whole panel stays hidden rather than showing empty axes.
+const DETAIL_UNITS = {
+  current: {
+    field: "current_per_phase_a", perPhase: true, legend: () => t("unit.current"),
+    format: v => `${Number(v).toFixed(1)} A`, axis: v => `${Number(v).toFixed(0)} A`,
+    domain: values => [0, Math.max(1, ...values) * 1.15],
+  },
+  voltage: {
+    field: "voltage_per_phase_v", perPhase: true, legend: () => t("unit.voltage"),
+    format: v => `${Math.round(Number(v))} V`, axis: v => `${Math.round(v)} V`,
+    // Tight, zero-suppressed: a 10 V sag under load is the diagnostic signal here, and on a
+    // 0-based axis it is invisible.
+    domain: values => {
+      const lo = Math.min(...values), hi = Math.max(...values);
+      const pad = Math.max(2, (hi - lo) * 0.25);
+      return [lo - pad, hi + pad];
+    },
+  },
+  soc: {
+    field: "state_of_charge", perPhase: false, legend: () => t("unit.soc"),
+    format: v => `${Math.round(Number(v))} %`, axis: v => `${Math.round(v)} %`,
+    domain: () => [0, 100],
+  },
+};
+
+function detailValues(sample, spec) {
+  if (!spec.perPhase) {
+    const v = Number(sample[spec.field]);
+    return Number.isFinite(v) ? [v] : [];
+  }
+  const arr = sample[spec.field];
+  return Array.isArray(arr) ? arr.map(Number).filter(Number.isFinite) : [];
+}
+
+function detailUnitHasData(unit) {
+  const spec = DETAIL_UNITS[unit];
+  return state.history.some(sample => detailValues(sample, spec).length);
+}
+
+function drawDetailChart() {
+  const host = document.getElementById("chart-detail");
+  const available = Object.keys(DETAIL_UNITS).filter(detailUnitHasData);
+  host.classList.toggle("hidden", !available.length);
+  document.querySelectorAll("#detail-units button").forEach(button => {
+    const usable = available.includes(button.dataset.unit);
+    button.disabled = !usable;
+    button.style.opacity = usable ? "" : "0.4";
+  });
+  if (!available.length) return;
+  if (!available.includes(state.detailUnit)) state.detailUnit = available[0];
+  document.querySelectorAll("#detail-units button").forEach(button =>
+    button.classList.toggle("active", button.dataset.unit === state.detailUnit));
+
+  const spec = DETAIL_UNITS[state.detailUnit];
+  const canvas = document.getElementById("detail-chart");
+  const samples = state.history.filter(sample => Number.isFinite(sample.ts));
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  const width = rect.width, height = rect.height;
+  ctx.clearRect(0, 0, width, height);
+  if (!samples.length) return;
+
+  const ink = themeColors();
+  const phaseColors = [ink.cyan, ink.amber, ink.purple];
+  const pad = {left: 54, right: 12, top: 10, bottom: 20};
+  const chartW = width - pad.left - pad.right, chartH = height - pad.top - pad.bottom;
+  const all = samples.flatMap(sample => detailValues(sample, spec));
+  if (!all.length) return;
+  const [lo, hi] = spec.domain(all);
+  const span = Math.max(1e-6, hi - lo);
+  // The x mapping is deliberately identical to the power chart's, so the crosshair lines up.
+  const minTs = samples[0].ts, maxTs = samples[samples.length - 1].ts || minTs + 1;
+  const x = ts => pad.left + ((ts - minTs) / Math.max(1, maxTs - minTs)) * chartW;
+  const y = value => pad.top + chartH - ((value - lo) / span) * chartH;
+
+  ctx.strokeStyle = ink.grid; ctx.lineWidth = 1; ctx.fillStyle = ink.quiet; ctx.font = "10px system-ui";
+  for (let i = 0; i <= 2; i++) {
+    const yy = pad.top + chartH * i / 2;
+    ctx.beginPath(); ctx.moveTo(pad.left, yy); ctx.lineTo(width - pad.right, yy); ctx.stroke();
+    ctx.fillText(spec.axis(hi - span * i / 2), 4, yy + 3);
+  }
+
+  const seriesCount = Math.max(...samples.map(sample => detailValues(sample, spec).length));
+  for (let s = 0; s < seriesCount; s++) {
+    let started = false;
+    ctx.beginPath();
+    ctx.strokeStyle = spec.perPhase ? phaseColors[s % phaseColors.length] : ink.green;
+    ctx.lineWidth = 2;
+    for (const sample of samples) {
+      const values = detailValues(sample, spec);
+      const value = values[s];
+      if (!Number.isFinite(value)) { started = false; continue; }
+      if (!started) { ctx.moveTo(x(sample.ts), y(value)); started = true; }
+      else ctx.lineTo(x(sample.ts), y(value));
+    }
+    ctx.stroke();
+  }
+
+  document.getElementById("detail-legend").innerHTML = spec.perPhase
+    ? Array.from({length: seriesCount}, (_, s) =>
+        `<span><i class="legend-dot" style="background:${esc(phaseColors[s % phaseColors.length])}"></i>${esc(PHASE_LABELS[s] || `#${s + 1}`)}</span>`).join("")
+    : `<span><i class="legend-dot" style="background:${esc(ink.green)}"></i>${esc(spec.legend())}</span>`;
+
+  canvas._chart = {samples, x, pad, chartW};
+  drawCrosshair(ctx, canvas, height);
+}
+
+const PHASE_LABELS = ["L1", "L2", "L3"];
+
+// Hovering either panel inspects the same instant on both: one tooltip (on the panel under
+// the cursor) carrying the values of both, and a crosshair on each. Clicking locks it, so a
+// value can be read without keeping the mouse still while the stream updates.
+function inspectChart(event, lock = false, which = "power") {
+  const canvas = document.getElementById(which === "detail" ? "detail-chart" : "power-chart");
   const chart = canvas._chart;
   if (!chart?.samples.length) return;
   const rect = canvas.getBoundingClientRect();
@@ -2807,11 +3102,32 @@ function inspectChart(event, lock = false) {
     Math.abs(chart.x(sample.ts) - mouseX) < Math.abs(chart.x(chart.samples[best].ts) - mouseX) ? i : best, 0);
   if (state.lockedChartIndex != null && !lock) index = state.lockedChartIndex;
   if (lock) state.lockedChartIndex = state.lockedChartIndex === index ? null : index;
-  const sample = chart.samples[index], tip = document.getElementById("chart-tooltip");
-  tip.innerHTML = `<strong>${new Date(sample.ts * 1000).toLocaleTimeString()}</strong><br>${esc(t("legend.consumption"))} ${formatPower(sample.power_w)}<br>${esc(t("legend.pv"))} ${formatPower(sample.pv_power_w)}<br>${esc(t("legend.limit"))} ${formatPower(sample.consumption_limit_w)}<br>${esc(tf("js.evsCharging", {n: sample.ev_charging ?? 0}))}`;
+  state.hoverIndex = index;
+
+  const sample = chart.samples[index];
+  const lines = [
+    `<strong>${new Date(sample.ts * 1000).toLocaleTimeString()}</strong>`,
+    `${esc(t("legend.consumption"))} ${formatPower(sample.power_w)}`,
+    `${esc(t("legend.pv"))} ${formatPower(sample.pv_power_w)}`,
+    `${esc(t("legend.limit"))} ${formatPower(sample.consumption_limit_w)}`,
+  ];
+  // Only the units that actually carry a value at this instant, so the tooltip stays short.
+  for (const [unit, spec] of Object.entries(DETAIL_UNITS)) {
+    const values = detailValues(sample, spec);
+    if (!values.length) continue;
+    const label = spec.perPhase
+      ? values.map((v, i) => `${PHASE_LABELS[i] || `#${i + 1}`} ${spec.format(v)}`).join(" · ")
+      : spec.format(values[0]);
+    lines.push(`${esc(spec.legend())} ${esc(label)}`);
+  }
+  const tip = document.getElementById(which === "detail" ? "detail-tooltip" : "chart-tooltip");
+  const other = document.getElementById(which === "detail" ? "chart-tooltip" : "detail-tooltip");
+  if (other) other.style.display = "none";
+  tip.innerHTML = lines.join("<br>");
   tip.style.display = "block";
-  tip.style.left = `${Math.min(rect.width - 145, Math.max(58, chart.x(sample.ts) + 8))}px`;
-  tip.style.top = "18px";
+  tip.style.left = `${Math.min(rect.width - 175, Math.max(58, chart.x(sample.ts) + 8))}px`;
+  tip.style.top = which === "detail" ? "6px" : "18px";
+  drawChart(); // repaints both panels' crosshairs
 }
 
 function populateUsecaseTargets() {
@@ -2828,7 +3144,8 @@ async function usecaseRead(kind) {
     lpc: `/lpc/${ski}/limit`, failsafe: `/lpc/${ski}/failsafe`,
     nominal: `/lpc/${ski}/nominal-max`, heartbeat: `/lpc/${ski}/heartbeat`,
     lpp: `/lpp/${ski}/limit`, mpc: `/mpc/${ski}`, mgcp: `/mgcp/${ski}`,
-    opev: `/opev/${ski}`, oscev: `/oscev/${ski}`, ohpcf: `/ohpcf/${ski}`
+    opev: `/opev/${ski}`, oscev: `/oscev/${ski}`, ohpcf: `/ohpcf/${ski}`,
+    evsecc: `/evsecc/${ski}`
   };
   let result, output;
   if (kind === "snapshot" || kind === "ev" || kind === "assets") {
@@ -2842,7 +3159,9 @@ async function usecaseRead(kind) {
       : kind === "lpp" ? "out-lpp"
       : kind === "opev" || kind === "oscev" ? "out-current"
       : kind === "ohpcf" ? "out-ohpcf"
+      : kind === "evsecc" ? "out-assets"
       : "out-monitoring";
+    if (kind === "opev" || kind === "oscev") renderCurrentConstraints(result);
   }
   document.getElementById(output).textContent = json(result);
   return result;
@@ -3072,24 +3391,81 @@ async function loadRecentEvents() {
   renderEvents();
 }
 
+// ---- Station identity (EVSECC) -----------------------------------------------------------
+// The info box on the dashboard's intelligence panel: what the charging station declares
+// about itself (EVSECC scenarios 1+2), straight from the snapshot's charging_stations
+// records, refreshed with every poll.
+function renderStationIdentity() {
+  const stations = state.snapshot?.ev?.charging_stations || [];
+  if (!stations.length) return "";
+  return stations.map(st => {
+    const rows = [
+      [t("station.device"), [st.manufacturer, st.device_code ? `(${st.device_code})` : ""].filter(Boolean).join(" ")],
+      [t("station.brand"), st.brand],
+      [t("station.vendor"), [st.vendor_name, st.vendor_code ? `(${st.vendor_code})` : ""].filter(Boolean).join(" ")],
+      [t("station.serial"), st.serial_number],
+      [t("station.software"), st.software_revision],
+      [t("station.hardware"), st.hardware_revision],
+      [t("station.state"), [st.operating_state, st.last_error].filter(Boolean).join(" · ")],
+    ].filter(([, value]) => value);
+    if (!rows.length) return "";
+    return `<div class="notice" style="margin-top:10px"><strong>${esc(t("station.title"))} [${esc((st.entity || []).join(","))}]</strong>
+      ${rows.map(([label, value]) => `<div class="kv"><span>${esc(label)}</span><span class="mono">${esc(value)}</span></div>`).join("")}
+    </div>`;
+  }).join("");
+}
+
 // ---- Per-phase charging current (OPEV obligations / OSCEV recommendations) --------------
 
-function currentLimitsBody(active) {
-  const phases = ["a", "b", "c"];
-  const limits = phases.map((phase, i) => ({
-    phase,
-    value_a: Math.max(0, Number(document.getElementById(`opev-${phase}`).value) || 0),
-    is_active: active,
-  }));
+function currentLimitsBody(active, forcedValue = null) {
+  const limits = ["a", "b", "c"]
+    .filter(phase => document.getElementById(`opev-en-${phase}`).checked)
+    .map(phase => ({
+      phase,
+      value_a: forcedValue != null ? forcedValue : Math.max(0, Number(document.getElementById(`opev-${phase}`).value) || 0),
+      is_active: active,
+    }));
+  if (!limits.length) throw new Error(t("current.phasesNone"));
   return {limits};
 }
 
-async function writeCurrentLimits(kind, active) {
+// Renders the EV's declared per-phase boundaries under the inputs and clamps the inputs to
+// them -- the spec requires the Energy Guard to consider these constraints (OPEV UC TS §2.3.1).
+function renderCurrentConstraints(result) {
+  const host = document.getElementById("opev-constraints");
+  const c = result && result.constraints;
+  if (!c || !Array.isArray(c.max_a) || !c.max_a.length) {
+    host.textContent = t("current.noConstraints");
+    return;
+  }
+  const fmt = arr => (arr && arr.length ? arr.join(" / ") : "—");
+  host.textContent = `${t("current.constraints")}: min ${fmt(c.min_a)} A · max ${fmt(c.max_a)} A · ${t("current.default")} ${fmt(c.default_a)} A`;
+  ["a", "b", "c"].forEach((phase, i) => {
+    const input = document.getElementById(`opev-${phase}`);
+    if (c.min_a && c.min_a[i] != null) input.min = c.min_a[i];
+    if (c.max_a && c.max_a[i] != null) input.max = c.max_a[i];
+  });
+}
+
+async function opevHeartbeat(actionName) {
+  const result = await api(`/opev/heartbeat/${actionName}`, {method: "POST"});
+  document.getElementById("out-current").textContent = json(result);
+}
+
+async function opevOperatingState(failure) {
+  const result = await api(`/opev/operating-state`, {
+    method: "PUT", headers: {"content-type": "application/json"},
+    body: JSON.stringify({failure}),
+  });
+  document.getElementById("out-current").textContent = json(result);
+}
+
+async function writeCurrentLimits(kind, active, forcedValue = null) {
   if (!state.selectedSki) throw new Error(t("js.selectDeviceFirst"));
   const entity = document.getElementById("uc-entity").value;
   const result = await api(withEntity(`/${kind}/${encodeURIComponent(state.selectedSki)}/limits`, entity), {
     method: "PUT", headers: {"content-type": "application/json"},
-    body: JSON.stringify(currentLimitsBody(active)),
+    body: JSON.stringify(currentLimitsBody(active, forcedValue)),
   });
   document.getElementById("out-current").textContent = json(result);
   return result;
@@ -3377,9 +3753,31 @@ function renderTraceSummary() {
   </tbody></table></div>`;
 }
 
+// The three dropdowns are exclusion filters: everything is shown until unchecked, and
+// values never seen before (a peer that connects later, a new function) start visible.
+// That is why exclusions are stored, not selections -- "hide the heartbeat" must not also
+// hide whatever appears next. Persisted per browser: turning the heartbeat off once should
+// stick across reloads.
+function traceHiddenLoad() {
+  try {
+    const raw = JSON.parse(localStorage.getItem("eebus-trace-hidden") || "{}");
+    return {peer: new Set(raw.peer || []), cls: new Set(raw.cls || []), fn: new Set(raw.fn || [])};
+  } catch (_) { return {peer: new Set(), cls: new Set(), fn: new Set()}; }
+}
+function traceHiddenSave() {
+  try {
+    localStorage.setItem("eebus-trace-hidden", JSON.stringify({
+      peer: [...state.traceHidden.peer], cls: [...state.traceHidden.cls], fn: [...state.traceHidden.fn],
+    }));
+  } catch (_) {}
+}
+function traceClassifierOf(e) { return e.classifier || (e.kind === "ship" ? "SHIP" : "(none)"); }
+function traceFunctionOf(e) { return e.function || "(none)"; }
+
 function traceFilterMatch(e) {
-  const peer = document.getElementById("trace-peer").value;
-  if (peer && e.ski !== peer) return false;
+  if (state.traceHidden.peer.has(e.ski)) return false;
+  if (state.traceHidden.cls.has(traceClassifierOf(e))) return false;
+  if (state.traceHidden.fn.has(traceFunctionOf(e))) return false;
   const dir = document.getElementById("trace-dir").value;
   if (dir && e.dir !== dir) return false;
   if (document.getElementById("trace-findings-only").checked && !e.findings.length) return false;
@@ -3391,15 +3789,40 @@ function traceFilterMatch(e) {
   return true;
 }
 
-function renderTrace() {
-  const rows = state.traceEntries.filter(traceFilterMatch).slice(-300).reverse();
-  document.getElementById("trace-empty").style.display = state.traceEntries.length ? "none" : "block";
-  // Expansion lives in state, keyed by the frame's stable seq -- the tbody is rebuilt on
-  // every poll, so anything kept only in the DOM (like a toggled class) survives two
-  // seconds at most.
-  document.getElementById("trace-body").innerHTML = rows.map(e => {
-    const expanded = state.traceExpanded.has(e.seq);
-    return `
+// Rebuilds one dropdown's option list, but only when the set of values actually changed --
+// replacing the children of an open <details> the user is mid-click in is this page's
+// equivalent of the collapsing-row bug.
+function renderTraceFilter(id, kind, title, values, labelFor) {
+  const host = document.getElementById(id);
+  const hidden = state.traceHidden[kind];
+  for (const v of [...hidden]) if (!values.includes(v)) { hidden.delete(v); traceHiddenSave(); }
+  const key = values.join("\u0001");
+  const list = host.querySelector(".mselect-list");
+  if (host.dataset.valuesKey !== key) {
+    host.dataset.valuesKey = key;
+    list.innerHTML = values.map(v => `
+      <label><input type="checkbox" data-msel-kind="${esc(kind)}" data-msel-value="${esc(v)}" ${hidden.has(v) ? "" : "checked"}>
+      <span class="${kind === "peer" ? "mono" : ""}">${esc(labelFor(v))}</span></label>`).join("") ||
+      `<span class="muted">${esc(t("trace.noValues"))}</span>`;
+  } else {
+    // Same values: only sync checkbox states (cheap, keeps the open dropdown intact).
+    list.querySelectorAll("input[data-msel-value]").forEach(box => { box.checked = !hidden.has(box.dataset.mselValue); });
+  }
+  host.querySelector("summary").textContent = `${title} (${values.length - hidden.size}/${values.length})`;
+}
+
+function renderTraceFilters() {
+  const peers = [...new Set(state.traceEntries.map(e => e.ski))].sort();
+  const classifiers = [...new Set(state.traceEntries.map(traceClassifierOf))].sort();
+  const functions = [...new Set(state.traceEntries.map(traceFunctionOf))].sort();
+  renderTraceFilter("msel-peer", "peer", t("trace.fPeer"), peers, ski => labelForSki(ski));
+  renderTraceFilter("msel-cls", "cls", t("trace.fClassifier"), classifiers, v => v);
+  renderTraceFilter("msel-fn", "fn", t("trace.fFunction"), functions, v => v);
+}
+
+function traceRowHTML(e) {
+  const expanded = state.traceExpanded.has(e.seq);
+  return `
     <tr class="event-row" data-trace-seq="${esc(e.seq)}">
       <td>${esc(new Date(e.ts * 1000).toLocaleTimeString())}</td>
       <td><span class="badge ${e.dir === "send" ? "" : "purple"}">${esc(e.dir === "send" ? t("trace.sent") : t("trace.received"))}</span></td>
@@ -3410,7 +3833,41 @@ function renderTrace() {
       <td>${e.findings.length ? `<span class="badge err">${e.findings.length}</span>` : `<span class="badge ok">0</span>`}</td>
     </tr>
     <tr class="event-payload${expanded ? "" : " hidden"}" data-trace-payload="${esc(e.seq)}"><td colspan="7">${expanded ? (state.traceDetails.get(e.seq) || `<div class="muted">${esc(t("empty.loading"))}</div>`) : ""}</td></tr>`;
-  }).join("");
+}
+
+// traceFilterKey serializes everything traceFilterMatch reads, so renderTrace can tell a
+// poll (append-only) from a filter change (rebuild).
+function traceFilterKey() {
+  return JSON.stringify([
+    [...state.traceHidden.peer].sort(), [...state.traceHidden.cls].sort(), [...state.traceHidden.fn].sort(),
+    document.getElementById("trace-dir").value,
+    document.getElementById("trace-findings-only").checked,
+    document.getElementById("trace-search").value.trim().toLowerCase(),
+  ]);
+}
+
+// New frames are PREPENDED; rows already in the DOM are never re-rendered by a poll. That --
+// not state bookkeeping -- is what guarantees an opened frame stays open, keeps text
+// selection, and keeps the scroll position while the stream runs. A full rebuild happens
+// only when the filters change or the page is (re)entered.
+function renderTrace() {
+  renderTraceFilters();
+  document.getElementById("trace-empty").style.display = state.traceEntries.length ? "none" : "block";
+  const tbody = document.getElementById("trace-body");
+  const key = traceFilterKey();
+  if (state.traceRenderedKey !== key || !tbody.children.length) {
+    const rows = state.traceEntries.filter(traceFilterMatch).slice(-300).reverse();
+    tbody.innerHTML = rows.map(traceRowHTML).join("");
+    state.traceRenderedKey = key;
+    state.traceRenderedMax = rows.length ? rows[0].seq : 0;
+  } else {
+    const fresh = state.traceEntries.filter(e => e.seq > state.traceRenderedMax && traceFilterMatch(e)).reverse();
+    if (fresh.length) {
+      tbody.insertAdjacentHTML("afterbegin", fresh.map(traceRowHTML).join(""));
+      state.traceRenderedMax = fresh[0].seq;
+      while (tbody.children.length > 600) tbody.removeChild(tbody.lastChild); // 300 frame pairs
+    }
+  }
   // Frames that fell out of the retained buffer can never be shown again; drop their state.
   const retained = new Set(state.traceEntries.map(e => e.seq));
   for (const seq of [...state.traceExpanded]) {
@@ -3421,21 +3878,31 @@ function renderTrace() {
   }
 }
 
+function traceDetailRow(seq) {
+  const row = document.querySelector(`[data-trace-payload="${seq}"]`);
+  return row ? {row, cell: row.firstElementChild} : null;
+}
+
 async function toggleTraceDetail(seq) {
   seq = Number(seq);
+  const target = traceDetailRow(seq);
   if (state.traceExpanded.has(seq)) {
     state.traceExpanded.delete(seq);
     state.traceDetails.delete(seq);
-    renderTrace();
+    if (target) { target.row.classList.add("hidden"); target.cell.innerHTML = ""; }
     return;
   }
   state.traceExpanded.add(seq);
-  renderTrace(); // shows the loading placeholder in place
+  if (target) {
+    target.cell.innerHTML = `<div class="muted">${esc(t("empty.loading"))}</div>`;
+    target.row.classList.remove("hidden");
+  }
   const entry = await safeApi(`/trace/${seq}`, null);
   if (!state.traceExpanded.has(seq)) return; // collapsed again while fetching
   if (!entry) {
     state.traceDetails.set(seq, `<div class="muted">${esc(t("trace.gone"))}</div>`);
-    renderTrace();
+    const gone = traceDetailRow(seq);
+    if (gone) gone.cell.innerHTML = state.traceDetails.get(seq);
     return;
   }
   let pretty = entry.raw;
@@ -3447,7 +3914,8 @@ async function toggleTraceDetail(seq) {
   state.traceDetails.set(seq, `${findings}
     <div class="muted" style="margin:4px 0">${esc(t("trace.rawTitle"))} · ${esc(entry.size)} B · ${esc(entry.source || "")}${entry.dest ? " → " + esc(entry.dest) : ""}</div>
     <pre class="raw" style="max-height:340px">${esc(pretty)}</pre>`);
-  renderTrace();
+  const loaded = traceDetailRow(seq);
+  if (loaded) loaded.cell.innerHTML = state.traceDetails.get(seq);
 }
 
 async function jumpToTraceFrame(seq) {
@@ -3463,19 +3931,11 @@ async function jumpToTraceFrame(seq) {
   }
   document.getElementById("trace-findings-only").checked = false;
   document.getElementById("trace-search").value = "";
+  state.traceRenderedKey = null; // force a rebuild: the frame may be outside the DOM window
   renderTrace();
   // Expand-only: jumping to a frame that is already open must not close it.
   if (!state.traceExpanded.has(Number(seq))) await toggleTraceDetail(Number(seq));
   document.querySelector(`[data-trace-seq="${seq}"]`)?.scrollIntoView({block: "center"});
-}
-
-function populateTracePeers() {
-  const select = document.getElementById("trace-peer");
-  const previous = select.value;
-  const skis = [...new Set(state.traceEntries.map(e => e.ski))];
-  select.innerHTML = `<option value="">${esc(t("trace.allPeers"))}</option>` +
-    skis.map(ski => `<option value="${esc(ski)}">${esc(labelForSki(ski))}</option>`).join("");
-  if (skis.includes(previous)) select.value = previous;
 }
 
 async function boot() {
@@ -3531,7 +3991,7 @@ async function boot() {
   state.profileSteps = loadProfileSteps();
   renderProfileBuilder();
   setInterval(pollTrace, 2000);
-  setInterval(() => { refreshTraceSummary(); if (tracePageActive()) populateTracePeers(); }, 6000);
+  setInterval(() => { refreshTraceSummary(); }, 6000);
   setInterval(() => {
     if (state.snapshot) document.getElementById("snapshot-age").textContent = formatAge(state.snapshot.ts);
   }, 1000);
@@ -3586,9 +4046,24 @@ document.getElementById("trace-clear").addEventListener("click", async () => {
   state.traceEntries = []; state.traceCursor = 0; state.traceSummary = null;
   renderTrace(); refreshTraceSummary(); toast(t("js.traceCleared"));
 });
-["trace-peer","trace-dir","trace-findings-only"].forEach(id =>
+["trace-dir","trace-findings-only"].forEach(id =>
   document.getElementById(id).addEventListener("change", renderTrace));
 document.getElementById("trace-search").addEventListener("input", renderTrace);
+document.addEventListener("change", event => {
+  const box = event.target.closest("[data-msel-kind]");
+  if (!box) return;
+  const hidden = state.traceHidden[box.dataset.mselKind];
+  if (box.checked) hidden.delete(box.dataset.mselValue);
+  else hidden.add(box.dataset.mselValue);
+  traceHiddenSave();
+  renderTrace();
+});
+// One open dropdown at a time, and clicking anywhere else closes it.
+document.addEventListener("click", event => {
+  document.querySelectorAll(".mselect[open]").forEach(d => {
+    if (!d.contains(event.target)) d.removeAttribute("open");
+  });
+}, true);
 document.querySelectorAll("[data-current-write]").forEach(button => button.addEventListener("click", event =>
   action(event.currentTarget, () => writeCurrentLimits(event.currentTarget.dataset.currentWrite, true),
     event.currentTarget.dataset.currentWrite === "opev" ? t("js.obligationApplied") : t("js.recommendationApplied")
@@ -3597,6 +4072,18 @@ document.querySelectorAll("[data-current-write]").forEach(button => button.addEv
 document.querySelectorAll("[data-current-release]").forEach(button => button.addEventListener("click", event =>
   action(event.currentTarget, () => writeCurrentLimits(event.currentTarget.dataset.currentRelease, false), t("js.currentReleased"))
     .catch(error => { document.getElementById("out-current").textContent = errorDetail(error); })
+));
+document.querySelectorAll("[data-current-pause]").forEach(button => button.addEventListener("click", event =>
+  action(event.currentTarget, () => writeCurrentLimits(event.currentTarget.dataset.currentPause, true, 0), t("js.pauseSent"))
+    .catch(error => { document.getElementById("out-current").textContent = errorDetail(error); })
+));
+document.querySelectorAll("[data-opev-hb]").forEach(button => button.addEventListener("click", event =>
+  action(event.currentTarget, () => opevHeartbeat(event.currentTarget.dataset.opevHb),
+    event.currentTarget.dataset.opevHb === "start" ? t("js.hbStarted") : t("js.hbStopped")).catch(() => {})
+));
+document.querySelectorAll("[data-opev-failure]").forEach(button => button.addEventListener("click", event =>
+  action(event.currentTarget, () => opevOperatingState(event.currentTarget.dataset.opevFailure === "true"),
+    event.currentTarget.dataset.opevFailure === "true" ? t("js.errorAnnounced") : t("js.errorCleared")).catch(() => {})
 ));
 document.getElementById("profile-add").addEventListener("click", () => {
   state.profileSteps.push({watts: 4200, seconds: 900});
@@ -3634,8 +4121,26 @@ document.getElementById("profile-steps").addEventListener("change", () => { save
 document.getElementById("power-chart").addEventListener("mousemove", event => inspectChart(event));
 document.getElementById("power-chart").addEventListener("click", event => inspectChart(event, true));
 document.getElementById("power-chart").addEventListener("mouseleave", () => {
-  if (state.lockedChartIndex == null) document.getElementById("chart-tooltip").style.display = "none";
+  if (state.lockedChartIndex == null) {
+    state.hoverIndex = null;
+    document.getElementById("chart-tooltip").style.display = "none";
+    drawChart();
+  }
 });
+document.getElementById("detail-chart").addEventListener("mousemove", event => inspectChart(event, false, "detail"));
+document.getElementById("detail-chart").addEventListener("click", event => inspectChart(event, true, "detail"));
+document.getElementById("detail-chart").addEventListener("mouseleave", () => {
+  if (state.lockedChartIndex == null) {
+    state.hoverIndex = null;
+    document.getElementById("detail-tooltip").style.display = "none";
+    drawChart();
+  }
+});
+document.querySelectorAll("#detail-units button").forEach(button => button.addEventListener("click", () => {
+  state.detailUnit = button.dataset.unit;
+  localStorage.setItem("eebus-detail-unit", state.detailUnit);
+  drawDetailChart();
+}));
 window.addEventListener("resize", drawChart);
 document.querySelectorAll("#range-buttons button").forEach(button => button.addEventListener("click", async () => {
   state.range = Number(button.dataset.range); localStorage.setItem("eebus-chart-range", state.range);
@@ -3645,7 +4150,7 @@ document.querySelectorAll("#range-buttons button").forEach(button => button.addE
 document.querySelectorAll("[data-uc-read]").forEach(button => button.addEventListener("click", () => {
   const kind = button.dataset.ucRead;
   action(button, () => usecaseRead(kind), t("js.readDone")).catch(error => {
-    const output = ["lpc","failsafe","nominal","heartbeat"].includes(kind) ? "out-lpc" : kind === "lpp" ? "out-lpp" : ["ev","assets"].includes(kind) ? "out-assets" : ["opev","oscev"].includes(kind) ? "out-current" : kind === "ohpcf" ? "out-ohpcf" : "out-monitoring";
+    const output = ["lpc","failsafe","nominal","heartbeat"].includes(kind) ? "out-lpc" : kind === "lpp" ? "out-lpp" : ["ev","assets","evsecc"].includes(kind) ? "out-assets" : ["opev","oscev"].includes(kind) ? "out-current" : kind === "ohpcf" ? "out-ohpcf" : "out-monitoring";
     document.getElementById(output).textContent = errorDetail(error);
   });
 }));

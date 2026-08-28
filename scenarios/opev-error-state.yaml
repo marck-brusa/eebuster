@@ -1,0 +1,23 @@
+name: opev-error-state
+description: >
+  Announces an Energy Guard error state and clears it again (EEBus UC TS OPEV V1.0.1b
+  scenario 3, "Energy Guard sends error state"): while the error is announced, the EV must
+  stop trusting our curtailment and switch to a safe current setting [OPEV-007]. The
+  device-side reaction is observable in EVCEM measurements during a live session; this
+  scenario always ends with the error cleared.
+category: Conformance
+risk: disruptive
+requires:
+  capabilities: [opev.operating_state]
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/opev/operating-state"
+      body: {failure: true}
+  - log: "Failure state announced; per OPEV-007 the EV must not rely on curtailment while it stands."
+  - sleep: 5
+  - put:
+      path: "/api/v1/opev/operating-state"
+      body: {failure: false}

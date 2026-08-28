@@ -346,13 +346,14 @@ func New(cfg BootConfig) (*Stack, error) {
 	return stack, nil
 }
 
-func (s *Stack) LPC() *LPC     { return s.lpc }
-func (s *Stack) LPP() *LPP     { return s.lpp }
-func (s *Stack) MPC() *MPC     { return s.mpc }
-func (s *Stack) MGCP() *MGCP   { return s.mgcp }
-func (s *Stack) OPEV() *OPEV   { return s.opev }
-func (s *Stack) OSCEV() *OSCEV { return s.oscev }
-func (s *Stack) OHPCF() *OHPCF { return s.ohpcf }
+func (s *Stack) LPC() *LPC       { return s.lpc }
+func (s *Stack) LPP() *LPP       { return s.lpp }
+func (s *Stack) MPC() *MPC       { return s.mpc }
+func (s *Stack) MGCP() *MGCP     { return s.mgcp }
+func (s *Stack) OPEV() *OPEV     { return s.opev }
+func (s *Stack) EVSECC() *EVSECC { return s.evsecc }
+func (s *Stack) OSCEV() *OSCEV   { return s.oscev }
+func (s *Stack) OHPCF() *OHPCF   { return s.ohpcf }
 
 // Start (re-)starts the embedded stack. ship-go's mDNS manager clears its injected test
 // provider on every Shutdown (mdns.go: "m.mdnsProvider = nil", to guarantee a clean state for

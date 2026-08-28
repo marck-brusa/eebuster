@@ -1,5 +1,54 @@
 # Release notes
 
+## 1.0.0-rc5
+
+Complete OPEV coverage and full station identity.
+
+- **Station identity (EVSECC).** `GET /api/v1/evsecc/{ski}` returns the full manufacturer
+  data — device name/code, serial number, software and hardware revision, vendor name/code,
+  brand — plus the operating state; the energy snapshot's `charging_stations` records carry
+  the same fields, and the workbench gains a "Station identity" button. Verified against a
+  live charging system, which also demonstrated why it matters: the device reports its exact
+  software image string, and its placeholder hardware revision became visible immediately.
+  The dashboard's intelligence panel shows it as a station-identity info box, refreshed with
+  every poll, and the EV entity card now also displays charged energy and per-phase current,
+  completing the visible EVCEM scenario 1–3 coverage.
+- **All three OPEV spec scenarios are now implemented** (EEBus UC TS OPEV V1.0.1b):
+  - *Scenario 1* — per-phase obligations: the current card gains per-phase enable
+    checkboxes (single- and two-phase writes), a Pause (0 A) button, and the EV's declared
+    min/max/default constraints shown after a read and clamped onto the inputs, as the spec
+    requires the Energy Guard to consider them.
+  - *Scenario 2* — availability: `POST /api/v1/opev/heartbeat/start|stop` and workbench
+    buttons; stopping the heartbeat obliges the EV to fall to a safe current within 4 s
+    (OPEV-005).
+  - *Scenario 3* — error state: `PUT /api/v1/opev/operating-state` announces or clears the
+    Energy Guard failure state (OPEV-007). OSCEV gets the same heartbeat and error-state
+    endpoints.
+- **A second chart panel for per-phase current, per-phase voltage, and state of charge.**
+  One unit at a time, chosen with a segmented control: volts (~230), amps (0–32) and percent
+  cannot share an axis without either normalising the values away or stacking axes that
+  invite false correlations. Voltage gets a tight, zero-suppressed scale, so a sag under load
+  is visible rather than a flat line; current draws one line per phase in the phase colours,
+  and charge is a fixed 0–100 %. Hovering either panel inspects the same instant on both — a
+  crosshair on each and a single tooltip carrying the values of both, click to lock it. Units
+  with no data in the window are disabled, and when a device reports none of them (an idle
+  charging station, typically) the whole panel stays hidden instead of showing empty axes.
+- **Message tracer rebuilt around a stream you can actually read.** New frames are prepended
+  incrementally; rows already on screen are never re-rendered by a poll, so an opened frame
+  can no longer be closed (or lose your text selection) when the next message arrives. The
+  peer filter became three multiselect dropdowns — peers, classifiers, functions — populated
+  from the captured traffic. They filter by exclusion: everything (heartbeats included) is
+  visible by default, unchecking hides it, new values always start visible, and the choices
+  persist per browser — so "hide the heartbeat" is one click, once.
+- **Station identity in Devices & network too**: the device detail pane shows the same
+  identity box as the dashboard (serial, software revision, vendor, brand, operating state).
+- The SSH-tunnel recipe for reaching a device SHIP port over VPN/NAT is now in QUICKSTART,
+  verified end to end against a live charging system (`ssh -N -L` + a static 127.0.0.1 peer).
+- **Four new scenarios**: `opev-asymmetric` (a different obligation per phase must survive
+  readback unaveraged, OPEV-002), `opev-zero-pause` (the 0 A pause signal),
+  `opev-heartbeat-loss` and `opev-error-state` (both verified passing against a live
+  charging system; the write scenarios require a vehicle, as documented).
+
 ## 1.0.0-rc4
 
 The control half of a HEMS: per-phase charging-current management.

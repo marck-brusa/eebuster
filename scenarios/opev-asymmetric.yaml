@@ -1,0 +1,37 @@
+name: opev-asymmetric
+description: >
+  Writes a different current obligation on each phase (6/10/16 A) and requires each to be
+  visible on readback, then releases. Asymmetric curtailment [OPEV-002, EEBus UC TS OPEV
+  V1.0.1b scenario 1] lets an Energy Guard keep a high current on lightly loaded phases —
+  a device that averages or symmetrizes the phases silently defeats the point of the use
+  case. Needs a vehicle associated (the EV entity exists only during a session on some
+  devices).
+category: Conformance
+risk: live-control
+requires:
+  capabilities: [opev.write]
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: a, value_a: 6, is_active: true}
+          - {phase: b, value_a: 10, is_active: true}
+          - {phase: c, value_a: 16, is_active: true}
+  - sleep: 2
+  - assert:
+      get: "/api/v1/opev/{peer.ski}"
+      equals:
+        limits.0.value_a: 6
+        limits.1.value_a: 10
+        limits.2.value_a: 16
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: a, value_a: 6, is_active: false}
+          - {phase: b, value_a: 10, is_active: false}
+          - {phase: c, value_a: 16, is_active: false}

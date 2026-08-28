@@ -22,6 +22,11 @@ type Sample struct {
 	ProductionLimitW  *float64 `json:"production_limit_w"`
 	EVConnected       int      `json:"ev_connected"`
 	EVCharging        int      `json:"ev_charging"`
+	// Per-phase electrical detail and state of charge, for the dashboard's second chart
+	// panel. Nil-safe: a device that does not report them simply has no line to draw.
+	CurrentPerPhaseA []float64 `json:"current_per_phase_a,omitempty"`
+	VoltagePerPhaseV []float64 `json:"voltage_per_phase_v,omitempty"`
+	StateOfCharge    *float64  `json:"state_of_charge,omitempty"`
 }
 
 // SnapshotSource is the minimal shape Record needs from an eebusgo.Snapshot, kept as its own
@@ -38,6 +43,9 @@ type SnapshotSource struct {
 	ProductionLimitW  *float64
 	EVConnectedCount  int
 	EVChargingCount   int
+	CurrentPerPhaseA  []float64
+	VoltagePerPhaseV  []float64
+	StateOfCharge     *float64
 }
 
 type Store struct {
@@ -55,6 +63,8 @@ func (s *Store) Record(ski string, snap SnapshotSource) Sample {
 		BatteryPowerW: snap.BatteryW, EVPowerW: snap.EVW,
 		ConsumptionLimitW: snap.ConsumptionLimitW, ProductionLimitW: snap.ProductionLimitW,
 		EVConnected: snap.EVConnectedCount, EVCharging: snap.EVChargingCount,
+		CurrentPerPhaseA: snap.CurrentPerPhaseA, VoltagePerPhaseV: snap.VoltagePerPhaseV,
+		StateOfCharge: snap.StateOfCharge,
 	}
 	if sample.Ts == 0 {
 		sample.Ts = float64(time.Now().UnixNano()) / 1e9

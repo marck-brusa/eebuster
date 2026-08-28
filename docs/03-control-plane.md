@@ -29,7 +29,10 @@ Shows the selected peer's:
 - live device/use-case summary.
 
 The time-series chart stores one sample per snapshot request, retains up to 12 hours in
-memory, and supports hover and click inspection.
+memory, and supports hover and click inspection. A second panel below it plots per-phase
+current, per-phase voltage, or state of charge — one unit at a time, since they share no
+axis; hovering either panel inspects the same instant on both. Units the device does not
+report are disabled, and the panel is hidden entirely when it reports none of them.
 
 The LPC control sends immediately. Automatic entity selection uses the entity that advertises
 LPC; an engineer can select an explicit SPINE entity when needed.
@@ -146,6 +149,11 @@ All endpoints are under `/api/v1`.
 | GET | `/oscev/{ski}` | Per-phase current recommendations and constraints |
 | PUT | `/oscev/{ski}/limits` | Write per-phase current recommendations |
 | GET | `/ohpcf/{ski}` | Heat pump compressor flexibility offer |
+| GET | `/evsecc/{ski}` | Station identity: manufacturer data and operating state |
+| POST | `/opev/heartbeat/start` `/stop` | Energy Guard heartbeat (OPEV scenario 2) |
+| PUT | `/opev/operating-state` | Announce/clear the Energy Guard error state (OPEV scenario 3) |
+| POST | `/oscev/heartbeat/start` `/stop` | CEM heartbeat for OSCEV |
+| PUT | `/oscev/operating-state` | Announce/clear the CEM error state for OSCEV |
 | GET | `/mgcp/{ski}` | Grid-connection measurements |
 | GET | `/energy/{ski}/snapshot` | Best-effort energy intelligence |
 | GET | `/energy/{ski}/history` | Session history |

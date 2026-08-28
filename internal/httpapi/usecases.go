@@ -31,6 +31,13 @@ func (s *Server) registerUsecaseRoutes() {
 	s.mux.HandleFunc("GET /api/v1/oscev/{ski}", s.handleOSCEVRead)
 	s.mux.HandleFunc("PUT /api/v1/oscev/{ski}/limits", s.handleOSCEVWriteLimits)
 	s.mux.HandleFunc("GET /api/v1/ohpcf/{ski}", s.handleOHPCFRead)
+	s.mux.HandleFunc("GET /api/v1/evsecc/{ski}", s.handleEVSECCRead)
+	s.mux.HandleFunc("POST /api/v1/opev/heartbeat/start", s.handleOPEVHeartbeatStart)
+	s.mux.HandleFunc("POST /api/v1/opev/heartbeat/stop", s.handleOPEVHeartbeatStop)
+	s.mux.HandleFunc("PUT /api/v1/opev/operating-state", s.handleOPEVOperatingState)
+	s.mux.HandleFunc("POST /api/v1/oscev/heartbeat/start", s.handleOSCEVHeartbeatStart)
+	s.mux.HandleFunc("POST /api/v1/oscev/heartbeat/stop", s.handleOSCEVHeartbeatStop)
+	s.mux.HandleFunc("PUT /api/v1/oscev/operating-state", s.handleOSCEVOperatingState)
 	s.mux.HandleFunc("GET /api/v1/mgcp/{ski}", s.handleMGCPRead)
 }
 
@@ -368,4 +375,75 @@ func (s *Server) handleOHPCFRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+// EVSE station identity (EVSECC scenarios 1+2): manufacturer data and operating state.
+
+func (s *Server) handleEVSECCRead(w http.ResponseWriter, r *http.Request) {
+	hint, err := entityHint(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_entity_hint", "detail": err.Error()})
+		return
+	}
+	result, err := s.stack.EVSECC().Read(r.PathValue("ski"), hint)
+	if err != nil {
+		writeUsecaseError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+// OPEV/OSCEV scenario 2 and 3 controls: our heartbeat towards the EV, and our announced
+// operating state. Both are local-side operations (no target entity): the EV observes them
+// and must fall back to a safe current when the heartbeat stays away >4s (OPEV-005) or a
+// failure state is announced (OPEV-007).
+
+type operatingStateBody struct {
+	Failure bool `json:"failure"`
+}
+
+func (s *Server) handleOPEVHeartbeatStart(w http.ResponseWriter, r *http.Request) {
+	s.stack.OPEV().StartHeartbeat()
+	writeJSON(w, http.StatusOK, map[string]any{"heartbeat": "started"})
+}
+
+func (s *Server) handleOPEVHeartbeatStop(w http.ResponseWriter, r *http.Request) {
+	s.stack.OPEV().StopHeartbeat()
+	writeJSON(w, http.StatusOK, map[string]any{"heartbeat": "stopped"})
+}
+
+func (s *Server) handleOPEVOperatingState(w http.ResponseWriter, r *http.Request) {
+	var body operatingStateBody
+	if err := decodeBody(r, &body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "detail": err.Error()})
+		return
+	}
+	if err := s.stack.OPEV().SetOperatingState(body.Failure); err != nil {
+		writeUsecaseError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "failure": body.Failure})
+}
+
+func (s *Server) handleOSCEVHeartbeatStart(w http.ResponseWriter, r *http.Request) {
+	s.stack.OSCEV().StartHeartbeat()
+	writeJSON(w, http.StatusOK, map[string]any{"heartbeat": "started"})
+}
+
+func (s *Server) handleOSCEVHeartbeatStop(w http.ResponseWriter, r *http.Request) {
+	s.stack.OSCEV().StopHeartbeat()
+	writeJSON(w, http.StatusOK, map[string]any{"heartbeat": "stopped"})
+}
+
+func (s *Server) handleOSCEVOperatingState(w http.ResponseWriter, r *http.Request) {
+	var body operatingStateBody
+	if err := decodeBody(r, &body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "detail": err.Error()})
+		return
+	}
+	if err := s.stack.OSCEV().SetOperatingState(body.Failure); err != nil {
+		writeUsecaseError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "failure": body.Failure})
 }

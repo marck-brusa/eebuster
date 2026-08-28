@@ -61,6 +61,16 @@ func (o *OPEV) WriteLimits(ski string, limits []PhaseLimit, entityHint []uint) e
 	return err
 }
 
+// Heartbeat controls OPEV scenario 2 ("EV checks Energy Guard availability"): the EV must
+// fall to a safe current when our heartbeat stays away for more than 4 s (OPEV-005).
+func (o *OPEV) StartHeartbeat() { o.uc.StartHeartbeat() }
+func (o *OPEV) StopHeartbeat()  { o.uc.StopHeartbeat() }
+
+// SetOperatingState drives OPEV scenario 3 ("Energy Guard sends error state"): announcing
+// failure means the EV must stop trusting our curtailment and fall to a safe current
+// (OPEV-007). Announced device-wide, so it also affects other use cases we serve.
+func (o *OPEV) SetOperatingState(failure bool) error { return o.uc.SetOperatingState(failure) }
+
 type OSCEV struct{ uc *oscev.OSCEV }
 
 func (o *OSCEV) Read(ski string, entityHint []uint) (map[string]any, error) {
@@ -131,3 +141,9 @@ func phaseName(s string) (spinemodel.ElectricalConnectionPhaseNameType, error) {
 	}
 	return "", fmt.Errorf("unknown phase %q (use a, b or c)", s)
 }
+
+// The OSCEV twin of the scenario 2/3 controls above.
+func (o *OSCEV) StartHeartbeat() { o.uc.StartHeartbeat() }
+func (o *OSCEV) StopHeartbeat()  { o.uc.StopHeartbeat() }
+
+func (o *OSCEV) SetOperatingState(failure bool) error { return o.uc.SetOperatingState(failure) }

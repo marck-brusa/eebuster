@@ -12,14 +12,14 @@ human-readable labels; it never invents support.
 | MPC | `monitoringOfPowerConsumption` | Power, energy, phase values, frequency |
 | MGCP | `monitoringOfGridConnectionPoint` | Grid power, energy, phase values, frequency |
 | EVCC | `evCommissioningAndConfiguration` | Connected state, charge state, sleep mode, standard, identity, manufacturer, limits |
-| EVSECC | `evseCommissioningAndConfiguration` | Station identity and operating state |
+| EVSECC | `evseCommissioningAndConfiguration` | Station identity (vendor, brand, serial, software revision), operating state |
 | CEVC | `coordinatedEvCharging` | Strategy, demand, charge plan |
 | EVCEM | `measurementOfElectricityDuringEvCharging` | Phases, current, power, charged energy |
 | EVSOC | `evStateOfCharge` | Vehicle state of charge |
 | VAPD | `visualizationOfAggregatedPhotovoltaicData` | Power, peak power, total yield |
 | VABD | `visualizationOfAggregatedBatteryData` | Power, state of charge, energy |
-| OPEV | `overloadProtectionByEvChargingCurrentCurtailment` | Per-phase current obligations read/write, constraints |
-| OSCEV | `optimizationOfSelfConsumptionDuringEvCharging` | Per-phase current recommendations read/write, constraints |
+| OPEV | `overloadProtectionByEvChargingCurrentCurtailment` | Per-phase current obligations read/write, constraints, heartbeat, error state |
+| OSCEV | `optimizationOfSelfConsumptionDuringEvCharging` | Per-phase current recommendations read/write, constraints, heartbeat, error state |
 | OHPCF | `optimizationOfSelfConsumptionByHeatPumpCompressorFlexibility` | Flexibility offer read |
 
 That table is the complete set. A peer may advertise use cases outside it — the device browser
@@ -53,6 +53,10 @@ this table listed them as available "via Raw RPC", which was never true.
 | `mpc-phase-consistency` | read-only | Per-phase powers must add up to the reported total |
 | `ev-charged-energy` | read-only | EVCEM scenario 3, when advertised, must deliver a charged-energy value |
 | `opev-limit-roundtrip` | live-control | Per-phase current obligations must be visible on readback, then released |
+| `opev-asymmetric` | live-control | A different obligation per phase must survive readback unaveraged (OPEV-002) |
+| `opev-zero-pause` | live-control | A 0 A obligation — the pause signal — must be accepted and visible |
+| `opev-heartbeat-loss` | disruptive | Stop the guard heartbeat; the EV must fall to a safe current within 4 s (OPEV-005) |
+| `opev-error-state` | disruptive | Announce a guard error; the EV must stop trusting curtailment (OPEV-007) |
 | `opev-constraints` | read-only | The OPEV use case must resolve and answer a read |
 | `oscev-read` | read-only | The OSCEV recommendation state must answer a read |
 | `ohpcf-read` | read-only | A compressor's flexibility offer must answer a read |

@@ -1,0 +1,33 @@
+name: opev-zero-pause
+description: >
+  Writes a 0 A obligation on every phase — the overload-protection pause signal (EEBus UC TS
+  OPEV V1.0.1b scenario 1): a current limit below the EV's minimum means it must suspend
+  charging rather than draw the minimum. Verifies the write is accepted and visible, then
+  releases. During a live session, EVCEM currents dropping to zero confirm the EV actually
+  obeyed. Needs a vehicle associated.
+category: Conformance
+risk: live-control
+requires:
+  capabilities: [opev.write]
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: a, value_a: 0, is_active: true}
+          - {phase: b, value_a: 0, is_active: true}
+          - {phase: c, value_a: 0, is_active: true}
+  - sleep: 2
+  - assert:
+      get: "/api/v1/opev/{peer.ski}"
+      equals: {limits.0.value_a: 0, limits.0.is_active: true}
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: a, value_a: 0, is_active: false}
+          - {phase: b, value_a: 0, is_active: false}
+          - {phase: c, value_a: 0, is_active: false}

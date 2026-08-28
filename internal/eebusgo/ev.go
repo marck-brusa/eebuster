@@ -20,6 +20,48 @@ type EVCC struct{ uc *evcc.EVCC }
 // operating state for an EVSE entity.
 type EVSECC struct{ uc *evsecc.EVSECC }
 
+// Read returns the station's full identity (EVSE Commissioning and Configuration scenario 1:
+// manufacturer data -- device name/code, serial, software/hardware revision, vendor, brand)
+// plus its operating state (scenario 2). Field names follow SPINE's deviceClassification
+// manufacturer data, snake_cased; empty strings are omitted so the output shows what the
+// device actually filled in.
+func (e *EVSECC) Read(ski string, entityHint []uint) (map[string]any, error) {
+	entity, err := resolveEntity(e.uc.RemoteEntitiesScenarios(), ski, entityHint)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]any{}
+	if md, err := e.uc.ManufacturerData(entity); err == nil {
+		identity := map[string]any{}
+		for key, value := range map[string]string{
+			"device_name":                      md.DeviceName,
+			"device_code":                      md.DeviceCode,
+			"serial_number":                    md.SerialNumber,
+			"software_revision":                md.SoftwareRevision,
+			"hardware_revision":                md.HardwareRevision,
+			"vendor_name":                      md.VendorName,
+			"vendor_code":                      md.VendorCode,
+			"brand_name":                       md.BrandName,
+			"power_source":                     md.PowerSource,
+			"manufacturer_node_identification": md.ManufacturerNodeIdentification,
+			"manufacturer_label":               md.ManufacturerLabel,
+			"manufacturer_description":         md.ManufacturerDescription,
+		} {
+			if value != "" {
+				identity[key] = value
+			}
+		}
+		out["identity"] = identity
+	}
+	if state, lastErr, err := e.uc.OperatingState(entity); err == nil {
+		out["operating_state"] = string(state)
+		if lastErr != "" {
+			out["last_error_code"] = lastErr
+		}
+	}
+	return out, nil
+}
+
 // CEVC wraps cem/cevc (coordinatedEvCharging): charge strategy, energy demand, and plan.
 type CEVC struct{ uc *cevc.CEVC }
 
@@ -114,10 +156,17 @@ type chargePlan struct {
 }
 
 type evseRecord struct {
-	Entity         []uint  `json:"entity"`
-	Manufacturer   *string `json:"manufacturer,omitempty"`
-	OperatingState string  `json:"operating_state,omitempty"`
-	LastError      string  `json:"last_error,omitempty"`
+	Entity           []uint  `json:"entity"`
+	Manufacturer     *string `json:"manufacturer,omitempty"`
+	Brand            string  `json:"brand,omitempty"`
+	VendorName       string  `json:"vendor_name,omitempty"`
+	VendorCode       string  `json:"vendor_code,omitempty"`
+	SerialNumber     string  `json:"serial_number,omitempty"`
+	SoftwareRevision string  `json:"software_revision,omitempty"`
+	HardwareRevision string  `json:"hardware_revision,omitempty"`
+	DeviceCode       string  `json:"device_code,omitempty"`
+	OperatingState   string  `json:"operating_state,omitempty"`
+	LastError        string  `json:"last_error,omitempty"`
 }
 
 // evKey identifies one EV/EVSE entity across use cases, matching intelligence_snapshot()'s

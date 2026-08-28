@@ -1,0 +1,21 @@
+name: opev-heartbeat-loss
+description: >
+  Starts our Energy Guard heartbeat towards the EV, then stops it (EEBus UC TS OPEV V1.0.1b
+  scenario 2, "EV checks Energy Guard availability"): once the heartbeat stays away for more
+  than 4 seconds, the EV must switch to a safe current setting on its own [OPEV-005]. The
+  device-side reaction is observable in EVCEM measurements during a live session; this
+  scenario drives the guard side and leaves the device in the heartbeat-restored state.
+category: Conformance
+risk: disruptive
+requires:
+  capabilities: [opev.heartbeat]
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - call: {method: cem-opev/StartHeartbeat}
+  - sleep: 3
+  - call: {method: cem-opev/StopHeartbeat}
+  - log: "Heartbeat stopped; per OPEV-005 the EV must fall to a safe current within ~4s. Watch EVCEM currents during a live session."
+  - sleep: 6
+  - call: {method: cem-opev/StartHeartbeat}

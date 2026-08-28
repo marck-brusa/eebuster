@@ -107,6 +107,14 @@ func (rn *Runner) stepCall(args any, context map[string]any) StepResult {
 		return rn.postNoBody("/api/v1/lpc/heartbeat/start", "call "+method)
 	case "eg-lpc/StopHeartbeat":
 		return rn.postNoBody("/api/v1/lpc/heartbeat/stop", "call "+method)
+	case "cem-opev/StartHeartbeat":
+		return rn.postNoBody("/api/v1/opev/heartbeat/start", "call "+method)
+	case "cem-opev/StopHeartbeat":
+		return rn.postNoBody("/api/v1/opev/heartbeat/stop", "call "+method)
+	case "cem-oscev/StartHeartbeat":
+		return rn.postNoBody("/api/v1/oscev/heartbeat/start", "call "+method)
+	case "cem-oscev/StopHeartbeat":
+		return rn.postNoBody("/api/v1/oscev/heartbeat/stop", "call "+method)
 	default:
 		return StepResult{Name: "call " + method, Status: "failed",
 			Detail: fmt.Sprintf("%q has no typed REST equivalent in this rewrite (the generic RPC passthrough it used doesn't exist anymore)", method)}

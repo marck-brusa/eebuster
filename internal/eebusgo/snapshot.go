@@ -155,6 +155,13 @@ func (s *Stack) EnergySnapshot(ski string) (Snapshot, error) {
 		if md, err := s.evsecc.uc.ManufacturerData(entity); err == nil {
 			name := md.DeviceName
 			rec.Manufacturer = &name
+			rec.Brand = md.BrandName
+			rec.VendorName = md.VendorName
+			rec.VendorCode = md.VendorCode
+			rec.SerialNumber = md.SerialNumber
+			rec.SoftwareRevision = md.SoftwareRevision
+			rec.HardwareRevision = md.HardwareRevision
+			rec.DeviceCode = md.DeviceCode
 		}
 		if state, lastErr, err := s.evsecc.uc.OperatingState(entity); err == nil {
 			rec.OperatingState = string(state)

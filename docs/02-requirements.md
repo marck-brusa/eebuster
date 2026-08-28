@@ -47,7 +47,11 @@ The primary adapter provides typed operations for:
   - VAPD photovoltaic data;
   - VABD battery data.
 - Overload Protection by EV Charging Current Curtailment (OPEV)
-  - per-phase current obligations read/write and declared constraints.
+  - per-phase current obligations read/write and declared constraints;
+  - Energy Guard heartbeat start/stop (scenario 2) and error-state announcement (scenario 3).
+- EVSE Commissioning and Configuration (EVSECC)
+  - station identity: manufacturer data (vendor, brand, serial, software/hardware revision)
+    and operating state.
 - Optimization of Self-Consumption During EV Charging (OSCEV)
   - per-phase current recommendations read/write and declared constraints.
 - Heat pump compressor flexibility (OHPCF)
@@ -71,7 +75,9 @@ The desktop dashboard must:
 - show live values and distinguish absent, inactive, unsupported, and failed data;
 - let an engineer drill from peer to entity to use case;
 - label actions that change the connected device;
-- provide an interactive time-series view with selectable ranges and sample inspection;
+- provide an interactive time-series view with selectable ranges and sample inspection,
+  including a second panel for per-phase current, per-phase voltage, or state of charge
+  (one unit at a time, with a crosshair shared across panels);
 - render per-phase values with asymmetric loading flagged;
 - provide a message-trace workspace with per-frame conformance findings, and keep expanded
   rows expanded while the live stream updates;

@@ -32,12 +32,49 @@ func (s *Server) handleEnergySnapshot(w http.ResponseWriter, r *http.Request) {
 // explicit mapping, not a shared type, so telemetry stays independent of eebusgo (see
 // telemetry.SnapshotSource's doc comment).
 func snapshotSource(snap eebusgo.Snapshot) telemetry.SnapshotSource {
+	current, voltage, soc := phaseSeries(snap)
 	return telemetry.SnapshotSource{
 		Ts: snap.Ts, ConsumptionW: snap.Power.ConsumptionW, GridW: snap.Power.GridW,
 		PVW: snap.Power.PVW, BatteryW: snap.Power.BatteryW, EVW: snap.Power.EVW,
 		ConsumptionLimitW: snap.Limits.ConsumptionW, ProductionLimitW: snap.Limits.ProductionW,
 		EVConnectedCount: snap.EV.ConnectedCount, EVChargingCount: snap.EV.ChargingCount,
+		CurrentPerPhaseA: current, VoltagePerPhaseV: voltage, StateOfCharge: soc,
 	}
+}
+
+// phaseSeries picks the per-phase current and voltage to record, preferring the metered
+// side (MPC/MGCP, present whenever the device meters at all) and falling back to the EV's
+// own charging measurements (EVCEM), which exist only during a session. Recording one
+// series per sample keeps the history a flat time series -- the chart draws phases, not
+// entities, and a device metering the same phases twice would otherwise double the lines.
+func phaseSeries(snap eebusgo.Snapshot) (current, voltage []float64, soc *float64) {
+	take := func(entries []map[string]any) {
+		for _, fields := range entries {
+			if current == nil {
+				if v, ok := fields["current_per_phase_a"].([]float64); ok && len(v) > 0 {
+					current = v
+				}
+			}
+			if voltage == nil {
+				if v, ok := fields["voltage_per_phase_v"].([]float64); ok && len(v) > 0 {
+					voltage = v
+				}
+			}
+		}
+	}
+	take(snap.Monitoring)
+	take(snap.Grid)
+	for _, ev := range snap.EV.Vehicles {
+		if current == nil && len(ev.CurrentPerPhaseA) > 0 {
+			current = ev.CurrentPerPhaseA
+		}
+		// One SoC per sample: the first vehicle reporting one. Several EVs on one peer is
+		// rare enough that a single line beats an unbounded set of them.
+		if soc == nil && ev.StateOfCharge != nil {
+			soc = ev.StateOfCharge
+		}
+	}
+	return current, voltage, soc
 }
 
 func (s *Server) handleEnergyHistory(w http.ResponseWriter, r *http.Request) {
