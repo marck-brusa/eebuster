@@ -16,6 +16,10 @@ steps:
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"
       body: {value_w: 3000, is_active: true, is_changeable: true, duration: "PT5M"}
+  # Wait for the device to publish the new limit before reading it back. A write is
+  # asynchronous -- acceptance, approval and the notify that follows all take time -- so an
+  # immediate read can still return the previous limit and blame the device for it.
+  - expect_event: {event: eg-lpc-DataUpdateLimit, within: 5s}
   - assert:
       get: "/api/v1/lpc/{peer.ski}/limit"
       equals: {value_w: 3000, is_active: true}

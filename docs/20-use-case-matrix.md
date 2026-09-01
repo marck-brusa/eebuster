@@ -33,6 +33,19 @@ EV entity) with opposite semantics: OPEV writes **obligations** the EV must not 
 before the 2026-07-31 upstream revision this tool now pins, and an even earlier version of
 this table listed them as available "via Raw RPC", which was never true.
 
+## What the simulator covers
+
+The built-in simulated device answers LPC and MPC. Enabling `ev:` on it adds a vehicle as a
+sub-entity of the charging station -- SPINE entity `[1,1]` -- advertising EVCC, EVCEM, EVSOC
+and OPEV, with a battery that fills and per-phase currents that follow whatever limit is in
+force. That makes every EV scenario except the LPP/MGCP/OHPCF ones runnable without
+hardware, including the OPEV write path, which on real hardware needs a vehicle physically
+present.
+
+The EV side is built from SPINE server features directly (`internal/simulator/ev.go`):
+eebus-go implements these use cases only for the CEM, since the other half is firmware in a
+real vehicle.
+
 ## Included scenario examples
 
 | Scenario | Risk | Purpose |

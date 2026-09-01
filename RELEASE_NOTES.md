@@ -1,5 +1,40 @@
 # Release notes
 
+## 1.0.0-rc6
+
+A vehicle in the simulator, so charging behaviour can be watched without hardware.
+
+- **A simulated EV.** Setting `ev: {enabled: true}` on a simulated device plugs a vehicle into
+  it: a SPINE sub-entity of the charging station (`[1,1]`) advertising **EVCC, EVCEM, EVSOC
+  and OPEV**, with a battery that fills, a per-phase charging current, a charged-energy
+  counter, and an identity (name, brand, model, serial) the station reports. `charge_speedup`
+  compresses simulated time so a charge is watchable in a couple of minutes rather than hours.
+- **It answers to limits, which is the point.** An LPC limit written to the station is shared
+  across the vehicle's phases; an OPEV obligation curtails each phase individually. Verified
+  end to end: a 6 kW limit takes the vehicle from 16 A to 8.7 A per phase and the battery
+  visibly fills more slowly; releasing it returns to 11 kW; a 16/10/6 A asymmetric obligation
+  produces exactly 16/10/6 A. A limit that works out below the vehicle's minimum current
+  pauses charging instead of undercutting it, as a real vehicle does.
+- **The state-of-charge chart populates itself.** SoC flows into the history like any other
+  measurement, so the dashboard's *Charge* tab — greyed out until now, because nothing
+  reported one — enables itself the moment a device does.
+- **The EV side is built from SPINE server features directly**
+  (`internal/simulator/ev.go`): eebus-go implements these use cases only for the CEM, the
+  other half being firmware in a real vehicle. Two tests cover what a CEM will read and how
+  the vehicle answers limits.
+- Fixed while building it: measurements published without a complete key set
+  (`measurementId` *and* `valueType` *and* `timestamp`) are treated by spine-go as an
+  incomplete identifier and broadcast over existing entries per SPINE Table 7 — into an empty
+  data set that stores nothing at all, while the update still reports success. A device doing
+  this answers every read with an empty list and looks healthy.
+- Fixed: a limit's expiry timer could deactivate a *newer* limit written after it was
+  started, restoring the older value with it.
+- Fixed: `lpc-duration-roundtrip` read the limit back immediately after writing it, with no
+  wait for the device to publish it, so it could fail on timing alone and blame the device.
+  It now waits for the update event, as its neighbouring scenarios do. **Worth re-running
+  against real hardware**: an earlier failure of this scenario there was reported as a device
+  fault and may have been this race.
+
 ## 1.0.0-rc5
 
 Complete OPEV coverage and full station identity.

@@ -56,6 +56,9 @@ The primary adapter provides typed operations for:
   - per-phase current recommendations read/write and declared constraints.
 - Heat pump compressor flexibility (OHPCF)
   - flexibility offer read (optional power consumption, pausability, run windows).
+- Simulated devices
+  - LPC limits, MPC measurements, and optionally a vehicle with EVCC/EVCEM/EVSOC/OPEV whose
+    charging current and state of charge respond to limits.
 - Message trace
   - raw frame list with cursor polling, single-frame lookup with the wire payload;
   - conformance summary aggregated by rule, split into errors and warnings.

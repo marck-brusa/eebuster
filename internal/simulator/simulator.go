@@ -40,9 +40,19 @@ type Device struct {
 	lpc       *cslpc.LPC
 	mpc       *mumpc.MPC
 
+	// ev is the vehicle plugged into this station, when the config asks for one. It owns the
+	// EV-side use cases and the battery; the station meters whatever it draws.
+	ev     *evSim
+	evStop chan struct{}
+
 	mu          sync.Mutex
 	limitW      float64
 	limitActive bool
+	// limitGen counts limit writes, so an expiry timer can tell whether the limit it was
+	// started for is still the current one. Without it a timer started for an earlier limit
+	// deactivates a newer one that arrived in the meantime -- and, because expiry republishes
+	// the value it captured, silently restores the older value too.
+	limitGen uint64
 	// limitTimer expires a limit that arrived with a duration: a spec-correct device stops
 	// following the limit AND reports it inactive afterwards. Devices in the field get the
 	// first half right and forget the second -- the lpc-limit-expiry scenario exists to catch
@@ -172,6 +182,16 @@ func New(cfg config.SimulatedDevice, dataDir string, logLevel eebusgo.LogLevel, 
 	}
 	d.mpc = mpcUC
 
+	if cfg.EV.Enabled {
+		ev, err := newEVSim(cfg.ID, cfg.EV, svc.LocalDevice(), localEntity)
+		if err != nil {
+			return nil, fmt.Errorf("simulator %s: attaching the simulated EV: %w", cfg.ID, err)
+		}
+		d.ev = ev
+		log.Printf("simulator[%s]: simulated EV attached -- %s %s, %.0f kWh battery at %.0f%%, up to %.0fA on %d phase(s)",
+			cfg.ID, ev.cfg.Brand, ev.cfg.Model, ev.cfg.BatteryKWh, ev.cfg.SoCStartPercent, ev.cfg.MaxCurrentA, ev.cfg.Phases)
+	}
+
 	return d, nil
 }
 
@@ -187,10 +207,55 @@ func (d *Device) Start() error {
 		return err
 	}
 	d.reportPower() // publish the baseline immediately, not just after the first limit write
+	if d.ev != nil {
+		d.evStop = make(chan struct{})
+		go d.runCharging(d.evStop)
+	}
 	return nil
 }
 
-func (d *Device) Shutdown() { d.service.Shutdown() }
+// runCharging advances the vehicle every second: pick up any obligation a CEM has written,
+// let the battery take what it is allowed to, and re-meter the station from what the vehicle
+// actually drew. One second is slow enough to be cheap and fast enough that a limit write
+// visibly takes effect while you watch.
+func (d *Device) runCharging(stop <-chan struct{}) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			d.ev.applyWrittenLimits()
+			d.ev.tick(d.stationLimitPerPhaseA())
+			d.reportPower()
+		}
+	}
+}
+
+// stationLimitPerPhaseA turns an active station-level LPC limit (watts for the whole
+// station) into the per-phase current share the vehicle has to respect -- the path a real
+// installation takes from "the house may draw 4 kW" to "each phase may pull 5.8 A".
+func (d *Device) stationLimitPerPhaseA() float64 {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if !d.limitActive || d.ev == nil {
+		return 0
+	}
+	phases := float64(d.ev.cfg.Phases)
+	if phases <= 0 {
+		return 0
+	}
+	return d.limitW / phases / evNominalV
+}
+
+func (d *Device) Shutdown() {
+	if d.evStop != nil {
+		close(d.evStop)
+		d.evStop = nil
+	}
+	d.service.Shutdown()
+}
 
 // LocalSKI is the real SKI, not GetLocalCertificateFingerprint()'s certificate fingerprint --
 // see eebusgo.Stack.LocalSKI's comment for how that distinction was found.
@@ -226,8 +291,10 @@ func (d *Device) onLPCEvent(ski string, _ spineapi.DeviceRemoteInterface, _ spin
 			d.limitTimer.Stop()
 			d.limitTimer = nil
 		}
+		d.limitGen++
 		if limit.IsActive && limit.Duration > 0 {
-			d.limitTimer = time.AfterFunc(limit.Duration, d.expireLimit)
+			gen := d.limitGen
+			d.limitTimer = time.AfterFunc(limit.Duration, func() { d.expireLimit(gen) })
 		}
 		d.mu.Unlock()
 		log.Printf("simulator[%s]: limit from ski %s -> %.0fW active=%v duration=%s", d.id, ski, limit.Value, limit.IsActive, limit.Duration)
@@ -237,7 +304,14 @@ func (d *Device) onLPCEvent(ski string, _ spineapi.DeviceRemoteInterface, _ spin
 
 // expireLimit is the duration timer firing: deactivate the limit in our own published data,
 // so a controller reading back after expiry sees is_active=false, then return to baseline.
-func (d *Device) expireLimit() {
+func (d *Device) expireLimit(gen uint64) {
+	d.mu.Lock()
+	stale := gen != d.limitGen
+	d.mu.Unlock()
+	if stale {
+		// A newer limit was written after this timer was started; it owns the state now.
+		return
+	}
 	limit, err := d.lpc.ConsumptionLimit()
 	if err != nil {
 		return
@@ -272,12 +346,48 @@ func (d *Device) reportPower() {
 	}
 	d.mu.Unlock()
 
+	// With a vehicle plugged in, the station meters the vehicle: the EV decides what it draws
+	// (its own maximum, any obligation written to it, the station's limit) and the station
+	// reports that, so the power chart, the phase currents and the EV's own EVCEM values all
+	// tell the same story instead of three plausible but unrelated ones.
+	if d.ev != nil {
+		evCurrents := d.ev.Currents()
+		phaseW := make([]float64, 3)
+		total := 0.0
+		for i, a := range evCurrents {
+			if i < len(phaseW) {
+				phaseW[i] = a * evNominalV
+				total += phaseW[i]
+			}
+		}
+		d.publishPhases(total, phaseW)
+		log.Printf("simulator[%s]: EV drawing %.0fW (%.1f/%.1f/%.1fA), battery %.1f%%",
+			d.id, total, currentAt(evCurrents, 0), currentAt(evCurrents, 1), currentAt(evCurrents, 2), d.ev.SoC())
+		return
+	}
+
 	// Two-phase split: L1 and L2 carry the load, L3 idles. A real single/two-phase EV charger
 	// on a three-phase connection looks exactly like this, and a deliberately asymmetric
 	// simulated device is what lets the phase-balance panel and the asymmetry test scenarios
 	// demonstrate anything without hardware. 230 V nominal per phase.
 	const nominalV = 230.0
-	phaseW := []float64{power / 2, power / 2, 0}
+	d.publishPhases(power, []float64{power / 2, power / 2, 0})
+	log.Printf("simulator[%s]: reporting %.0fW (L1 %.0fW / L2 %.0fW / L3 %.0fW)", d.id, power, power/2, power/2, 0.0)
+}
+
+func currentAt(values []float64, i int) float64 {
+	if i < len(values) {
+		return values[i]
+	}
+	return 0
+}
+
+// publishPhases writes one power/current/voltage picture into MPC.
+func (d *Device) publishPhases(power float64, phaseW []float64) {
+	const nominalV = 230.0
+	for len(phaseW) < 3 {
+		phaseW = append(phaseW, 0)
+	}
 	if err := d.mpc.Update(
 		d.mpc.UpdateDataPowerTotal(power, nil, nil),
 		d.mpc.UpdateDataPowerPhaseA(phaseW[0], nil, nil),
@@ -292,9 +402,7 @@ func (d *Device) reportPower() {
 		d.mpc.UpdateDataFrequency(50, nil, nil),
 	); err != nil {
 		log.Printf("simulator[%s]: reporting %.0fW failed: %v", d.id, power, err)
-		return
 	}
-	log.Printf("simulator[%s]: reporting %.0fW (L1 %.0fW / L2 %.0fW / L3 %.0fW)", d.id, power, phaseW[0], phaseW[1], phaseW[2])
 }
 
 // The rest of api.ServiceReaderInterface: a simulator has no pairing UI, so these are

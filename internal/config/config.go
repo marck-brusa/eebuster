@@ -117,6 +117,36 @@ type SimulatedDevice struct {
 	Type      string  `yaml:"type" json:"type"` // "generic" | "ev" | "heat_pump"
 	ShipPort  int     `yaml:"ship_port" json:"ship_port"`
 	BaselineW float64 `yaml:"baseline_w" json:"baseline_w"`
+	// EV, when enabled, attaches a simulated vehicle to this device: a charging session with
+	// a battery that fills, per-phase currents, and a state of charge, all following whatever
+	// LPC limit or OPEV curtailment arrives. See SimulatedEV.
+	EV SimulatedEV `yaml:"ev" json:"ev"`
+}
+
+// SimulatedEV is a vehicle plugged into a simulated charging station. It exists so the EV
+// use cases (EVCC, EVCEM, EVSOC, OPEV) can be exercised without hardware and, above all, so
+// the effect of a limit is visible: the charging power drops, the phase currents follow, and
+// the battery fills more slowly.
+type SimulatedEV struct {
+	Enabled bool   `yaml:"enabled" json:"enabled"`
+	Name    string `yaml:"name" json:"name"`
+	Brand   string `yaml:"brand" json:"brand"`
+	Model   string `yaml:"model" json:"model"`
+	// Serial doubles as the vehicle identification the station reports (EVCC scenario 5).
+	Serial string `yaml:"serial" json:"serial"`
+	// BatteryKWh, SoCStartPercent: the battery being filled.
+	BatteryKWh      float64 `yaml:"battery_kwh" json:"battery_kwh"`
+	SoCStartPercent float64 `yaml:"soc_start_percent" json:"soc_start_percent"`
+	// MaxCurrentA and MinCurrentA are per phase, as the EV declares them to the station; a
+	// curtailment below MinCurrentA pauses charging instead of undercutting it, which is what
+	// a real vehicle does.
+	MaxCurrentA float64 `yaml:"max_current_a" json:"max_current_a"`
+	MinCurrentA float64 `yaml:"min_current_a" json:"min_current_a"`
+	Phases      int     `yaml:"phases" json:"phases"`
+	// ChargeSpeedup compresses simulated time so a charge is watchable: at the default 60,
+	// one real second of charging fills the battery as one simulated minute would. Set 1 for
+	// real time.
+	ChargeSpeedup float64 `yaml:"charge_speedup" json:"charge_speedup"`
 }
 
 type Simulator struct {
