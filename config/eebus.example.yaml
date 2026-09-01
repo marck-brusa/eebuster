@@ -99,6 +99,25 @@ simulator:
       ship_port: 4713
       baseline_w: 11000    # reports this until an LPC limit pulls it lower
 
+      # A vehicle plugged into this station. Flip enabled to true (and `type: ev` above, if
+      # you want it to announce itself as a charging station) to get an EV entity advertising
+      # EVCC, EVCEM, EVSOC and OPEV, with a battery that fills and per-phase currents that
+      # follow whatever limit is in force. Left here in full rather than in a comment block,
+      # because `ev:` belongs to THIS device -- it must line up with `id:` above it.
+      ev:
+        enabled: false
+        name: "Simulated EV"     # what the station reports as the vehicle's identity
+        brand: "SIMCAR"
+        model: "e-Sim 60"
+        serial: "SIM-EV-0001"
+        battery_kwh: 60
+        soc_start_percent: 20
+        max_current_a: 16       # per phase, as the vehicle declares it
+        min_current_a: 6        # below this the vehicle pauses instead of charging
+        phases: 3
+        charge_speedup: 60      # simulated seconds per real second, so a charge is
+                                # watchable; 1 charges in real time
+
   # What a simulated device does, regardless of type:
   #   - accepts LPC consumption limits (write 4 kW and its reported power drops until
   #     released; a limit with a duration expires by itself, reporting inactive afterwards);
@@ -113,9 +132,9 @@ simulator:
   #   ev         same entity shape, e-mobility category
   #   heat_pump  heat pump appliance / heat generation system, HVAC category
   #
-  # The EV-session use cases (EVCC/EVCEM/EVSOC/OPEV) come with a simulated vehicle -- see
-  # `ev:` below. Not implemented: LPP, MGCP and the heat pump flexibility offer (OHPCF);
-  # scenarios requiring those skip against the simulator.
+  # The EV-session use cases (EVCC/EVCEM/EVSOC/OPEV) come with a simulated vehicle -- see the
+  # `ev:` block on sim-load-1 above. Not implemented: LPP, MGCP and the heat pump flexibility
+  # offer (OHPCF); scenarios requiring those skip against the simulator.
   #
   # Several devices can run at once; give each its own id and ship_port. Examples:
   #
@@ -128,39 +147,26 @@ simulator:
   #     type: ev
   #     ship_port: 4715
   #     baseline_w: 22000
-  #     ev:                   # ...with a vehicle plugged into it, see below
+  #     ev:                    # ...with its own vehicle; keys line up with `id:` above
   #       enabled: true
+  #       battery_kwh: 77
+  #       max_current_a: 32
   #
   #   - id: sim-heatpump       # announces as a heat pump (HVAC category) -- handy for
   #     type: heat_pump        # checking how a HEMS classifies and lists device kinds
   #     ship_port: 4716
   #     baseline_w: 2500
   #
-  # A simulated vehicle (`ev:` on any device) adds a charging session to that station: an EV
-  # entity advertising EVCC, EVCEM, EVSOC and OPEV, a battery that fills, per-phase currents,
-  # and a state of charge that appears in the dashboard's Charge chart on its own. It obeys
-  # whatever limits arrive -- an LPC limit on the station is shared across its phases, an OPEV
-  # obligation curtails each phase individually -- so the effect of a limit is visible:
+  # With a vehicle enabled (see sim-load-1 above), the effect of a limit is visible: an LPC
+  # limit on the station is shared across the vehicle's phases, an OPEV obligation curtails
+  # each phase individually, and the battery fills more slowly.
   #
   #   ./examples/lpc-set-limit.sh <ski> 6000     # 16A -> 8.7A per phase, battery fills slower
   #   ./examples/lpc-set-limit.sh <ski> 0 release
   #
   # A limit that works out below the vehicle's own minimum current pauses charging rather
-  # than undercutting it, which is what a real vehicle does.
-  #
-  #     ev:
-  #       enabled: true
-  #       name: "Simulated EV"     # what the station reports as the vehicle's identity
-  #       brand: "SIMCAR"
-  #       model: "e-Sim 60"
-  #       serial: "SIM-EV-0001"
-  #       battery_kwh: 60
-  #       soc_start_percent: 20
-  #       max_current_a: 16       # per phase, as the vehicle declares it
-  #       min_current_a: 6        # below this the vehicle pauses instead of charging
-  #       phases: 3
-  #       charge_speedup: 60      # simulated seconds per real second, so a charge is
-  #                               # watchable; 1 charges in real time
+  # than undercutting it, which is what a real vehicle does. Each `ev:` block belongs to the
+  # device it is nested under, so a second station can hold a different vehicle.
 
 # EEBusTracer (the bundled deep-dive protocol analyzer, a separate tool with its own web UI)
 # starts automatically when its binary sits next to eebus-testbench, serves on
