@@ -180,7 +180,7 @@ var capabilities = map[string]bool{
 	"lpp.read": true, "lpp.write": true,
 	"mpc.read": true, "mgcp.read": true,
 	"opev.read": true, "opev.write": true, "opev.heartbeat": true, "opev.operating_state": true,
-	"oscev.read": true, "oscev.write": true, "oscev.heartbeat": true, "oscev.operating_state": true,
+	"oscev.read": true, "oscev.write": true, "cevc.write": true, "oscev.heartbeat": true, "oscev.operating_state": true,
 	"ohpcf.read": true, "evsecc.read": true,
 	"heartbeat":        true,
 	"approve_deny":     false,

@@ -395,6 +395,27 @@ paths:
                       is_active: {type: boolean}
       responses: { "200": { description: OK } }
 
+  /api/v1/cevc/{ski}/power-limits:
+    put:
+      tags: [use-cases]
+      summary: Write a CEVC power limitation curve (scenario 2) - consecutive slots of duration and maximum power
+      parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                slots:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      duration_s: {type: number, example: 900}
+                      power_w: {type: number, example: 4000}
+      responses: { "200": { description: OK } }
+
   /api/v1/ohpcf/{ski}:
     get:
       tags: [use-cases]

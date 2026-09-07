@@ -1,5 +1,25 @@
 # Release notes
 
+## 1.0.0-rc7
+
+- **A vehicle panel on the dashboard.** The energy-assets card now renders every EV entity the
+  device announces as a key/value table -- charge state, SoC, energy charged, charging power,
+  per-phase currents, charging power limits (min / max / standby), identification (MAC),
+  brand / device name / serial, communication standard, asymmetric charging, sleep mode,
+  phases connected and charge strategy -- refreshed with every snapshot. Until now these
+  values only surfaced in the raw "Read EV inventory" output.
+- **EV series on the detail chart.** Three new units next to current / voltage / charge: the
+  vehicle's own per-phase charging current and power (EVCEM) and its charged energy, recorded
+  in the history with every snapshot, so the pad's metered input and the EV's draw can be
+  compared over time.
+- **CEVC power limitation curve.** `PUT /api/v1/cevc/{ski}/power-limits` writes scenario 2 -
+  consecutive `{duration_s, power_w}` slots - to the EV entity (`?entity=1,1`), reported as
+  the `cevc.write` capability.
+- **Combined-phase devices.** A device that measures one combined phase (`acMeasuredPhases`
+  `abc` -- a wireless pad, a DC charger) was invisible to eebus-go's per-phase getters and
+  writers. Limits can now be written with `phase: "abc"`, and the vehicle record falls back
+  to the combined measurement for current and power when no per-phase value exists.
+
 ## 1.0.0-rc6
 
 A vehicle in the simulator, so charging behaviour can be watched without hardware.

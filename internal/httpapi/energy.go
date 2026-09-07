@@ -33,13 +33,32 @@ func (s *Server) handleEnergySnapshot(w http.ResponseWriter, r *http.Request) {
 // telemetry.SnapshotSource's doc comment).
 func snapshotSource(snap eebusgo.Snapshot) telemetry.SnapshotSource {
 	current, voltage, soc := phaseSeries(snap)
+	evCurrent, evPower, evEnergy := evSeries(snap)
 	return telemetry.SnapshotSource{
 		Ts: snap.Ts, ConsumptionW: snap.Power.ConsumptionW, GridW: snap.Power.GridW,
 		PVW: snap.Power.PVW, BatteryW: snap.Power.BatteryW, EVW: snap.Power.EVW,
 		ConsumptionLimitW: snap.Limits.ConsumptionW, ProductionLimitW: snap.Limits.ProductionW,
 		EVConnectedCount: snap.EV.ConnectedCount, EVChargingCount: snap.EV.ChargingCount,
 		CurrentPerPhaseA: current, VoltagePerPhaseV: voltage, StateOfCharge: soc,
+		EVCurrentPerPhaseA: evCurrent, EVPowerPerPhaseW: evPower, EVEnergyChargedWh: evEnergy,
 	}
+}
+
+// evSeries takes the first vehicle's own EVCEM measurements, so the chart can show what the EV
+// draws next to what the pad meters.
+func evSeries(snap eebusgo.Snapshot) (current, power []float64, energy *float64) {
+	for _, ev := range snap.EV.Vehicles {
+		if current == nil && len(ev.CurrentPerPhaseA) > 0 {
+			current = ev.CurrentPerPhaseA
+		}
+		if power == nil && len(ev.PowerPerPhaseW) > 0 {
+			power = ev.PowerPerPhaseW
+		}
+		if energy == nil && ev.EnergyChargedWh != nil {
+			energy = ev.EnergyChargedWh
+		}
+	}
+	return current, power, energy
 }
 
 // phaseSeries picks the per-phase current and voltage to record, preferring the metered

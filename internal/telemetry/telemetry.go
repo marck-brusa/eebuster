@@ -27,25 +27,33 @@ type Sample struct {
 	CurrentPerPhaseA []float64 `json:"current_per_phase_a,omitempty"`
 	VoltagePerPhaseV []float64 `json:"voltage_per_phase_v,omitempty"`
 	StateOfCharge    *float64  `json:"state_of_charge,omitempty"`
+	// The EV entity's own charging measurements (EVCEM), kept apart from the metered side so
+	// the pad input and the vehicle draw can be compared.
+	EVCurrentPerPhaseA []float64 `json:"ev_current_per_phase_a,omitempty"`
+	EVPowerPerPhaseW   []float64 `json:"ev_power_per_phase_w,omitempty"`
+	EVEnergyChargedWh  *float64  `json:"ev_energy_charged_wh,omitempty"`
 }
 
 // SnapshotSource is the minimal shape Record needs from an eebusgo.Snapshot, kept as its own
 // interface so this package doesn't import eebusgo (which would create a dependency the
 // telemetry store has no other reason to have).
 type SnapshotSource struct {
-	Ts                float64
-	ConsumptionW      *float64
-	GridW             *float64
-	PVW               *float64
-	BatteryW          *float64
-	EVW               *float64
-	ConsumptionLimitW *float64
-	ProductionLimitW  *float64
-	EVConnectedCount  int
-	EVChargingCount   int
-	CurrentPerPhaseA  []float64
-	VoltagePerPhaseV  []float64
-	StateOfCharge     *float64
+	Ts                 float64
+	ConsumptionW       *float64
+	GridW              *float64
+	PVW                *float64
+	BatteryW           *float64
+	EVW                *float64
+	ConsumptionLimitW  *float64
+	ProductionLimitW   *float64
+	EVConnectedCount   int
+	EVChargingCount    int
+	CurrentPerPhaseA   []float64
+	VoltagePerPhaseV   []float64
+	StateOfCharge      *float64
+	EVCurrentPerPhaseA []float64
+	EVPowerPerPhaseW   []float64
+	EVEnergyChargedWh  *float64
 }
 
 type Store struct {
@@ -64,7 +72,8 @@ func (s *Store) Record(ski string, snap SnapshotSource) Sample {
 		ConsumptionLimitW: snap.ConsumptionLimitW, ProductionLimitW: snap.ProductionLimitW,
 		EVConnected: snap.EVConnectedCount, EVCharging: snap.EVChargingCount,
 		CurrentPerPhaseA: snap.CurrentPerPhaseA, VoltagePerPhaseV: snap.VoltagePerPhaseV,
-		StateOfCharge: snap.StateOfCharge,
+		StateOfCharge:      snap.StateOfCharge,
+		EVCurrentPerPhaseA: snap.EVCurrentPerPhaseA, EVPowerPerPhaseW: snap.EVPowerPerPhaseW, EVEnergyChargedWh: snap.EVEnergyChargedWh,
 	}
 	if sample.Ts == 0 {
 		sample.Ts = float64(time.Now().UnixNano()) / 1e9

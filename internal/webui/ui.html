@@ -593,6 +593,9 @@ tr.phase-asym .phase-bar{background:var(--amber)}
                   <button data-unit="current" data-i18n="unit.current">Current</button>
                   <button data-unit="voltage" data-i18n="unit.voltage">Voltage</button>
                   <button data-unit="soc" data-i18n="unit.soc">Charge</button>
+                  <button data-unit="evCurrent" data-i18n="unit.evCurrent">EV current</button>
+                  <button data-unit="evPower" data-i18n="unit.evPower">EV power</button>
+                  <button data-unit="evEnergy" data-i18n="unit.evEnergy">EV energy</button>
                 </div>
               </div>
               <div class="chart-wrap" style="height:150px">
@@ -981,12 +984,32 @@ const I18N = {
     "unit.current": "Current",
     "unit.voltage": "Voltage",
     "unit.soc": "Charge",
+    "unit.evCurrent": "EV current",
+    "unit.evPower": "EV power",
+    "unit.evEnergy": "EV energy",
     "trace.fPeer": "Peers",
     "trace.fClassifier": "Classifiers",
     "trace.fFunction": "Functions",
     "trace.noValues": "Nothing captured yet",
     "station.title": "Station identity",
     "station.device": "Device",
+    "ev.title": "Vehicle",
+    "ev.state": "Charge state",
+    "ev.soc": "State of charge",
+    "ev.energy": "Energy charged this session",
+    "ev.power": "Charging power",
+    "ev.currents": "Current per phase",
+    "ev.limits": "Charging power limits (min / max / standby)",
+    "ev.ident": "Identification",
+    "ev.brand": "Brand",
+    "ev.device": "Device name",
+    "ev.serial": "Serial number",
+    "ev.comm": "Communication standard",
+    "ev.asym": "Asymmetric charging",
+    "ev.sleep": "Sleep mode",
+    "ev.phases": "Phases connected",
+    "ev.strategy": "Charge strategy",
+    "ev.none": "No vehicle entity announced by this device.",
     "station.brand": "Brand",
     "station.vendor": "Vendor",
     "station.serial": "Serial number",
@@ -1392,12 +1415,32 @@ const I18N = {
     "unit.current": "Strom",
     "unit.voltage": "Spannung",
     "unit.soc": "Ladung",
+    "unit.evCurrent": "EV-Strom",
+    "unit.evPower": "EV-Leistung",
+    "unit.evEnergy": "EV-Energie",
     "trace.fPeer": "Peers",
     "trace.fClassifier": "Klassifizierer",
     "trace.fFunction": "Funktionen",
     "trace.noValues": "Noch nichts aufgezeichnet",
     "station.title": "Stationsidentität",
     "station.device": "Gerät",
+    "ev.title": "Fahrzeug",
+    "ev.state": "Ladezustand",
+    "ev.soc": "Ladestand (SoC)",
+    "ev.energy": "Geladene Energie (Sitzung)",
+    "ev.power": "Ladeleistung",
+    "ev.currents": "Strom je Phase",
+    "ev.limits": "Ladeleistungsgrenzen (min / max / standby)",
+    "ev.ident": "Identifikation",
+    "ev.brand": "Marke",
+    "ev.device": "Gerätename",
+    "ev.serial": "Seriennummer",
+    "ev.comm": "Kommunikationsstandard",
+    "ev.asym": "Asymmetrisches Laden",
+    "ev.sleep": "Schlafmodus",
+    "ev.phases": "Verbundene Phasen",
+    "ev.strategy": "Ladestrategie",
+    "ev.none": "Dieses Gerät meldet keine Fahrzeug-Entität.",
     "station.brand": "Marke",
     "station.vendor": "Hersteller",
     "station.serial": "Seriennummer",
@@ -1803,12 +1846,32 @@ const I18N = {
     "unit.current": "电流",
     "unit.voltage": "电压",
     "unit.soc": "电量",
+    "unit.evCurrent": "车辆电流",
+    "unit.evPower": "车辆功率",
+    "unit.evEnergy": "车辆充电电量",
     "trace.fPeer": "对端",
     "trace.fClassifier": "分类器",
     "trace.fFunction": "功能",
     "trace.noValues": "尚未捕获任何内容",
     "station.title": "充电站标识",
     "station.device": "设备",
+    "ev.title": "车辆",
+    "ev.state": "充电状态",
+    "ev.soc": "电量 (SoC)",
+    "ev.energy": "本次充电电量",
+    "ev.power": "充电功率",
+    "ev.currents": "各相电流",
+    "ev.limits": "充电功率限制 (最小 / 最大 / 待机)",
+    "ev.ident": "标识",
+    "ev.brand": "品牌",
+    "ev.device": "设备名称",
+    "ev.serial": "序列号",
+    "ev.comm": "通信标准",
+    "ev.asym": "非对称充电",
+    "ev.sleep": "休眠模式",
+    "ev.phases": "已连接相数",
+    "ev.strategy": "充电策略",
+    "ev.none": "该设备未通告车辆实体。",
     "station.brand": "品牌",
     "station.vendor": "制造商",
     "station.serial": "序列号",
@@ -2858,7 +2921,7 @@ function renderDashboardIntelligence() {
       <div class="flow-node"><span>${esc(t("js.snapshotGaps"))}</span><strong>${state.snapshot.errors.length}</strong></div>
     </div>
     <div class="entity-tags" style="margin-top:13px">${[...domains.entries()].map(([domain,count]) => `<span class="badge ok">${esc(domain)} · ${count}</span>`).join("") || `<span class="muted">${esc(t("js.noUcAdvertised"))}</span>`}</div>
-    <div style="margin-top:13px">${evs.map(ev => `<div class="notice"><strong>EV entity [${esc((ev.entity || []).join(","))}]</strong><br>${esc(ev.charge_state || t("js.stateUnavailable"))} · ${formatPower(Array.isArray(ev.power_per_phase_w) ? ev.power_per_phase_w.reduce((a,b)=>a+b,0) : null)}${ev.state_of_charge != null ? ` · ${esc(ev.state_of_charge)}% SoC` : ""}${ev.energy_charged_wh != null ? ` · ${esc((ev.energy_charged_wh / 1000).toFixed(2))} kWh ${esc(t("js.charged"))}` : ""}${Array.isArray(ev.current_per_phase_a) && ev.current_per_phase_a.length ? `<br><span class="mono" style="font-size:11px">${esc(ev.current_per_phase_a.map(v => `${Number(v).toFixed(1)} A`).join(" / "))}</span>` : ""}</div>`).join("") || `<div class="notice">${esc(t("js.noEvEntities"))}</div>`}</div>
+    ${renderEvDetails()}
     ${renderStationIdentity()}`;
 }
 
@@ -2998,6 +3061,21 @@ const DETAIL_UNITS = {
     field: "state_of_charge", perPhase: false, legend: () => t("unit.soc"),
     format: v => `${Math.round(Number(v))} %`, axis: v => `${Math.round(v)} %`,
     domain: () => [0, 100],
+  },
+  evCurrent: {
+    field: "ev_current_per_phase_a", perPhase: true, legend: () => t("unit.evCurrent"),
+    format: v => `${Number(v).toFixed(1)} A`, axis: v => `${v.toFixed(0)} A`,
+    domain: values => [0, Math.max(1, ...values) * 1.15],
+  },
+  evPower: {
+    field: "ev_power_per_phase_w", perPhase: true, legend: () => t("unit.evPower"),
+    format: v => formatPower(Number(v)), axis: v => `${(v / 1000).toFixed(1)} kW`,
+    domain: values => [0, Math.max(100, ...values) * 1.15],
+  },
+  evEnergy: {
+    field: "ev_energy_charged_wh", perPhase: false, legend: () => t("unit.evEnergy"),
+    format: v => `${(Number(v) / 1000).toFixed(2)} kWh`, axis: v => `${(v / 1000).toFixed(1)} kWh`,
+    domain: values => [0, Math.max(100, ...values) * 1.15],
   },
 };
 
@@ -3395,6 +3473,37 @@ async function loadRecentEvents() {
 // The info box on the dashboard's intelligence panel: what the charging station declares
 // about itself (EVSECC scenarios 1+2), straight from the snapshot's charging_stations
 // records, refreshed with every poll.
+function renderEvDetails() {
+  const evs = state.snapshot?.ev?.vehicles || [];
+  if (!evs.length) return `<div class="notice" style="margin-top:13px">${esc(t("ev.none"))}</div>`;
+  const yesNo = v => v == null ? "" : (v ? "yes" : "no");
+  const num = (v, d = 0) => v == null ? "" : Number(v).toFixed(d);
+  return evs.map(ev => {
+    const limits = ev.charging_power_limits_w;
+    const power = Array.isArray(ev.power_per_phase_w) && ev.power_per_phase_w.length ? ev.power_per_phase_w.reduce((a, b) => a + b, 0) : null;
+    const rows = [
+      [t("ev.state"), [ev.charge_state, ev.connected === false ? "disconnected" : ""].filter(Boolean).join(" · ")],
+      [t("ev.soc"), ev.state_of_charge != null ? `${num(ev.state_of_charge)} %` : ""],
+      [t("ev.energy"), ev.energy_charged_wh != null ? `${num(ev.energy_charged_wh / 1000, 2)} kWh` : ""],
+      [t("ev.power"), power != null ? formatPower(power) : ""],
+      [t("ev.currents"), Array.isArray(ev.current_per_phase_a) && ev.current_per_phase_a.length ? ev.current_per_phase_a.map(v => `${num(v, 1)} A`).join(" / ") : ""],
+      [t("ev.limits"), limits ? `${num(limits.minimum)} / ${num(limits.maximum)} / ${num(limits.standby)} W` : ""],
+      [t("ev.ident"), Array.isArray(ev.identifications) ? ev.identifications.map(v => String(v).replace(/\u0000/g, "")).join(", ") : ""],
+      [t("ev.brand"), ev.manufacturer?.brand_name],
+      [t("ev.device"), [ev.manufacturer?.device_name, ev.manufacturer?.device_code ? `(${ev.manufacturer.device_code})` : ""].filter(Boolean).join(" ")],
+      [t("ev.serial"), ev.manufacturer?.serial_number],
+      [t("ev.comm"), ev.communication_standard],
+      [t("ev.asym"), yesNo(ev.asymmetric_charging)],
+      [t("ev.sleep"), yesNo(ev.in_sleep_mode)],
+      [t("ev.phases"), ev.phases_connected != null ? String(ev.phases_connected) : ""],
+      [t("ev.strategy"), ev.charge_strategy && ev.charge_strategy !== "unknown" ? ev.charge_strategy : ""],
+    ].filter(([, value]) => value);
+    return `<div class="notice" style="margin-top:13px"><strong>${esc(t("ev.title"))} [${esc((ev.entity || []).join(","))}]</strong>
+      ${rows.map(([label, value]) => `<div class="kv"><span>${esc(label)}</span><span class="mono">${esc(value)}</span></div>`).join("")}
+    </div>`;
+  }).join("");
+}
+
 function renderStationIdentity() {
   const stations = state.snapshot?.ev?.charging_stations || [];
   if (!stations.length) return "";

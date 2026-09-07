@@ -10,6 +10,7 @@ import (
 	"github.com/enbility/eebus-go/usecases/cem/evsecc"
 	"github.com/enbility/eebus-go/usecases/cem/evsoc"
 	spineapi "github.com/enbility/spine-go/api"
+	spinemodel "github.com/enbility/spine-go/model"
 )
 
 // EVCC wraps eebus-go's cem/evcc use case (evCommissioningAndConfiguration): connection
@@ -231,9 +232,13 @@ func (s *Stack) collectEV(ski string) []evRecord {
 		}
 		if v, err := s.evcem.uc.CurrentPerPhase(entity); err == nil {
 			rec.CurrentPerPhaseA = v
+		} else if v, ok := combinedPhaseValue(s.evcem.uc.LocalEntity, entity, spinemodel.MeasurementTypeTypeCurrent, spinemodel.ScopeTypeTypeACCurrent); ok {
+			rec.CurrentPerPhaseA = []float64{v}
 		}
 		if v, err := s.evcem.uc.PowerPerPhase(entity); err == nil {
 			rec.PowerPerPhaseW = v
+		} else if v, ok := combinedPhaseValue(s.evcem.uc.LocalEntity, entity, spinemodel.MeasurementTypeTypePower, spinemodel.ScopeTypeTypeACPower); ok {
+			rec.PowerPerPhaseW = []float64{v}
 		}
 		if v, err := s.evcem.uc.EnergyCharged(entity); err == nil {
 			rec.EnergyChargedWh = &v

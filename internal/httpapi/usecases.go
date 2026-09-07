@@ -30,6 +30,7 @@ func (s *Server) registerUsecaseRoutes() {
 	s.mux.HandleFunc("PUT /api/v1/opev/{ski}/limits", s.handleOPEVWriteLimits)
 	s.mux.HandleFunc("GET /api/v1/oscev/{ski}", s.handleOSCEVRead)
 	s.mux.HandleFunc("PUT /api/v1/oscev/{ski}/limits", s.handleOSCEVWriteLimits)
+	s.mux.HandleFunc("PUT /api/v1/cevc/{ski}/power-limits", s.handleCEVCWritePowerLimits)
 	s.mux.HandleFunc("GET /api/v1/ohpcf/{ski}", s.handleOHPCFRead)
 	s.mux.HandleFunc("GET /api/v1/evsecc/{ski}", s.handleEVSECCRead)
 	s.mux.HandleFunc("POST /api/v1/opev/heartbeat/start", s.handleOPEVHeartbeatStart)
@@ -446,4 +447,28 @@ func (s *Server) handleOSCEVOperatingState(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "failure": body.Failure})
+}
+
+// CEVC scenario 2: a power limitation curve for the EV.
+
+type powerLimitSlotsBody struct {
+	Slots []eebusgo.PowerLimitSlot `json:"slots"`
+}
+
+func (s *Server) handleCEVCWritePowerLimits(w http.ResponseWriter, r *http.Request) {
+	hint, err := entityHint(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_entity_hint", "detail": err.Error()})
+		return
+	}
+	var body powerLimitSlotsBody
+	if err := decodeBody(r, &body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "detail": err.Error()})
+		return
+	}
+	if err := s.stack.CEVC().WritePowerLimits(r.PathValue("ski"), body.Slots, hint); err != nil {
+		writeUsecaseError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "sent": body.Slots})
 }

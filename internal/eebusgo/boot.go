@@ -353,6 +353,7 @@ func (s *Stack) MGCP() *MGCP     { return s.mgcp }
 func (s *Stack) OPEV() *OPEV     { return s.opev }
 func (s *Stack) EVSECC() *EVSECC { return s.evsecc }
 func (s *Stack) OSCEV() *OSCEV   { return s.oscev }
+func (s *Stack) CEVC() *CEVC     { return s.cevc }
 func (s *Stack) OHPCF() *OHPCF   { return s.ohpcf }
 
 // Start (re-)starts the embedded stack. ship-go's mDNS manager clears its injected test

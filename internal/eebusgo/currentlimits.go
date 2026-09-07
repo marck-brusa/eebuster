@@ -138,8 +138,12 @@ func phaseName(s string) (spinemodel.ElectricalConnectionPhaseNameType, error) {
 		return spinemodel.ElectricalConnectionPhaseNameTypeB, nil
 	case "c", "l3", "3":
 		return spinemodel.ElectricalConnectionPhaseNameTypeC, nil
+	case "abc", "all", "total":
+		// A device that measures one combined phase (a wireless pad, a DC charger) declares
+		// acMeasuredPhases "abc"; a limit has to be written against that same phase name.
+		return spinemodel.ElectricalConnectionPhaseNameTypeAbc, nil
 	}
-	return "", fmt.Errorf("unknown phase %q (use a, b or c)", s)
+	return "", fmt.Errorf("unknown phase %q (use a, b, c or abc)", s)
 }
 
 // The OSCEV twin of the scenario 2/3 controls above.
