@@ -1,5 +1,16 @@
 # Release notes
 
+## 1.0.0-rc9
+
+- **CEVC power limitation curves reach the device.** The curve write is built here now instead
+  of going through eebus-go's `WritePowerLimits`, which two things made unusable against a KEO
+  device: it reads `constraints[0]` blindly, so on a device whose first constraint belongs to
+  the single-demand series -- one slot by definition -- every curve of more than one slot was
+  refused locally before anything was sent; and it describes a slot only by its time period,
+  while `keo_uc_api` treats the slot duration as mandatory and refused the whole curve
+  (`Validation failed for PowerLimitationCurve: A mandatory element was not set`). The write now
+  uses the constraints of the writeable constraints series and gives every slot its duration.
+
 ## 1.0.0-rc8
 
 - **History is sampled by the server, not by the browser.** `telemetry.Record` used to run only
