@@ -3079,18 +3079,21 @@ const DETAIL_UNITS = {
   },
 };
 
+// Keeps the array positional: a missing phase stays a hole rather than being dropped, so
+// index 1 is always L2. Compacting here shifted L3's value onto L2's line whenever a phase
+// was briefly absent, which drew phases that were never measured.
 function detailValues(sample, spec) {
   if (!spec.perPhase) {
     const v = Number(sample[spec.field]);
     return Number.isFinite(v) ? [v] : [];
   }
   const arr = sample[spec.field];
-  return Array.isArray(arr) ? arr.map(Number).filter(Number.isFinite) : [];
+  return Array.isArray(arr) ? arr.map(Number) : [];
 }
 
 function detailUnitHasData(unit) {
   const spec = DETAIL_UNITS[unit];
-  return state.history.some(sample => detailValues(sample, spec).length);
+  return state.history.some(sample => detailValues(sample, spec).some(Number.isFinite));
 }
 
 function drawDetailChart() {
@@ -3140,8 +3143,13 @@ function drawDetailChart() {
     ctx.fillText(spec.axis(hi - span * i / 2), 4, yy + 3);
   }
 
+  // Series are drawn by position so the colours stay pinned to L1/L2/L3, and a position that
+  // never carried a value is left out of the legend rather than shown as an empty line.
   const seriesCount = Math.max(...samples.map(sample => detailValues(sample, spec).length));
+  const drawn = [];
   for (let s = 0; s < seriesCount; s++) {
+    if (!samples.some(sample => Number.isFinite(detailValues(sample, spec)[s]))) continue;
+    drawn.push(s);
     let started = false;
     ctx.beginPath();
     ctx.strokeStyle = spec.perPhase ? phaseColors[s % phaseColors.length] : ink.green;
@@ -3157,7 +3165,7 @@ function drawDetailChart() {
   }
 
   document.getElementById("detail-legend").innerHTML = spec.perPhase
-    ? Array.from({length: seriesCount}, (_, s) =>
+    ? drawn.map(s =>
         `<span><i class="legend-dot" style="background:${esc(phaseColors[s % phaseColors.length])}"></i>${esc(PHASE_LABELS[s] || `#${s + 1}`)}</span>`).join("")
     : `<span><i class="legend-dot" style="background:${esc(ink.green)}"></i>${esc(spec.legend())}</span>`;
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"io"
 	"log"
@@ -390,6 +391,9 @@ func runServe(args []string) {
 	}
 
 	server := httpapi.New(cfg, *configPath, *scenariosDir, logs, stack, trustStore, frames)
+	samplingCtx, stopSampling := context.WithCancel(context.Background())
+	defer stopSampling()
+	server.StartSampling(samplingCtx)
 	httpServer := &http.Server{Addr: cfg.API.Bind + ":" + strconv.Itoa(cfg.API.Port), Handler: server.Handler()}
 	go func() {
 		log.Printf("dashboard listening on http://%s/ui", httpServer.Addr)

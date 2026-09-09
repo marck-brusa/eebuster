@@ -361,7 +361,7 @@ paths:
                   items:
                     type: object
                     properties:
-                      phase: {type: string, enum: [a, b, c]}
+                      phase: {type: string, enum: [a, b, c, abc], description: "abc addresses a combined-phase device, which reports one value for all three phases"}
                       value_a: {type: number}
                       is_active: {type: boolean}
       responses: { "200": { description: OK } }
@@ -390,7 +390,7 @@ paths:
                   items:
                     type: object
                     properties:
-                      phase: {type: string, enum: [a, b, c]}
+                      phase: {type: string, enum: [a, b, c, abc], description: "abc addresses a combined-phase device, which reports one value for all three phases"}
                       value_a: {type: number}
                       is_active: {type: boolean}
       responses: { "200": { description: OK } }

@@ -1,5 +1,22 @@
 # Release notes
 
+## 1.0.0-rc8
+
+- **History is sampled by the server, not by the browser.** `telemetry.Record` used to run only
+  inside the snapshot handler, so the chart's history existed only while a tab was polling it:
+  a backgrounded tab, whose timers the browser throttles to roughly once a minute, left ragged
+  gaps; two open tabs recorded every instant twice; and with nobody watching, nothing was
+  recorded at all. A ticker now records one sample per connected peer every five seconds,
+  independent of who is looking, which is what the store's twelve-hour depth always assumed.
+- **Per-phase chart series keep their position.** `detailValues` compacted the per-phase array
+  with `.filter(Number.isFinite)`, so a momentarily absent phase shifted every later phase down
+  one slot -- L3's values were drawn on L2's line, in L2's colour. Missing values are now holes
+  that break the line, and a position that never carried a value is dropped from the legend
+  instead of drawing an empty one.
+- **`abc` is documented in the API.** The OPEV and OSCEV limit schemas still advertised
+  `enum: [a, b, c]` although rc7 added combined-phase support; a device that reports one value
+  for all three phases is written with `phase: "abc"`.
+
 ## 1.0.0-rc7
 
 - **A vehicle panel on the dashboard.** The energy-assets card now renders every EV entity the

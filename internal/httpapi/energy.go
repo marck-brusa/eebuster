@@ -24,7 +24,6 @@ func (s *Server) handleEnergySnapshot(w http.ResponseWriter, r *http.Request) {
 		writeUsecaseError(w, err)
 		return
 	}
-	s.telemetry.Record(ski, snapshotSource(snap))
 	writeJSON(w, http.StatusOK, snap)
 }
 
