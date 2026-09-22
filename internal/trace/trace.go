@@ -70,10 +70,19 @@ type Store struct {
 	seq      int64
 	sessions map[string]*conformance.Session
 	// logWriter, when set, additionally appends every frame as one line in the "EEBus Hub"
-	// log format: `2026-03-16 05:19:57    [Send] <40-hex-ski><payload>`. That exact shape is
-	// what EEBusTracer's log tailing auto-detects, so pointing its --log-file at this file
-	// gives the deep-dive tracer a live feed with no protocol glue at all.
+	// log format: `2026-03-16 05:19:57    [Send] <40-hex-ski><payload>`, which is what
+	// EEBusTracer's `import` reads. Its live sources want a different line; see
+	// internal/tracerfeed.
 	logWriter io.Writer
+	// publisher, when set, additionally receives every frame in EEBusTracer's live log
+	// format, so its TCP and UDP capture sources can follow a session as it happens.
+	publisher Publisher
+}
+
+// Publisher receives every frame as it is recorded. Implemented by tracerfeed.Feed; kept as an
+// interface here so this package keeps no dependency on the network side.
+type Publisher interface {
+	Publish(dir, ski, payload string)
 }
 
 func New() *Store {
@@ -86,6 +95,13 @@ func (s *Store) SetLogWriter(w io.Writer) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.logWriter = w
+}
+
+// SetPublisher attaches the live tracer feed (see publisher). Pass nil to detach.
+func (s *Store) SetPublisher(p Publisher) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.publisher = p
 }
 
 // Add records one frame and returns the stored entry (including findings), so the caller can
@@ -126,7 +142,13 @@ func (s *Store) Add(stack, dir, ski, payload string) Entry {
 		_, _ = fmt.Fprintf(s.logWriter, "%s    [%s] %s%s\n",
 			time.Now().Format("2006-01-02 15:04:05"), direction, ski, payload)
 	}
+	publisher := s.publisher
 	s.mu.Unlock()
+
+	// Outside the lock: a tracer that stops reading must not hold up frame capture.
+	if publisher != nil {
+		publisher.Publish(dir, ski, payload)
+	}
 	return entry
 }
 

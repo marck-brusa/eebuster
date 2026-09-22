@@ -22,6 +22,7 @@ import (
 	"github.com/marck-brusa/eebuster/internal/simulator"
 	"github.com/marck-brusa/eebuster/internal/staticmdns"
 	"github.com/marck-brusa/eebuster/internal/trace"
+	"github.com/marck-brusa/eebuster/internal/tracerfeed"
 	"github.com/marck-brusa/eebuster/internal/truststore"
 )
 
@@ -109,6 +110,8 @@ func runServe(args []string) {
 	frameLogFlag := fs.String("frame-log", "", "append every raw SHIP frame to this file in EEBus Hub log format, ready for EEBusTracer to import (defaults to <data-dir>/frames.log when the bundled tracer runs)")
 	tracerFlag := fs.Bool("tracer", true, "run the bundled eebustracer web UI on localhost and link it from the dashboard sidebar (skipped when the binary is not next to this executable, or when config sets tracer_url)")
 	tracerPortFlag := fs.Int("tracer-port", 8090, "port for the bundled eebustracer UI")
+	tracerTCPFlag := fs.String("tracer-feed-tcp", "127.0.0.1:54546", "serve the live frame stream here for EEBusTracer's `capture --tcp` (empty to disable)")
+	tracerUDPFlag := fs.String("tracer-feed-udp", "127.0.0.1:4712", "answer EEBusTracer's `capture --target` on this UDP address (empty to disable)")
 	fs.Parse(args)
 	autoAcceptSet, requireApprovalSet, noFilterSet, configSet, dataDirSet, scenariosSet := false, false, false, false, false, false
 	fs.Visit(func(f *flag.Flag) {
@@ -265,6 +268,28 @@ func runServe(args []string) {
 		defer frameLog.Close()
 		frames.SetLogWriter(frameLog)
 		log.Printf("frame log: appending every raw SHIP frame to %s (EEBus Hub format; import it in EEBusTracer)", frameLogPath)
+	}
+
+	// The live counterpart of the frame log: EEBusTracer attaches to one of these and follows
+	// the session as it happens, instead of importing the file afterwards.
+	if *tracerTCPFlag != "" || *tracerUDPFlag != "" {
+		feed := tracerfeed.New()
+		defer feed.Close()
+		if *tracerTCPFlag != "" {
+			if err := feed.ListenTCP(*tracerTCPFlag); err != nil {
+				log.Printf("tracer feed: TCP %s unavailable: %v", *tracerTCPFlag, err)
+			} else {
+				log.Printf("tracer feed: eebustracer capture --tcp %s", *tracerTCPFlag)
+			}
+		}
+		if *tracerUDPFlag != "" {
+			if err := feed.ListenUDP(*tracerUDPFlag); err != nil {
+				log.Printf("tracer feed: UDP %s unavailable: %v", *tracerUDPFlag, err)
+			} else {
+				log.Printf("tracer feed: eebustracer capture --target %s", *tracerUDPFlag)
+			}
+		}
+		frames.SetPublisher(feed)
 	}
 
 	var simDevices []*simulator.Device

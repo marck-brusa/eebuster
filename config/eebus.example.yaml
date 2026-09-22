@@ -174,3 +174,8 @@ simulator:
 # the dashboard sidebar. Raw frames land in <data-dir>/frames.log for importing in its UI.
 # Set a URL here only to link a self-managed instance instead of spawning the bundled one:
 # tracer_url: "http://127.0.0.1:8090"
+#
+# For a live view instead of importing after the fact, every frame is also streamed to
+# EEBusTracer's capture sources: `eebustracer capture --tcp 127.0.0.1:54546`, or
+# `eebustracer capture --target 127.0.0.1:4712` for the UDP one. Change the addresses with
+# -tracer-feed-tcp / -tracer-feed-udp; an empty string disables that transport.

@@ -1,5 +1,23 @@
 # Release notes
 
+## 1.0.0-rc10
+
+- **EEBusTracer can follow a session live.** Until now the only way to get frames into the
+  deep-dive tracer was the frame log plus a manual `import`, which is a snapshot: anything
+  captured after it needed another import. Every frame is now also streamed to the tracer's two
+  live capture sources, so `eebustracer capture --tcp 127.0.0.1:54546` or
+  `eebustracer capture --target 127.0.0.1:4712` shows traffic as it happens. Addresses are
+  configurable with `-tracer-feed-tcp` / `-tracer-feed-udp`, and an empty string disables one.
+
+  The two transports differ, and the tracer drives both: the TCP source dials in and only
+  reads, so that side is a plain server, while the UDP source announces itself with a single
+  datagram and then listens, so that side registers the sender and answers. A tracer that stops
+  reading loses lines rather than stalling frame capture.
+
+  This also corrects a wrong comment in `internal/trace`: the frame log's "EEBus Hub" line is
+  what the tracer's `import` reads, not what its log tailing accepts -- `--log-file` pointed at
+  `frames.log` silently rejects every line.
+
 ## 1.0.0-rc9
 
 - **CEVC power limitation curves reach the device.** The curve write is built here now instead
