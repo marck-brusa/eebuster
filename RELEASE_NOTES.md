@@ -1,5 +1,28 @@
 # Release notes
 
+## 1.0.0-rc11
+
+- **OPEV and OSCEV work against a device that declares one combined phase.** A device that
+  meters all phases together (a wireless pad, a DC charger) declares its current limit on phase
+  `abc`. eebus-go's per-phase readers and writers only know `a`, `b` and `c`, so against such a
+  device "Apply obligation" failed with `peer_rpc_error` / `missing data` (nothing was sent), a
+  read showed no limits or constraints, and `opev-asymmetric`, `opev-limit-roundtrip` and
+  `opev-zero-pause` failed.
+  - `GET /opev/{ski}` and `GET /oscev/{ski}` add `phases`, the phases the device declares its
+    limit on, and fall back to the combined phase for `limits` and `constraints` when the
+    per-phase view is empty.
+  - A write accepts `{"phase": "each"}` as its only entry: one limit per declared phase, same
+    value. The response's `sent` lists what was actually written.
+  - A write naming none of the declared phases is refused with `422 phase_not_declared`,
+    listing the declared ones, instead of `502 peer_rpc_error` / `missing data`.
+  - The dashboard reads the declared phases before every write and shows a single
+    "L1-L3 combined" input when the device declares only `abc`.
+  - `opev-limit-roundtrip` and `opev-zero-pause` write with `phase: each`. `opev-asymmetric`
+    gets the new scenario requirement `opev_phases: [a, b, c]` and is skipped on a
+    combined-phase device, which has no per-phase limit to write.
+  - The simulated EV takes `combined_phase: true` to publish its measurement and limit on
+    `abc`, so this can be reproduced without hardware.
+
 ## 1.0.0-rc10
 
 - **EEBusTracer can follow a session live.** Until now the only way to get frames into the

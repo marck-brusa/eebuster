@@ -143,6 +143,9 @@ type SimulatedEV struct {
 	MaxCurrentA float64 `yaml:"max_current_a" json:"max_current_a"`
 	MinCurrentA float64 `yaml:"min_current_a" json:"min_current_a"`
 	Phases      int     `yaml:"phases" json:"phases"`
+	// CombinedPhase publishes one current measurement and one limit on the combined phase
+	// "abc" instead of one per phase, as a device that meters all phases together does.
+	CombinedPhase bool `yaml:"combined_phase" json:"combined_phase"`
 	// ChargeSpeedup compresses simulated time so a charge is watchable: at the default 60,
 	// one real second of charging fills the battery as one simulated minute would. Set 1 for
 	// real time.

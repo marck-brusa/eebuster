@@ -15,7 +15,8 @@ import (
 // writing *recommendations* (self-consumption optimization -- the EV may follow them).
 // Both wrap the upstream cem/{opev,oscev} clients; the REST shapes are shared.
 
-// PhaseLimit is one per-phase current limit in the REST shape. Phase is "a", "b" or "c".
+// PhaseLimit is one per-phase current limit in the REST shape. Phase is "a", "b", "c" or the
+// combined "abc"; a write may also use "each" for every phase the device declares.
 type PhaseLimit struct {
 	Phase        string  `json:"phase"`
 	ValueA       float64 `json:"value_a"`
@@ -24,7 +25,7 @@ type PhaseLimit struct {
 }
 
 // CurrentConstraints carries the EV's declared per-phase current boundaries, index-aligned
-// with phases a/b/c as far as the device reports them.
+// with the declared phases as far as the device reports them.
 type CurrentConstraints struct {
 	MinA     []float64 `json:"min_a"`
 	MaxA     []float64 `json:"max_a"`
@@ -38,27 +39,23 @@ func (o *OPEV) Read(ski string, entityHint []uint) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := map[string]any{}
-	if limits, err := o.uc.LoadControlLimits(entity); err == nil {
-		out["limits"] = phaseLimitsOut(limits)
-	}
-	if min, max, def, err := o.uc.CurrentLimits(entity); err == nil {
-		out["constraints"] = CurrentConstraints{MinA: min, MaxA: max, DefaultA: def}
-	}
-	return out, nil
+	limits := func() ([]ucapi.LoadLimitsPhase, error) { return o.uc.LoadControlLimits(entity) }
+	constraints := func() ([]float64, []float64, []float64, error) { return o.uc.CurrentLimits(entity) }
+	return readPhaseLimits(o.uc.LocalEntity, entity, opevLimitFilter, limits, constraints), nil
 }
 
-func (o *OPEV) WriteLimits(ski string, limits []PhaseLimit, entityHint []uint) error {
+// WriteLimits writes the limits and returns the entries it sent, with a {phase: "each"}
+// entry expanded to the phases the device declares.
+func (o *OPEV) WriteLimits(ski string, limits []PhaseLimit, entityHint []uint) ([]PhaseLimit, error) {
 	entity, err := resolveEntity(o.uc.RemoteEntitiesScenarios(), ski, entityHint)
 	if err != nil {
+		return nil, err
+	}
+	write := func(in []ucapi.LoadLimitsPhase) error {
+		_, err := o.uc.WriteLoadControlLimits(entity, in, nil)
 		return err
 	}
-	in, err := phaseLimitsIn(limits)
-	if err != nil {
-		return err
-	}
-	_, err = o.uc.WriteLoadControlLimits(entity, in, nil)
-	return err
+	return writePhaseLimits(o.uc.LocalEntity, entity, opevLimitFilter, limits, write)
 }
 
 // Heartbeat controls OPEV scenario 2 ("EV checks Energy Guard availability"): the EV must
@@ -78,27 +75,23 @@ func (o *OSCEV) Read(ski string, entityHint []uint) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := map[string]any{}
-	if limits, err := o.uc.LoadControlLimits(entity); err == nil {
-		out["limits"] = phaseLimitsOut(limits)
-	}
-	if min, max, def, err := o.uc.CurrentLimits(entity); err == nil {
-		out["constraints"] = CurrentConstraints{MinA: min, MaxA: max, DefaultA: def}
-	}
-	return out, nil
+	limits := func() ([]ucapi.LoadLimitsPhase, error) { return o.uc.LoadControlLimits(entity) }
+	constraints := func() ([]float64, []float64, []float64, error) { return o.uc.CurrentLimits(entity) }
+	return readPhaseLimits(o.uc.LocalEntity, entity, oscevLimitFilter, limits, constraints), nil
 }
 
-func (o *OSCEV) WriteLimits(ski string, limits []PhaseLimit, entityHint []uint) error {
+// WriteLimits writes the limits and returns the entries it sent, with a {phase: "each"}
+// entry expanded to the phases the device declares.
+func (o *OSCEV) WriteLimits(ski string, limits []PhaseLimit, entityHint []uint) ([]PhaseLimit, error) {
 	entity, err := resolveEntity(o.uc.RemoteEntitiesScenarios(), ski, entityHint)
 	if err != nil {
+		return nil, err
+	}
+	write := func(in []ucapi.LoadLimitsPhase) error {
+		_, err := o.uc.WriteLoadControlLimits(entity, in, nil)
 		return err
 	}
-	in, err := phaseLimitsIn(limits)
-	if err != nil {
-		return err
-	}
-	_, err = o.uc.WriteLoadControlLimits(entity, in, nil)
-	return err
+	return writePhaseLimits(o.uc.LocalEntity, entity, oscevLimitFilter, limits, write)
 }
 
 func phaseLimitsOut(limits []ucapi.LoadLimitsPhase) []PhaseLimit {
@@ -143,7 +136,7 @@ func phaseName(s string) (spinemodel.ElectricalConnectionPhaseNameType, error) {
 		// acMeasuredPhases "abc"; a limit has to be written against that same phase name.
 		return spinemodel.ElectricalConnectionPhaseNameTypeAbc, nil
 	}
-	return "", fmt.Errorf("unknown phase %q (use a, b, c or abc)", s)
+	return "", fmt.Errorf("unknown phase %q (use a, b, c, abc or each)", s)
 }
 
 // The OSCEV twin of the scenario 2/3 controls above.

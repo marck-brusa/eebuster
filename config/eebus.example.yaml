@@ -115,6 +115,8 @@ simulator:
         max_current_a: 16       # per phase, as the vehicle declares it
         min_current_a: 6        # below this the vehicle pauses instead of charging
         phases: 3
+        combined_phase: false   # true: one measurement and one limit on phase "abc", as a
+                                # device that meters all phases together publishes them
         charge_speedup: 60      # simulated seconds per real second, so a charge is
                                 # watchable; 1 charges in real time
 

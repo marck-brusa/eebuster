@@ -340,7 +340,7 @@ paths:
   /api/v1/opev/{ski}:
     get:
       tags: [use-cases]
-      summary: Per-phase charging-current obligations (OPEV) — active limits and the EV's declared min/max/default constraints
+      summary: Per-phase charging-current obligations (OPEV) — active limits, the EV's declared min/max/default constraints, and the phases it declares the limit on
       parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
       responses: { "200": { description: OK } }
 
@@ -361,7 +361,7 @@ paths:
                   items:
                     type: object
                     properties:
-                      phase: {type: string, enum: [a, b, c, abc], description: "abc addresses a combined-phase device, which reports one value for all three phases"}
+                      phase: {type: string, enum: [a, b, c, abc, each], description: "abc addresses a combined-phase device, which reports one value for all three phases; each, as the only entry, writes one limit per phase the device declares (GET returns them as phases)"}
                       value_a: {type: number}
                       is_active: {type: boolean}
       responses: { "200": { description: OK } }
@@ -390,7 +390,7 @@ paths:
                   items:
                     type: object
                     properties:
-                      phase: {type: string, enum: [a, b, c, abc], description: "abc addresses a combined-phase device, which reports one value for all three phases"}
+                      phase: {type: string, enum: [a, b, c, abc, each], description: "abc addresses a combined-phase device, which reports one value for all three phases; each, as the only entry, writes one limit per phase the device declares (GET returns them as phases)"}
                       value_a: {type: number}
                       is_active: {type: boolean}
       responses: { "200": { description: OK } }

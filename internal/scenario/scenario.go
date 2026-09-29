@@ -102,10 +102,13 @@ type spec struct {
 type requirementsSpec struct {
 	Capabilities []string `yaml:"capabilities"`
 	UseCases     []string `yaml:"use_cases"`
+	// OpevPhases skips the scenario when the peer declares its OPEV limits on other phases,
+	// e.g. per-phase tests against a device that declares only the combined "abc".
+	OpevPhases []string `yaml:"opev_phases"`
 }
 
 func (r requirementsSpec) asMap() map[string]any {
-	return map[string]any{"capabilities": r.Capabilities, "use_cases": r.UseCases}
+	return map[string]any{"capabilities": r.Capabilities, "use_cases": r.UseCases, "opev_phases": r.OpevPhases}
 }
 
 type Runner struct {

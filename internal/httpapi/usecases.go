@@ -65,7 +65,8 @@ func entityHint(r *http.Request) ([]uint, error) {
 
 // writeUsecaseError maps use-case errors to the same status codes app.py's exception
 // handlers used: entity ambiguity -> 409 with candidates, not-found -> 404, anything else
-// (a real upstream/SPINE error) -> 502, matching "peer_rpc_error" semantics.
+// (a real upstream/SPINE error) -> 502, matching "peer_rpc_error" semantics. A current limit
+// on phases the device does not declare is the caller's mistake, not the peer's -> 422.
 func writeUsecaseError(w http.ResponseWriter, err error) {
 	if e, ok := err.(*eebusgo.EntityAmbiguousError); ok {
 		writeJSON(w, http.StatusConflict, map[string]any{
@@ -75,6 +76,12 @@ func writeUsecaseError(w http.ResponseWriter, err error) {
 	}
 	if e, ok := err.(*eebusgo.NotFoundError); ok {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found", "detail": e.Detail})
+		return
+	}
+	if e, ok := err.(*eebusgo.PhaseNotDeclaredError); ok {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
+			"error": "phase_not_declared", "detail": e.Error(), "requested": e.Requested, "declared": e.Declared,
+		})
 		return
 	}
 	writeJSON(w, http.StatusBadGateway, map[string]string{"error": "peer_rpc_error", "detail": err.Error()})
@@ -325,11 +332,12 @@ func (s *Server) handleOPEVWriteLimits(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "detail": err.Error()})
 		return
 	}
-	if err := s.stack.OPEV().WriteLimits(r.PathValue("ski"), body.Limits, hint); err != nil {
+	sent, err := s.stack.OPEV().WriteLimits(r.PathValue("ski"), body.Limits, hint)
+	if err != nil {
 		writeUsecaseError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "sent": body.Limits})
+	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "sent": sent})
 }
 
 func (s *Server) handleOSCEVRead(w http.ResponseWriter, r *http.Request) {
@@ -357,11 +365,12 @@ func (s *Server) handleOSCEVWriteLimits(w http.ResponseWriter, r *http.Request) 
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "detail": err.Error()})
 		return
 	}
-	if err := s.stack.OSCEV().WriteLimits(r.PathValue("ski"), body.Limits, hint); err != nil {
+	sent, err := s.stack.OSCEV().WriteLimits(r.PathValue("ski"), body.Limits, hint)
+	if err != nil {
 		writeUsecaseError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "sent": body.Limits})
+	writeJSON(w, http.StatusOK, map[string]any{"accepted": true, "sent": sent})
 }
 
 func (s *Server) handleOHPCFRead(w http.ResponseWriter, r *http.Request) {

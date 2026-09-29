@@ -5,12 +5,14 @@ description: >
   V1.0.1b scenario 1] lets an Energy Guard keep a high current on lightly loaded phases —
   a device that averages or symmetrizes the phases silently defeats the point of the use
   case. Needs a vehicle associated (the EV entity exists only during a session on some
-  devices).
+  devices). Skipped on a device that declares its limit only on the combined phase "abc":
+  there is no per-phase limit to write.
 category: Conformance
 risk: live-control
 requires:
   capabilities: [opev.write]
   use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+  opev_phases: [a, b, c]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}

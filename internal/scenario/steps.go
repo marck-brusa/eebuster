@@ -311,6 +311,48 @@ func (rn *Runner) missingRequirements(req requirementsSpec, context map[string]a
 		}
 	}
 
+	if len(req.OpevPhases) > 0 {
+		ski, _ := lookup("peer.ski", context)
+		skiStr, _ := ski.(string)
+		if skiStr == "" {
+			missing = append(missing, "no peer selected for phase requirements")
+		} else if declared, ok := rn.declaredOpevPhases(skiStr); ok {
+			missing = append(missing, missingPhases(req.OpevPhases, declared)...)
+		}
+	}
+
+	return missing
+}
+
+// declaredOpevPhases asks for the phases the peer declares its OPEV limits on. Not knowing
+// them (no vehicle, no descriptions yet) is no reason to skip: the scenario then runs and
+// fails on its own, which is what it documents.
+func (rn *Runner) declaredOpevPhases(ski string) ([]string, bool) {
+	resp, err := rn.client.Get(rn.baseURL + "/api/v1/opev/" + ski)
+	if err != nil {
+		return nil, false
+	}
+	defer resp.Body.Close()
+	var body struct {
+		Phases []string `json:"phases"`
+	}
+	if resp.StatusCode >= 400 || json.NewDecoder(resp.Body).Decode(&body) != nil || len(body.Phases) == 0 {
+		return nil, false
+	}
+	return body.Phases, true
+}
+
+func missingPhases(required, declared []string) []string {
+	have := map[string]bool{}
+	for _, p := range declared {
+		have[p] = true
+	}
+	var missing []string
+	for _, p := range required {
+		if !have[p] {
+			missing = append(missing, fmt.Sprintf("peer declares its OPEV limits on phase(s) %s, not %s", strings.Join(declared, ", "), p))
+		}
+	}
 	return missing
 }
 

@@ -763,17 +763,21 @@ tr.phase-asym .phase-bar{background:var(--amber)}
             <div class="panel-head"><div><div class="uc-code">OPEV / OSCEV</div><h3 data-i18n="uc.current.title">Per-phase charging current</h3></div><span class="badge" data-support="overloadProtectionByEvChargingCurrentCurtailment" data-i18n="badge.unknown">unknown</span></div>
             <div class="live-warning"><strong>!</strong><span data-i18n="current.warning">Obligations cap the EV's charging current immediately; recommendations are advisory.</span></div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px">
-              <div class="field" style="margin:0">
+              <div class="field" style="margin:0" data-phase-field="a">
                 <label for="opev-a"><input type="checkbox" id="opev-en-a" checked> L1 (A)</label>
                 <input id="opev-a" type="number" min="0" step="0.1" value="16">
               </div>
-              <div class="field" style="margin:0">
+              <div class="field" style="margin:0" data-phase-field="b">
                 <label for="opev-b"><input type="checkbox" id="opev-en-b" checked> L2 (A)</label>
                 <input id="opev-b" type="number" min="0" step="0.1" value="16">
               </div>
-              <div class="field" style="margin:0">
+              <div class="field" style="margin:0" data-phase-field="c">
                 <label for="opev-c"><input type="checkbox" id="opev-en-c" checked> L3 (A)</label>
                 <input id="opev-c" type="number" min="0" step="0.1" value="16">
+              </div>
+              <div class="field" style="margin:0" data-phase-field="abc" hidden>
+                <label for="opev-abc"><input type="checkbox" id="opev-en-abc" checked> <span data-i18n="current.combined">L1–L3 combined (A)</span></label>
+                <input id="opev-abc" type="number" min="0" step="0.1" value="16">
               </div>
             </div>
             <div class="muted" id="opev-constraints" style="font-size:11px;margin-top:5px" data-i18n="current.noConstraints">EV constraints appear after a read (often only published during a session).</div>
@@ -1028,6 +1032,7 @@ const I18N = {
     "current.default": "default",
     "current.noConstraints": "EV constraints appear after a read (often only published during a session).",
     "current.phasesNone": "Select at least one phase",
+    "current.combined": "L1–L3 combined (A)",
     "js.pauseSent": "Pause (0 A) sent",
     "js.hbStarted": "OPEV heartbeat started",
     "js.hbStopped": "OPEV heartbeat stopped",
@@ -1459,6 +1464,7 @@ const I18N = {
     "current.default": "Standard",
     "current.noConstraints": "EV-Grenzen erscheinen nach einem Lesen (oft nur während einer Ladesitzung).",
     "current.phasesNone": "Mindestens eine Phase auswählen",
+    "current.combined": "L1–L3 gemeinsam (A)",
     "js.pauseSent": "Pause (0 A) gesendet",
     "js.hbStarted": "OPEV-Heartbeat gestartet",
     "js.hbStopped": "OPEV-Heartbeat gestoppt",
@@ -1890,6 +1896,7 @@ const I18N = {
     "current.default": "默认",
     "current.noConstraints": "读取后显示电动车约束（通常仅在充电会话期间发布）。",
     "current.phasesNone": "请至少选择一相",
+    "current.combined": "L1–L3 合并 (A)",
     "js.pauseSent": "已发送暂停（0 A）",
     "js.hbStarted": "已启动 OPEV 心跳",
     "js.hbStopped": "已停止 OPEV 心跳",
@@ -3247,7 +3254,7 @@ async function usecaseRead(kind) {
       : kind === "ohpcf" ? "out-ohpcf"
       : kind === "evsecc" ? "out-assets"
       : "out-monitoring";
-    if (kind === "opev" || kind === "oscev") renderCurrentConstraints(result);
+    if (kind === "opev" || kind === "oscev") { applyDeclaredPhases(result.phases); renderCurrentConstraints(result); }
   }
   document.getElementById(output).textContent = json(result);
   return result;
@@ -3534,8 +3541,22 @@ function renderStationIdentity() {
 
 // ---- Per-phase charging current (OPEV obligations / OSCEV recommendations) --------------
 
+const CURRENT_PHASES = ["a", "b", "c", "abc"];
+
+// Shows one current input per phase the device declares its limit on: L1-L3 for a per-phase
+// device, a single combined input for one that declares only "abc". Unknown -> L1-L3.
+function applyDeclaredPhases(phases) {
+  const declared = Array.isArray(phases) && phases.some(p => CURRENT_PHASES.includes(p)) ? phases : ["a", "b", "c"];
+  const combined = document.querySelector('[data-phase-field="abc"]');
+  if (combined.hidden && declared.includes("abc")) document.getElementById("opev-abc").value = document.getElementById("opev-a").value;
+  CURRENT_PHASES.forEach(phase => {
+    document.querySelector(`[data-phase-field="${phase}"]`).hidden = !declared.includes(phase);
+  });
+}
+
 function currentLimitsBody(active, forcedValue = null) {
-  const limits = ["a", "b", "c"]
+  const limits = CURRENT_PHASES
+    .filter(phase => !document.querySelector(`[data-phase-field="${phase}"]`).hidden)
     .filter(phase => document.getElementById(`opev-en-${phase}`).checked)
     .map(phase => ({
       phase,
@@ -3557,8 +3578,10 @@ function renderCurrentConstraints(result) {
   }
   const fmt = arr => (arr && arr.length ? arr.join(" / ") : "—");
   host.textContent = `${t("current.constraints")}: min ${fmt(c.min_a)} A · max ${fmt(c.max_a)} A · ${t("current.default")} ${fmt(c.default_a)} A`;
-  ["a", "b", "c"].forEach((phase, i) => {
+  const phases = Array.isArray(result.phases) && result.phases.length ? result.phases : ["a", "b", "c"];
+  phases.forEach((phase, i) => {
     const input = document.getElementById(`opev-${phase}`);
+    if (!input) return;
     if (c.min_a && c.min_a[i] != null) input.min = c.min_a[i];
     if (c.max_a && c.max_a[i] != null) input.max = c.max_a[i];
   });
@@ -3580,6 +3603,13 @@ async function opevOperatingState(failure) {
 async function writeCurrentLimits(kind, active, forcedValue = null) {
   if (!state.selectedSki) throw new Error(t("js.selectDeviceFirst"));
   const entity = document.getElementById("uc-entity").value;
+  try {
+    const current = await api(withEntity(`/${kind}/${encodeURIComponent(state.selectedSki)}`, entity));
+    applyDeclaredPhases(current.phases);
+    renderCurrentConstraints(current);
+  } catch (_) {
+    // The write reports the same resolution failure with its own error.
+  }
   const result = await api(withEntity(`/${kind}/${encodeURIComponent(state.selectedSki)}/limits`, entity), {
     method: "PUT", headers: {"content-type": "application/json"},
     body: JSON.stringify(currentLimitsBody(active, forcedValue)),

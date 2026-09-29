@@ -97,6 +97,23 @@ var evPhaseNames = []model.ElectricalConnectionPhaseNameType{
 	model.ElectricalConnectionPhaseNameTypeC,
 }
 
+// measuredPhases names the phase of each current measurement, parameter and limit the vehicle
+// publishes: one per connected phase, or the single combined "abc".
+func measuredPhases(cfg config.SimulatedEV) []model.ElectricalConnectionPhaseNameType {
+	if cfg.CombinedPhase {
+		return []model.ElectricalConnectionPhaseNameType{model.ElectricalConnectionPhaseNameTypeAbc}
+	}
+	return evPhaseNames[:cfg.Phases]
+}
+
+// phasesPerMeasurement is how many connected phases each published current flows on.
+func phasesPerMeasurement(cfg config.SimulatedEV) float64 {
+	if cfg.CombinedPhase {
+		return float64(cfg.Phases)
+	}
+	return 1
+}
+
 // newEVSim attaches the vehicle as a sub-entity of the station's own entity, which is how
 // SPINE models a car plugged into a charger: the EVSE is entity [1], the EV it currently
 // holds is [1,1]. A CEM resolves the EV use cases to that address.
@@ -109,8 +126,8 @@ func newEVSim(id string, cfg config.SimulatedEV, device spineapi.DeviceLocalInte
 	e := &evSim{
 		cfg: cfg, id: id, entity: entity,
 		soc:        cfg.SoCStartPercent,
-		curtailedA: make([]float64, cfg.Phases),
-		limitOn:    make([]bool, cfg.Phases),
+		curtailedA: make([]float64, len(measuredPhases(cfg))),
+		limitOn:    make([]bool, len(measuredPhases(cfg))),
 		lastTick:   time.Now(),
 		stop:       make(chan struct{}),
 	}
@@ -232,7 +249,7 @@ func (e *evSim) addElectricalFeatures() error {
 	// One current measurement per phase, each paired with the electrical-connection parameter
 	// that names its phase and carries its permitted range. OPEV curtails by pointing a limit
 	// at these same MeasurementIds, so the pairing is what makes curtailment addressable.
-	for i := 0; i < e.cfg.Phases; i++ {
+	for i, phase := range measuredPhases(e.cfg) {
 		id := meas.AddDescription(model.MeasurementDescriptionDataType{
 			MeasurementType: util.Ptr(model.MeasurementTypeTypeCurrent),
 			CommodityType:   util.Ptr(model.CommodityTypeTypeElectricity),
@@ -247,7 +264,7 @@ func (e *evSim) addElectricalFeatures() error {
 		paramID := ec.AddParameterDescription(model.ElectricalConnectionParameterDescriptionDataType{
 			ElectricalConnectionId: &e.ecID,
 			MeasurementId:          id,
-			AcMeasuredPhases:       util.Ptr(evPhaseNames[i]),
+			AcMeasuredPhases:       util.Ptr(phase),
 			ScopeType:              util.Ptr(model.ScopeTypeTypeACCurrent),
 		})
 		if paramID == nil {
@@ -285,7 +302,7 @@ func (e *evSim) addElectricalFeatures() error {
 		if ec.AddParameterDescription(model.ElectricalConnectionParameterDescriptionDataType{
 			ElectricalConnectionId: &e.ecID,
 			MeasurementId:          powerID,
-			AcMeasuredPhases:       util.Ptr(evPhaseNames[i]),
+			AcMeasuredPhases:       util.Ptr(phase),
 			ScopeType:              util.Ptr(model.ScopeTypeTypeACPower),
 		}) == nil {
 			return fmt.Errorf("simulator %s: EV power parameter %d", e.id, i)
@@ -361,7 +378,7 @@ func (e *evSim) addLoadControl() error {
 	}
 	e.lc = lc
 
-	for i := 0; i < e.cfg.Phases; i++ {
+	for i := range measuredPhases(e.cfg) {
 		id := lc.AddLimitDescription(model.LoadControlLimitDescriptionDataType{
 			LimitType:      util.Ptr(model.LoadControlLimitTypeTypeMaxValueLimit),
 			LimitCategory:  util.Ptr(model.LoadControlCategoryTypeObligation),
@@ -408,7 +425,7 @@ func (e *evSim) announceUseCases() {
 // pauses charging rather than undercutting it -- what a real EV does, and the reason a 0 A
 // obligation is a pause signal rather than a trickle.
 func (e *evSim) chargingCurrentA(stationLimitA float64) []float64 {
-	out := make([]float64, e.cfg.Phases)
+	out := make([]float64, len(e.limitOn))
 	if e.finished {
 		return out
 	}
@@ -439,7 +456,7 @@ func (e *evSim) tick(stationLimitA float64) (powerW float64) {
 	e.stationA = stationLimitA
 	currents := e.chargingCurrentA(stationLimitA)
 	for _, a := range currents {
-		powerW += a * evNominalV
+		powerW += a * evNominalV * phasesPerMeasurement(e.cfg)
 	}
 	if elapsed > 0 && powerW > 0 {
 		// Simulated time runs faster than the wall clock so a charge is watchable.
@@ -489,7 +506,7 @@ func (e *evSim) publish() {
 	for i := range currents {
 		data = append(data,
 			measurement(e.currentIDs[i], currents[i]),
-			measurement(e.powerIDs[i], currents[i]*evNominalV),
+			measurement(e.powerIDs[i], currents[i]*evNominalV*phasesPerMeasurement(e.cfg)),
 		)
 	}
 	if err := e.meas.UpdateDataForIds(data); err != nil {
@@ -538,7 +555,7 @@ func (e *evSim) applyWrittenLimits() {
 		}
 		if e.limitOn[i] != active || e.curtailedA[i] != value {
 			log.Printf("simulator[%s]: EV phase %s obligation -> %.1fA active=%v",
-				e.id, evPhaseNames[i], value, active)
+				e.id, measuredPhases(e.cfg)[i], value, active)
 		}
 		e.limitOn[i] = active
 		e.curtailedA[i] = value
@@ -553,9 +570,18 @@ func (e *evSim) SoC() float64 {
 }
 
 // Currents reports the per-phase charging current for the station's own measurements, so
-// what the station meters and what the vehicle reports cannot drift apart.
+// what the station meters and what the vehicle reports cannot drift apart. A combined-phase
+// vehicle draws its one current on every connected phase.
 func (e *evSim) Currents() []float64 {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return e.chargingCurrentA(e.stationA)
+	currents := e.chargingCurrentA(e.stationA)
+	if !e.cfg.CombinedPhase {
+		return currents
+	}
+	out := make([]float64, e.cfg.Phases)
+	for i := range out {
+		out[i] = currents[0]
+	}
+	return out
 }
