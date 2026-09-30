@@ -1963,6 +1963,8 @@ const I18N = {
     "help.title": "快速入门与提示",
     "help.qsTitle": "快速入门",
     "help.hintsTitle": "出现故障时",
+    "help.qs": "<ol class=\"help-list\"><li><strong>双向配对。</strong>设备也必须信任我们：在设备自己的 EEBUS 配对中输入<em>本测试平台的 SKI</em>（侧边栏）。设备出现但始终无法连接，通常就是缺少这一半。</li><li>在仪表板中<strong>选择设备</strong>。绿点表示已连接。</li><li><strong>用例：</strong>先读后写。电动车用例（OPEV、OSCEV、EVCEM、EVSOC、CEVC）仅在车辆连接时存在。</li><li><strong>测试运行器：</strong>先点<em>运行只读测试</em>。跳过表示设备不提供该用例，并非失败。</li><li><strong>跟踪：</strong><em>报文跟踪</em>显示每一帧。深入分析时，从侧边栏打开 EEBusTracer，点击 <em>Capture</em>，再点 <em>Start Capture</em>：目标 127.0.0.1 已预填。</li></ol>",
+    "help.hints": "<dl class=\"help-hints\"><dt>not_found</dt><dd>没有实体提供该用例：通常是没有连接车辆，或设备未通告该用例。</dd><dt>phase_not_declared</dt><dd>限值指定了设备没有的相。对 L1–L3 合并计量的设备只接受一个共同的限值。</dd><dt>peer_rpc_error</dt><dd>设备数据缺失或请求被拒绝。<em>报文跟踪</em>中可看到回复。</dd><dt>accepted: true</dt><dd>表示已发送，不一定已执行。设备的回复在<em>报文跟踪</em>中（errorNumber 0 表示已接受）。</dd><dt>SHIP close 4452</dt><dd>设备尚未信任我们：见第 1 步。</dd></dl>",
     "current.combined": "L1–L3 合并 (A)",
     "js.pauseSent": "已发送暂停（0 A）",
     "js.hbStarted": "已启动 OPEV 心跳",
