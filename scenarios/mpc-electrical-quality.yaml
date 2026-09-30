@@ -1,5 +1,7 @@
 name: mpc-electrical-quality
 description: Reads phase currents, phase voltages, and grid frequency.
+covers: "MPC: phase currents, phase voltages and grid frequency."
+goal: "Shows the electrical values a HEMS uses for phase balancing."
 category: MPC
 risk: read-only
 requires:

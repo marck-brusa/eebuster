@@ -1,5 +1,21 @@
 # Release notes
 
+## 1.0.0-rc12
+
+- **The OPEV card shows the right inputs up front.** It learns the phases the device declares
+  when the device is selected or the Use cases page opens, instead of on the first write. A
+  device with one combined limit for L1-L3 gets a single input and a note that per-phase
+  (asymmetric) limits are not possible; other devices go back to L1-L3 without a page reload.
+  A write that would drop different per-phase values stops with a message instead of silently
+  sending the L1 value.
+- **Help page** with a short quick start and what the common errors mean.
+- **Test runner: what each test covers and what it is for.** Every scenario has a one-line
+  `covers` and `goal`, plus a `hint` where it needs something (a vehicle, a device type); the
+  full description is collapsed under Details. Categories are colored, and each row gets a
+  green, amber or red stripe after it runs.
+- **EEBusTracer capture targets default to 127.0.0.1**, where the testbench serves its live
+  feed, so Capture > Start Capture works without typing an address.
+
 ## 1.0.0-rc11
 
 - **OPEV and OSCEV work against a device that declares one combined phase.** A device that

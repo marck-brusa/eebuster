@@ -76,6 +76,8 @@ jobs:
         run: |
           git clone --quiet "$EEBUSTRACER_REPO" /tmp/eebustracer
           git -C /tmp/eebustracer checkout --quiet "$EEBUSTRACER_COMMIT"
+          # Pre-fill the capture targets with 127.0.0.1, where the testbench serves its live feed.
+          git -C /tmp/eebustracer apply "$GITHUB_WORKSPACE/patches/eebustracer-localhost.patch"
           (cd /tmp/eebustracer && go build -trimpath -ldflags "-s -w" \
             -o "$GITHUB_WORKSPACE/eebustracer${{ matrix.ext }}" ./cmd/eebustracer)
           ls -la "eebustracer${{ matrix.ext }}"

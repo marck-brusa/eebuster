@@ -6,6 +6,9 @@ description: >
   its permitted-value sets. Needs a vehicle associated on devices that announce the use case
   permanently but only create the EV entity during a session — failing here while idle
   documents exactly that behaviour.
+covers: "OPEV: the vehicle's current range (min/max) and the phases it takes limits on."
+goal: "Proves a controller knows the allowed range before it limits the car."
+hint: "Needs a vehicle: without one it fails with not_found."
 category: Conformance
 risk: read-only
 requires:

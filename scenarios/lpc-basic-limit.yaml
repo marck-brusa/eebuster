@@ -1,5 +1,8 @@
 name: lpc-basic-limit
 description: Applies a 4.2 kW consumption limit, observes the update, and verifies readback.
+covers: "LPC scenario 1: a 4.2 kW consumption limit, written and read back."
+goal: "Proves the device accepts a limit and reports it as active."
+hint: "Changes the device's power while it runs."
 category: LPC
 risk: live-control
 requires:

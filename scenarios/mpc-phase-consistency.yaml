@@ -4,6 +4,9 @@ description: >
   Monitoring of Power Consumption V1.0.0). A device publishing a live total while every phase
   reads a hardcoded 0 W is publishing decoration, not measurements — the HEMS cannot do phase
   balancing against it. Tolerance 30% covers measurement jitter and rounding.
+covers: "MPC scenario 1: the phase powers against the total."
+goal: "Proves the per-phase values are real measurements, not placeholders."
+hint: "30 % tolerance for jitter and rounding."
 category: Conformance
 risk: read-only
 requires:

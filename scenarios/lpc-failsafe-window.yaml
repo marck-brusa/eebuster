@@ -6,6 +6,8 @@ description: >
   only key identifiers — cannot pass an energy guard's plausibility check, and its real
   failsafe behaviour after heartbeat loss should then be timed against what it announced
   (see lpc-heartbeat-loss).
+covers: "LPC failsafe: the announced minimum failsafe duration."
+goal: "Proves the duration lies in the 2-24 h window the use case requires."
 category: LPC
 risk: read-only
 requires:

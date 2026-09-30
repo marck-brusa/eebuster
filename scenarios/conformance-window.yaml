@@ -6,6 +6,9 @@ description: >
   such as "permittedValueSet":[[]] (SHIP TS 1.0.1 §11.4/§11.5) — and SPINE datagram
   violations (SPINE TS ProtocolSpecification 1.3.0 §5) exactly as they appeared on the wire,
   before any stack-side repair. Advisory warnings do not fail the window; errors do.
+covers: "Wire format of everything sent during discovery and reads (SHIP TS §11, SPINE TS §5)."
+goal: "Proves the device sends valid EEBUS JSON that strict controllers accept."
+hint: "Open Message trace to see a frame it names."
 category: Conformance
 risk: read-only
 requires:

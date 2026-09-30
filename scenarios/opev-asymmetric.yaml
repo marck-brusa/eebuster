@@ -7,6 +7,9 @@ description: >
   case. Needs a vehicle associated (the EV entity exists only during a session on some
   devices). Skipped on a device that declares its limit only on the combined phase "abc":
   there is no per-phase limit to write.
+covers: "OPEV scenario 1: a different current limit per phase (6/10/16 A)."
+goal: "Proves the device limits each phase separately, as a site fuse needs."
+hint: "Needs a vehicle. Skipped on a device with one combined limit for L1-L3."
 category: Conformance
 risk: live-control
 requires:

@@ -1,5 +1,7 @@
 name: lpc-release
 description: Releases the active consumption limit and verifies the inactive state.
+covers: "LPC: deactivating the consumption limit."
+goal: "Proves the device returns to full power when a limit is lifted."
 category: LPC
 risk: live-control
 requires:

@@ -1,5 +1,8 @@
 name: lpc-failsafe
 description: Writes and reads the failsafe power and its minimum duration.
+covers: "LPC failsafe: the failsafe power and duration, written and read back."
+goal: "Proves the device stores the fallback it must use when contact is lost."
+hint: "Changes the device's stored failsafe values."
 category: LPC
 risk: live-control
 requires:

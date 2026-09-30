@@ -1,5 +1,8 @@
 name: lpc-heartbeat-loss
 description: Starts and then stops the Energy Guard heartbeat for failsafe testing.
+covers: "LPC heartbeat: ours starts, then stops."
+goal: "Checks the device falls back to its failsafe limit when the controller disappears."
+hint: "The test only drives the heartbeat: watch the device's power to see the fallback."
 category: LPC
 risk: disruptive
 requires:

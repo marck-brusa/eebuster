@@ -24,6 +24,8 @@ if [ "$WITH_TRACER" = "1" ]; then
   trap 'rm -rf "$tracer_src"' EXIT
   git clone --quiet "$TRACER_REPO" "$tracer_src"
   git -C "$tracer_src" checkout --quiet "$TRACER_COMMIT"
+  # Pre-fill the capture targets with 127.0.0.1, where the testbench serves its live feed.
+  git -C "$tracer_src" apply "$PWD/patches/eebustracer-localhost.patch"
 fi
 
 for target in "${targets[@]}"; do

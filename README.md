@@ -115,6 +115,10 @@ frame is also appended to `<data-dir>/frames.log`, ready to import in the tracer
 spawning the bundled one. `./eebustracer analyze frames.log` gives a quick use-case audit
 from the terminal.
 
+To follow a session live, click **Capture** in the tracer, then **Start Capture**. The target
+is pre-filled with `127.0.0.1` (UDP port 4712, TCP port 54546), where the testbench serves its
+live feed; the bundled build is patched for that (`patches/eebustracer-localhost.patch`).
+
 ## Layout
 
 ```

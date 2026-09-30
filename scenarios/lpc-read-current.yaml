@@ -1,5 +1,7 @@
 name: lpc-read-current
 description: Reads the active consumption-limit state without changing it.
+covers: "LPC: the active consumption limit, read only."
+goal: "Shows the limit state without changing anything."
 category: LPC
 risk: read-only
 requires:

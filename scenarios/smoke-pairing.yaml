@@ -1,5 +1,8 @@
 name: smoke-pairing
 description: Confirms that at least one configured peer completed SHIP pairing and SPINE setup.
+covers: "SHIP pairing and SPINE setup with the configured device."
+goal: "Proves the basics work before anything else is tested."
+hint: "If this fails, fix pairing first: both sides must trust each other."
 category: Connectivity
 risk: read-only
 requires:

@@ -5,6 +5,9 @@ description: >
   scenario 1). A device that applies the duration internally but reports the limit without it
   leaves the controller unable to tell a temporary curtailment from a permanent one. The
   limit is released again at the end.
+covers: "LPC scenario 1: a limit with a duration."
+goal: "Proves a controller can tell a temporary limit from a permanent one."
+hint: "Changes the device's power while it runs."
 category: LPC
 risk: live-control
 requires:

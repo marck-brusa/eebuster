@@ -26,8 +26,8 @@ func TestOpevPhasesSkipsCombinedPhaseDevice(t *testing.T) {
 	rn := NewRunner(srv.URL)
 	missing := rn.missingRequirements(requirementsSpec{OpevPhases: []string{"a", "b", "c"}},
 		map[string]any{"peer": map[string]any{"ski": testSKI}})
-	if len(missing) != 3 || !strings.Contains(missing[0], "abc") {
-		t.Fatalf("missing = %v, want one entry per absent phase naming abc", missing)
+	if len(missing) != 1 || !strings.Contains(missing[0], "phase(s) abc, not a, b, c") {
+		t.Fatalf("missing = %v, want one entry naming abc and the absent phases", missing)
 	}
 }
 

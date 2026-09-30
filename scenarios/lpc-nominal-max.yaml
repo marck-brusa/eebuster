@@ -1,5 +1,7 @@
 name: lpc-nominal-max
 description: Reads the device's declared maximum consumption and checks that it is positive.
+covers: "LPC: the device's declared maximum consumption."
+goal: "Proves a controller knows the device's range before limiting it."
 category: LPC
 risk: read-only
 requires:

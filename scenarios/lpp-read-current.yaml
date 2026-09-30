@@ -1,5 +1,8 @@
 name: lpp-read-current
 description: Reads the active production-limit state without changing it.
+covers: "LPP: the active production limit, read only."
+goal: "Shows the production limit state without changing anything."
+hint: "Skipped on a pure consumer."
 category: LPP
 risk: read-only
 requires:

@@ -1,5 +1,8 @@
 name: device-profile-discovery
 description: Reads entity types, advertised use cases, and the raw SPINE discovery model.
+covers: "Discovery: entities, features and advertised use cases."
+goal: "Proves the device describes itself, so a controller knows what it can do."
+hint: "If this fails, check pairing first."
 category: Discovery
 risk: read-only
 requires:

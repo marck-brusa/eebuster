@@ -5,6 +5,9 @@ description: >
   stop trusting our curtailment and switch to a safe current setting [OPEV-007]. The
   device-side reaction is observable in EVCEM measurements during a live session; this
   scenario always ends with the error cleared.
+covers: "OPEV scenario 3: the Energy Guard announces an error, then clears it."
+goal: "Checks the car stops trusting our limits and falls to a safe current."
+hint: "The test only sends the error: watch the car's current to see the reaction."
 category: Conformance
 risk: disruptive
 requires:

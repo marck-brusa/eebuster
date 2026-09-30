@@ -3,6 +3,9 @@ description: >
   Reads a heat pump compressor's flexibility offer (Optimization of Self-Consumption by Heat
   Pump Compressor Flexibility, EEBus UC TS OHPCF V1.0.0): optional power consumption,
   requested power, pausability, and minimal run/pause windows.
+covers: "OHPCF: the heat pump's flexibility offer."
+goal: "Proves a heat pump tells the HEMS how far it can shift its compressor."
+hint: "Skipped unless the device is a heat pump."
 category: HVAC
 risk: read-only
 requires:

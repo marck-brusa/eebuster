@@ -347,13 +347,16 @@ func missingPhases(required, declared []string) []string {
 	for _, p := range declared {
 		have[p] = true
 	}
-	var missing []string
+	var absent []string
 	for _, p := range required {
 		if !have[p] {
-			missing = append(missing, fmt.Sprintf("peer declares its OPEV limits on phase(s) %s, not %s", strings.Join(declared, ", "), p))
+			absent = append(absent, p)
 		}
 	}
-	return missing
+	if len(absent) == 0 {
+		return nil
+	}
+	return []string{fmt.Sprintf("peer declares its OPEV limits on phase(s) %s, not %s", strings.Join(declared, ", "), strings.Join(absent, ", "))}
 }
 
 func splitLastDot(s string) (string, string) {

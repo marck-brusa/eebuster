@@ -1,5 +1,8 @@
 name: pv-production
 description: Reads current photovoltaic production and adds it to dashboard history.
+covers: "PV: current photovoltaic production."
+goal: "Proves an inverter reports what it produces."
+hint: "Skipped unless the device is a PV inverter."
 category: Generation
 risk: read-only
 requires:

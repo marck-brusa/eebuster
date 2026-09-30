@@ -1,0 +1,20 @@
+diff --git a/web/templates/layout.html b/web/templates/layout.html
+index 610a6bd..2038872 100644
+--- a/web/templates/layout.html
++++ b/web/templates/layout.html
+@@ -30,13 +30,13 @@
+                 </select>
+                 <div id="udp-inputs" class="capture-inputs">
+                     <label for="target-host">Target:</label>
+-                    <input type="text" id="target-host" placeholder="192.168.1.100" class="host-input" list="recent-hosts-udp">
++                    <input type="text" id="target-host" value="127.0.0.1" placeholder="127.0.0.1" class="host-input" list="recent-hosts-udp">
+                     <label for="target-port">:</label>
+                     <input type="number" id="target-port" value="4712" min="1" max="65535" class="port-input">
+                 </div>
+                 <div id="tcp-inputs" class="capture-inputs" style="display:none">
+                     <label for="tcp-host">Target:</label>
+-                    <input type="text" id="tcp-host" placeholder="192.168.20.41" class="host-input" list="recent-hosts-tcp">
++                    <input type="text" id="tcp-host" value="127.0.0.1" placeholder="127.0.0.1" class="host-input" list="recent-hosts-tcp">
+                     <label for="tcp-port">:</label>
+                     <input type="number" id="tcp-port" value="54546" min="1" max="65535" class="port-input">
+                 </div>

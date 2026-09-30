@@ -5,6 +5,9 @@ description: >
   announced-but-empty scenario breaks the HEMS's session energy accounting silently. Like the
   other measurement scenarios, this needs a charging session running and fails (rather than
   skips) without one.
+covers: "EVCEM scenario 3: the energy charged in the session."
+goal: "Proves an announced energy value is actually delivered, so a HEMS can account the session."
+hint: "Needs a charging session."
 category: EV charging
 risk: read-only
 requires:

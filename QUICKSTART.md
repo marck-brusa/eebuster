@@ -45,7 +45,9 @@ configuration file present it starts in real mDNS discovery mode on every usable
 with one simulated device enabled. Open <http://127.0.0.1:8080/ui>. You should see the
 simulated device connected, reporting 11 kW — and asymmetrically, on two of three phases,
 which the dashboard's Phase balance panel flags. The bundled EEBusTracer starts alongside on
-<http://127.0.0.1:8090> and is linked from the sidebar.
+<http://127.0.0.1:8090> and is linked from the sidebar: click **Capture**, then **Start
+Capture** to follow the session live (the target `127.0.0.1` is pre-filled). The dashboard's
+**Help** page has a short quick start and what the common errors mean.
 
 This first run is worth doing before touching real hardware: it confirms the executable runs,
 the dashboard loads, and the API answers, with no network or device variables involved.

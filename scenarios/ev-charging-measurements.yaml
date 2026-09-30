@@ -1,5 +1,8 @@
 name: ev-charging-measurements
 description: Reads per-phase charging measurements for each EV entity.
+covers: "EVCEM: the vehicle's charging current and power."
+goal: "Proves a HEMS can see what the car is drawing."
+hint: "Needs a vehicle connected."
 category: EV charging
 risk: read-only
 requires:

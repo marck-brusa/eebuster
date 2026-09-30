@@ -4,6 +4,9 @@ description: >
   Charging (EEBus UC TS OSCEV V1.0.1b). Recommendations are advisory current setpoints the
   EV may follow to absorb solar excess; a device advertising the use case must at least
   answer the read.
+covers: "OSCEV: the recommended currents for solar self-consumption."
+goal: "Proves a device advertising OSCEV answers the read."
+hint: "Needs a vehicle."
 category: EV charging
 risk: read-only
 requires:

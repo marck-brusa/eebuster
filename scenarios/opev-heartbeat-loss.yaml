@@ -5,6 +5,9 @@ description: >
   than 4 seconds, the EV must switch to a safe current setting on its own [OPEV-005]. The
   device-side reaction is observable in EVCEM measurements during a live session; this
   scenario drives the guard side and leaves the device in the heartbeat-restored state.
+covers: "OPEV scenario 2: our heartbeat towards the car stops."
+goal: "Checks the car falls to a safe current when the Energy Guard disappears."
+hint: "The test only stops the heartbeat: watch the car's current to see the reaction."
 category: Conformance
 risk: disruptive
 requires:

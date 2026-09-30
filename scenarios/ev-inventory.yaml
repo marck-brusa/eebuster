@@ -1,5 +1,8 @@
 name: ev-inventory
 description: Counts connected and actively charging EV entities reported by the peer.
+covers: "The vehicles the device reports, connected and charging."
+goal: "Proves the device shows a plugged-in car to the HEMS."
+hint: "Plug a car in to see one."
 category: EV charging
 risk: read-only
 requires:

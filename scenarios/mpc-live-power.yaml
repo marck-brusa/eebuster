@@ -1,5 +1,7 @@
 name: mpc-live-power
 description: Reads total power and proves that the peer exposes a numeric measurement.
+covers: "MPC: total power."
+goal: "Proves the device reports a real number for its consumption."
 category: MPC
 risk: read-only
 requires:

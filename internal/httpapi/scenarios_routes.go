@@ -51,6 +51,9 @@ type scenarioCatalogEntry struct {
 	ID          string         `json:"id"`
 	Name        string         `json:"name"`
 	Description string         `json:"description"`
+	Covers      string         `json:"covers"`
+	Goal        string         `json:"goal"`
+	Hint        string         `json:"hint"`
 	Category    string         `json:"category"`
 	Risk        string         `json:"risk"`
 	Requires    map[string]any `json:"requires"`
@@ -60,6 +63,9 @@ type scenarioCatalogEntry struct {
 type rawScenarioSpec struct {
 	Name        string           `yaml:"name"`
 	Description string           `yaml:"description"`
+	Covers      string           `yaml:"covers"`
+	Goal        string           `yaml:"goal"`
+	Hint        string           `yaml:"hint"`
 	Category    string           `yaml:"category"`
 	Risk        string           `yaml:"risk"`
 	Requires    map[string]any   `yaml:"requires"`
@@ -98,7 +104,7 @@ func (s *Server) handleScenariosCatalog(w http.ResponseWriter, r *http.Request) 
 			requires = map[string]any{}
 		}
 		result = append(result, scenarioCatalogEntry{
-			ID: id, Name: name, Description: spec.Description, Category: category,
+			ID: id, Name: name, Description: spec.Description, Covers: spec.Covers, Goal: spec.Goal, Hint: spec.Hint, Category: category,
 			Risk: risk, Requires: requires, StepCount: len(spec.Steps),
 		})
 	}

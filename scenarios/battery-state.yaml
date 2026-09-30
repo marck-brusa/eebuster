@@ -1,5 +1,8 @@
 name: battery-state
 description: Reads aggregate battery power and state data.
+covers: "Battery use case: aggregated battery power and state data."
+goal: "Proves a battery reports its state, so a HEMS can plan with it."
+hint: "Skipped unless the device advertises the battery use case."
 category: Storage
 risk: read-only
 requires:

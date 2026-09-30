@@ -1,5 +1,8 @@
 name: mgcp-grid-state
 description: Reads power and frequency at the grid connection point.
+covers: "MGCP: power and frequency at the grid connection point."
+goal: "Proves a grid meter reports what the house exchanges with the grid."
+hint: "Skipped unless the device is a grid meter."
 category: MGCP
 risk: read-only
 requires:

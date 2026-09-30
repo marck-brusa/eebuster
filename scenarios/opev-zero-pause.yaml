@@ -5,6 +5,9 @@ description: >
   means it must suspend charging rather than draw the minimum. Verifies the write is accepted and visible, then
   releases. During a live session, EVCEM currents dropping to zero confirm the EV actually
   obeyed. Needs a vehicle associated.
+covers: "OPEV scenario 1: a 0 A limit, the pause signal."
+goal: "Proves the device accepts the pause signal; a charging car should drop to 0 A."
+hint: "Needs a vehicle."
 category: Conformance
 risk: live-control
 requires:

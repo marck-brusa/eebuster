@@ -1,5 +1,8 @@
 name: lpp-basic-limit
 description: Applies a short production limit and verifies readback.
+covers: "LPP: a short production limit, written and read back."
+goal: "Proves a producer accepts a feed-in limit."
+hint: "Skipped on a pure consumer."
 category: LPP
 risk: live-control
 requires:

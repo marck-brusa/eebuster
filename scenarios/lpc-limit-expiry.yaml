@@ -1,5 +1,8 @@
 name: lpc-limit-expiry
 description: Applies a five-second limit and verifies that the device releases it after expiry.
+covers: "LPC: a 5 s limit that has to end by itself."
+goal: "Proves a timed limit expires on the device, not only in the controller."
+hint: "Changes the device's power for 5 s."
 category: LPC
 risk: live-control
 requires:
