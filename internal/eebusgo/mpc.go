@@ -17,6 +17,7 @@ func (m *MPC) Read(ski string, entityHint []uint) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	refresh(measurementDataRead(m.uc.LocalEntity, entity)...)
 	return mpcFields(m.uc, entity), nil
 }
 

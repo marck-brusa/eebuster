@@ -36,6 +36,7 @@ func (l *LPC) ReadLimit(ski string, entityHint []uint) (LoadLimit, error) {
 	if err != nil {
 		return LoadLimit{}, err
 	}
+	refresh(limitDataRead(l.uc.LocalEntity, entity)...)
 	limit, err := l.uc.ConsumptionLimit(entity)
 	if err != nil {
 		return LoadLimit{}, err
@@ -61,6 +62,7 @@ func (l *LPC) ReadFailsafe(ski string, entityHint []uint) (FailsafeLimit, error)
 	if err != nil {
 		return FailsafeLimit{}, err
 	}
+	refresh(keyValuesRead(l.uc.LocalEntity, entity)...)
 	value, err := l.uc.FailsafeConsumptionActivePowerLimit(entity)
 	if err != nil {
 		return FailsafeLimit{}, err

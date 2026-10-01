@@ -228,6 +228,7 @@ func readPhaseLimits(localEntity spineapi.EntityLocalInterface, entity spineapi.
 	filter spinemodel.LoadControlLimitDescriptionDataType,
 	limits func() ([]ucapi.LoadLimitsPhase, error),
 	constraints func() ([]float64, []float64, []float64, error)) map[string]any {
+	refresh(append(limitDataRead(localEntity, entity), permittedValuesRead(localEntity, entity)...)...)
 	slots := declaredLimitSlots(localEntity, entity, filter)
 	out := map[string]any{"phases": slotPhases(slots)}
 	if l, err := limits(); err == nil && len(l) > 0 {
