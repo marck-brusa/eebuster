@@ -180,3 +180,75 @@ func TestSlowClientIsDroppedNotBlocking(t *testing.T) {
 		t.Fatal("Publish blocked on a client that stopped reading")
 	}
 }
+
+func TestLateTCPClientGetsTheRecordedFramesFirst(t *testing.T) {
+	feed := New()
+	defer feed.Close()
+	addr := freeAddr(t, "tcp")
+	if err := feed.ListenTCP(addr); err != nil {
+		t.Fatalf("ListenTCP: %v", err)
+	}
+	feed.Publish("send", "abc123", `{"read":1}`)
+	feed.Publish("recv", "abc123", `{"reply":1}`)
+
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	reader := bufio.NewReader(conn)
+	for _, want := range []string{`SEND to abc123 MSG: {"read":1}`, `RECV from abc123 MSG: {"reply":1}`} {
+		line, err := reader.ReadString('\n')
+		if err != nil || !strings.Contains(line, want) {
+			t.Fatalf("replayed line = %q, %v; want %q", line, err, want)
+		}
+	}
+
+	// Live lines follow the replay without a gap.
+	go func() {
+		for i := 0; i < 50; i++ {
+			feed.Publish("send", "abc123", `{"live":1}`)
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+	line, err := reader.ReadString('\n')
+	if err != nil || !strings.Contains(line, `{"live":1}`) {
+		t.Fatalf("live line = %q, %v", line, err)
+	}
+}
+
+func TestLateUDPPeerGetsTheRecordedFramesFirst(t *testing.T) {
+	feed := New()
+	defer feed.Close()
+	addr := freeAddr(t, "udp")
+	if err := feed.ListenUDP(addr); err != nil {
+		t.Fatalf("ListenUDP: %v", err)
+	}
+	feed.Publish("send", "abc123", `{"read":1}`)
+
+	conn, err := net.Dial("udp", addr)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+	if _, err := conn.Write([]byte{0}); err != nil {
+		t.Fatalf("hello: %v", err)
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	buf := make([]byte, 4096)
+	n, err := conn.Read(buf)
+	if err != nil || !strings.Contains(string(buf[:n]), `SEND to abc123 MSG: {"read":1}`) {
+		t.Fatalf("replayed datagram = %q, %v", buf[:n], err)
+	}
+
+	// A second hello from the same peer must not replay again.
+	if _, err := conn.Write([]byte{0}); err != nil {
+		t.Fatalf("second hello: %v", err)
+	}
+	feed.Publish("recv", "abc123", `{"live":1}`)
+	n, err = conn.Read(buf)
+	if err != nil || !strings.Contains(string(buf[:n]), `{"live":1}`) {
+		t.Fatalf("after a second hello got %q, %v; want the live line", buf[:n], err)
+	}
+}

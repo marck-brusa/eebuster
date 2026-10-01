@@ -9,6 +9,11 @@
 // It reaches them differently. `capture --tcp host:port` dials us and only reads, so that side
 // is a plain TCP server. `capture --target host:port` sends a one-byte datagram first and then
 // listens, so that side registers the sender and answers with datagrams.
+//
+// A tracer that attaches mid-session first gets the frames recorded so far. Most of a session's
+// reads happen while it connects; the dashboard's reads are mostly answered from the stack's
+// local copy of the device's data, so without the replay a late tracer sees little more than
+// heartbeats.
 package tracerfeed
 
 import (
@@ -21,6 +26,9 @@ import (
 // queueDepth is the per-client backlog. A tracer that cannot keep up loses lines rather than
 // stalling frame capture, for the same reason the frame log ignores write errors.
 const queueDepth = 256
+
+// replayDepth is how many recent lines a newly attached tracer receives first.
+const replayDepth = 5000
 
 type client struct {
 	lines chan string
@@ -35,6 +43,7 @@ type Feed struct {
 	udpPeers map[string]net.Addr
 	closed   bool
 	listener net.Listener
+	history  []string // the most recent lines, oldest first, at most replayDepth
 }
 
 func New() *Feed {
@@ -60,20 +69,28 @@ func (f *Feed) accept(listener net.Listener) {
 			return
 		}
 		c := &client{lines: make(chan string, queueDepth), conn: conn}
+		// Snapshot and registration under one lock: every later line goes to the queue, so the
+		// replay neither misses nor repeats a frame.
 		f.mu.Lock()
+		replay := append([]string(nil), f.history...)
 		f.tcp[c] = struct{}{}
 		f.mu.Unlock()
-		go f.serve(c)
+		go f.serve(c, replay)
 	}
 }
 
-func (f *Feed) serve(c *client) {
+func (f *Feed) serve(c *client, replay []string) {
 	defer func() {
 		f.mu.Lock()
 		delete(f.tcp, c)
 		f.mu.Unlock()
 		_ = c.conn.Close()
 	}()
+	for _, line := range replay {
+		if _, err := c.conn.Write([]byte(line)); err != nil {
+			return
+		}
+	}
 	for line := range c.lines {
 		if _, err := c.conn.Write([]byte(line)); err != nil {
 			return
@@ -102,7 +119,12 @@ func (f *Feed) register(conn net.PacketConn) {
 			return
 		}
 		f.mu.Lock()
-		f.udpPeers[from.String()] = from
+		if _, known := f.udpPeers[from.String()]; !known {
+			for _, line := range f.history {
+				_, _ = conn.WriteTo([]byte(line), from)
+			}
+			f.udpPeers[from.String()] = from
+		}
 		f.mu.Unlock()
 	}
 }
@@ -119,6 +141,10 @@ func (f *Feed) Publish(dir, ski, payload string) {
 
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.history = append(f.history, line)
+	if len(f.history) > replayDepth {
+		f.history = f.history[len(f.history)-replayDepth:]
+	}
 	for c := range f.tcp {
 		select {
 		case c.lines <- line:
