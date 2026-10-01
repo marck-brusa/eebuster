@@ -292,7 +292,7 @@
   .button-row { display: flex; flex-wrap: wrap; gap: 7px; }
 
   .chart-wrap { height: 330px; position: relative; }
-  #power-chart { display: block; width: 100%; height: 100%; }
+  #power-chart, #detail-chart { display: block; width: 100%; height: 100%; }
   .chart-toolbar { display: flex; align-items: center; gap: 7px; }
   .segmented { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 7px; background: var(--inset); }
   .segmented button { padding: 4px 8px; border: 0; background: transparent; color: var(--muted); }
@@ -2549,8 +2549,13 @@ function labelForSki(ski) {
   const configured = (state.config.peers || []).find(peer => peer.ski === ski);
   return displayName(configured?.label || configured?.name, ski);
 }
+// A missing value (null: the device does not report it) shows as a dash, never as 0 W.
+function measured(value) {
+  return value == null ? NaN : Number(value);
+}
+
 function formatPower(value) {
-  if (!Number.isFinite(Number(value))) return "—";
+  if (!Number.isFinite(measured(value))) return "—";
   const n = Number(value);
   if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(Math.abs(n) >= 10000 ? 1 : 2)} kW`;
   return `${Math.round(n)} W`;
@@ -3078,7 +3083,7 @@ function drawChart() {
     let started = false;
     ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash);
     for (const sample of samples) {
-      const value = Number(sample[field]);
+      const value = measured(sample[field]);
       if (!Number.isFinite(value)) { started = false; continue; }
       if (!started) { ctx.moveTo(x(sample.ts), y(value)); started = true; }
       else ctx.lineTo(x(sample.ts), y(value));
@@ -3161,11 +3166,11 @@ const DETAIL_UNITS = {
 // was briefly absent, which drew phases that were never measured.
 function detailValues(sample, spec) {
   if (!spec.perPhase) {
-    const v = Number(sample[spec.field]);
+    const v = measured(sample[spec.field]);
     return Number.isFinite(v) ? [v] : [];
   }
   const arr = sample[spec.field];
-  return Array.isArray(arr) ? arr.map(Number) : [];
+  return Array.isArray(arr) ? arr.map(measured) : [];
 }
 
 function detailUnitHasData(unit) {

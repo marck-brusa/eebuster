@@ -230,12 +230,14 @@ func (s *Stack) collectEV(ski string) []evRecord {
 		if v, err := s.evcem.uc.PhasesConnected(entity); err == nil {
 			rec.PhasesConnected = &v
 		}
-		if v, err := s.evcem.uc.CurrentPerPhase(entity); err == nil {
+		// A device that measures one combined phase gets an empty per-phase list without an
+		// error from upstream, so an empty result falls back as well.
+		if v, err := s.evcem.uc.CurrentPerPhase(entity); err == nil && len(v) > 0 {
 			rec.CurrentPerPhaseA = v
 		} else if v, ok := combinedPhaseValue(s.evcem.uc.LocalEntity, entity, spinemodel.MeasurementTypeTypeCurrent, spinemodel.ScopeTypeTypeACCurrent); ok {
 			rec.CurrentPerPhaseA = []float64{v}
 		}
-		if v, err := s.evcem.uc.PowerPerPhase(entity); err == nil {
+		if v, err := s.evcem.uc.PowerPerPhase(entity); err == nil && len(v) > 0 {
 			rec.PowerPerPhaseW = v
 		} else if v, ok := combinedPhaseValue(s.evcem.uc.LocalEntity, entity, spinemodel.MeasurementTypeTypePower, spinemodel.ScopeTypeTypeACPower); ok {
 			rec.PowerPerPhaseW = []float64{v}
