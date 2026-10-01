@@ -1,9 +1,9 @@
 package hub
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -143,6 +143,18 @@ func (h *Hub) RegisterRemoteService(identity api.ServiceIdentity) {
 		return
 	}
 
+	// Pairing spec §4.3: registering trust in an addCu device expresses the
+	// pairing intent, so processing of addCu-requests must deactivate now —
+	// not only once the connection completes (HandleShipHandshakeStateUpdate).
+	// Otherwise the listener stays armed (indefinitely if the device is
+	// offline) and a third devZ announcing a valid request would immediately
+	// replace the trust registered here, since no replacement window is armed
+	// on this path.
+	isTrustedAddCu := service.Trusted() && service.PairingType() == api.PairingTypeAddCu && service.ShipID() != ""
+	if isTrustedAddCu {
+		h.stopPairingListener()
+	}
+
 	// if the hub has started, trigger a search and connection attempt
 	conn := h.connectionForService(service)
 	// remotely initiated?
@@ -151,16 +163,40 @@ func (h *Hub) RegisterRemoteService(identity api.ServiceIdentity) {
 		return
 	}
 
+	// The addCu device has no live connection, so it is offline. Arm the
+	// §4.3 1.a replacement timer — the only sanctioned automatic reactivation —
+	// so that after 15 minutes of no SHIP Message Exchange the listener
+	// reopens. This mirrors startAddCuReplacementTimersForOfflineDevices on the
+	// startup path: without it, stopping the listener above would leave an
+	// offline devZ deactivated indefinitely, recoverable only by manual removal
+	// (UnregisterRemoteService). A completed connection cancels the timer
+	// (StopAddCuReplacementTimer in HandleShipHandshakeStateUpdate).
+	if isTrustedAddCu {
+		h.addCuReplacementTracker.StartTimer(service.ShipID(), h.handleAddCuReplacementTimeout)
+	}
+
 	h.mdns.RequestMdnsEntries()
 }
 
 // Remove pairing using ServiceIdentity
 func (h *Hub) UnregisterRemoteService(identity api.ServiceIdentity) {
 	if service := h.serviceFor(identity); service != nil {
+		// The stored entry carries the authoritative pairing type — the
+		// caller-supplied identity may have been built from the SKI alone.
+		isAddCu := service.PairingType() == api.PairingTypeAddCu
+		shipID := service.ShipID()
 		service.SetTrusted(false)
 		service.ConnectionStateDetail().SetState(api.ConnectionStateNone)
 		h.hubReader.ServicePairingDetailUpdate(identity, service.ConnectionStateDetail())
-		h.removeService(identity.SKI, identity.Fingerprint)
+		h.removeServiceEntry(service)
+		if isAddCu {
+			// Pairing spec §4.3 item 2.b / §10.4 *3: user removal of the
+			// trusted addCu device reactivates processing of addCu-requests
+			// immediately — the 15-minute wait applies only to the automatic
+			// reactivation path, so any pending replacement timer is obsolete.
+			h.addCuReplacementTracker.StopTimer(shipID)
+			h.reactivatePairingListener("Control Unit removed")
+		}
 	}
 
 	h.removeConnectionAttemptCounter(identity.SKI)
@@ -320,6 +356,9 @@ func (h *Hub) enablePairingListener(config *api.PairingConfig) error {
 	ctx := h.pairingCtx // Use Hub's context for proper lifecycle management
 
 	if err := listener.StartListening(ctx, config.Secret); err != nil {
+		if errors.Is(err, api.ErrListenerAlreadyActive) {
+			return nil
+		}
 		return fmt.Errorf("failed to start autonomous listener: %w", err)
 	}
 
@@ -403,15 +442,11 @@ func (h *Hub) StartAnnouncementTo(target api.PairingTarget) error {
 		return fmt.Errorf("failed to create pairing announcer")
 	}
 
-	// Create context for this announcement (child of Hub's pairing context)
-	_, cancel := context.WithCancel(h.pairingCtx)
-
 	// Create announcement state
 	state := announcementState{
-		target:     target,
-		announcer:  announcer,
-		startTime:  time.Now(),
-		cancelFunc: cancel,
+		target:    target,
+		announcer: announcer,
+		startTime: time.Now(),
 	}
 
 	// Enable the announcer with the target's secret
@@ -456,11 +491,6 @@ func (h *Hub) StopAnnouncementTo(shipID string) error {
 	state, exists := h.activeAnnouncements[shipID]
 	if !exists {
 		return fmt.Errorf("no active announcement for device: %s", shipID)
-	}
-
-	// Cancel the announcement context
-	if state.cancelFunc != nil {
-		state.cancelFunc()
 	}
 
 	// Stop the announcer
@@ -528,7 +558,7 @@ func (h *Hub) OnPairingSuccess(remoteShipID, remoteFingerprint string) {
 			return
 		}
 		replacedService.SetTrusted(false)
-		h.removeService(replacedService.SKI(), replacedService.Fingerprint())
+		h.removeServiceEntry(replacedService)
 		h.addCuReplacementTracker.StopTimer(replacedService.ShipID())
 	}
 
@@ -566,6 +596,15 @@ func (h *Hub) OnPairingSuccess(remoteShipID, remoteFingerprint string) {
 		// Convert ServiceDetails to ServiceIdentity - thread-safe, no Copy() needed
 		identity := service.ToServiceIdentity()
 		pairingReader.ServiceAutoTrusted(identity)
+	}
+
+	// The accepted request may have been withdrawn right after evaluation or
+	// replayed from the mDNS cache, so a SHIP connection may never
+	// materialise. Arm the replacement timer so the spec §4.3 1.a recovery
+	// window runs from trust establishment; it is stopped as soon as the
+	// SHIP connection completes.
+	if conn := h.connectionForService(service); conn == nil {
+		h.addCuReplacementTracker.StartTimer(remoteShipID, h.handleAddCuReplacementTimeout)
 	}
 
 	// we have to initiate checking the mds records again, to trigger a connection
@@ -622,7 +661,7 @@ func (h *Hub) GeneratePairingQR() (string, error) {
 
 // generateStandardShipQR generates the standard SHIP QR format
 func (h *Hub) generateStandardShipQR() (string, error) {
-	ski := h.localService.SKI()
+	ski := formatSKIForQRCode(h.localService.SKI())
 	identifier := h.localService.ShipID()
 	optionals := h.buildOptionalMetadata()
 
@@ -647,7 +686,7 @@ func (h *Hub) generatePairingServiceQR(secret api.PairingSecret) (string, error)
 	}
 
 	// Get required fields
-	ski := h.localService.SKI()
+	ski := formatSKIForQRCode(h.localService.SKI())
 	shipID := h.localService.ShipID()
 
 	// Encode secret as uppercase hex
@@ -690,6 +729,22 @@ func (h *Hub) buildOptionalMetadata() string {
 	}
 
 	return optionals
+}
+
+// formatSKIForQRCode inserts a space every 4 characters, as required by SHIP Spec 1.1.0
+// section 12.7 (see also section 12.2): the SKI is encoded as a non-prefixed hexadecimal
+// string with an additional space every 4 hexadecimal digits. The case of the input is
+// preserved, as the spec allows upper or lower case letters.
+func formatSKIForQRCode(ski string) string {
+	var result strings.Builder
+	for i, char := range ski {
+		if i > 0 && i%4 == 0 {
+			result.WriteByte(' ')
+		}
+		result.WriteRune(char)
+	}
+
+	return result.String()
 }
 
 // safeQRCodeKeyValue returns a safe to use key value pair for the QR code text in the proper format

@@ -1,12 +1,13 @@
 package hub
 
 import (
-	"errors"
-	"net"
 	"time"
 
 	"github.com/enbility/ship-go/api"
 	"github.com/enbility/ship-go/logging"
+	"github.com/enbility/ship-go/model"
+	"github.com/enbility/ship-go/ship"
+	"github.com/enbility/ship-go/ws"
 	"github.com/gorilla/websocket"
 )
 
@@ -20,90 +21,174 @@ func (h *Hub) isSkiConnected(ski string) bool {
 	return ok
 }
 
-// keepThisConnection prevents double connections
-// only keep the connection initiated by the higher SKI
-//
-// returns true if this connection is fine to be continued
-// returns false if this connection should not be established or kept
-func (h *Hub) keepThisConnection(conn *websocket.Conn, incomingRequest bool, remoteService *api.ServiceDetails) bool {
-	// SHIP 12.2.2 defines:
-	// prevent double connections with SKI Comparison
-	// the node with the higher SKI value keeps the most recent connection and
-	// and closes all other connections to the same SHIP node
+// doubleConnectionAction is what to do with a newly established connection when
+// another connection to the same SKI already exists.
+type doubleConnectionAction int
+
+const (
+	// dcAdopt: take this connection and retire everything else for that SKI.
+	dcAdopt doubleConnectionAction = iota
+	// dcPark: hold this connection back and leave the existing one in place, waiting
+	// for the peer to resolve the duplicate.
 	//
-	// This is hard to implement without any flaws. Therefore I chose a
-	// different approach: The connection initiated by the higher SKI will be kept
+	// TODO(#96): not implemented yet - the call sites keep the most recent connection
+	// here too. That is not what SHIP 12.2.2 asks of the smaller-SKI node, but it is
+	// strictly closer to it than closing the newer connection, which is what this code
+	// used to do and which leaves a compliant peer pair with nothing connected. It
+	// agrees with a compliant peer in every ordering except a true simultaneous
+	// crossing, where the two ends can disagree on which connection is the most recent.
+	// Parking removes that last case; it is a separate change because nothing in the
+	// SHIP TestSpecification exercises the smaller-SKI side.
+	dcPark
+)
 
-	remoteSKI := remoteService.SKI()
+// resolveDoubleConnection implements the SKI comparison of SHIP 12.2.2:
+//
+// "the SHIP node with the bigger 160 bit SKI value SHALL only keep the most recent
+// connection open and close all other connections to the same SHIP node [...] each
+// SHIP node may close a connection - even the SHIP node with the smaller SKI value -
+// if a timeout was detected or the SHIP node with the bigger SKI value does not close
+// double or multiple connections to the same SHIP node within 3 seconds."
+//
+// So the bigger SKI decides immediately and the smaller SKI waits. Which side opened
+// which connection does not enter into it — "most recent" is the criterion, and it is
+// only well defined because the smaller-SKI node stays passive while the bigger-SKI
+// node resolves.
+func resolveDoubleConnection(localSKI, remoteSKI string) doubleConnectionAction {
+	if localSKI > remoteSKI {
+		return dcAdopt
+	}
+	return dcPark
+}
 
-	// Atomic check-and-action to prevent TOCTOU race conditions
-	h.muxCon.Lock()
-	existingC, exists := h.connections[remoteSKI]
+// doubleConnectionAction returns what to do with a new connection for a SKI. A
+// connection is only a double connection if one is already registered.
+func (h *Hub) doubleConnectionAction(remoteSKI string) doubleConnectionAction {
+	h.muxCon.RLock()
+	_, exists := h.connections[remoteSKI]
+	h.muxCon.RUnlock()
+
 	if !exists {
-		h.muxCon.Unlock()
-		return true
+		return dcAdopt
 	}
 
-	// Log the double connection scenario for diagnostics  
+	action := resolveDoubleConnection(h.localService.SKI(), remoteSKI)
 	logging.Log().Debug("double connection detected with remoteSKI", remoteSKI,
-		"incoming", incomingRequest)
-
-	keep := false
-	localSKI := h.localService.SKI()
-	if incomingRequest {
-		keep = remoteSKI > localSKI
-	} else {
-		keep = localSKI > remoteSKI
-	}
-
-	if keep {
-		// we have an existing connection
-		// so keep the new (most recent) and close the old one
-		// Atomically remove the old connection while holding the lock
-		delete(h.connections, remoteSKI)
-		h.muxCon.Unlock()
-
-		logging.Log().Debug("closing existing double connection, keep the new one")
-		// Close the old connection outside the lock to prevent deadlock
-		go func(oldConn api.ShipConnectionInterface) {
-			oldConn.CloseConnection(false, 0, "")
-		}(existingC)
-	} else {
-		h.muxCon.Unlock()
-
-		connType := "incoming"
-		if !incomingRequest {
-			connType = "outgoing"
-		}
-		logging.Log().Debugf("closing %s double connection, as the existing connection will be used", connType)
-		if conn != nil {
-			go h.sendWSCloseMessage(conn)
-		}
-	}
-
-	return keep
+		"action", map[doubleConnectionAction]string{dcAdopt: "adopt", dcPark: "park"}[action])
+	return action
 }
 
-// sendWSCloseMessage sends a WebSocket close message
-func (h *Hub) sendWSCloseMessage(conn *websocket.Conn) {
-	err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "double connection"))
-	if err != nil && !errors.Is(err, net.ErrClosed) {
-		logging.Log().Debug("failed to send close message:", err)
+// supersedeForIncoming retires an in-flight outgoing dial to the same SKI because an
+// incoming connection has taken over. Called from the TLS handshake of the incoming
+// connection (SHIP 12.2.2: "The SHIP node with the greater SKI SHOULD check for double
+// connections directly during the TLS handshake"), so that the older connection is gone
+// before the new handshake completes.
+//
+// A registered connection is not touched here: it is displaced atomically when the new
+// connection registers, which keeps the registry from ever passing through an empty
+// state for that SKI.
+func (h *Hub) supersedeForIncoming(remoteSKI string) {
+	h.muxCon.RLock()
+	dial := h.connectionsInitiating[remoteSKI]
+	h.muxCon.RUnlock()
+
+	if dial == nil {
+		return
 	}
-	<-time.After(time.Millisecond * 100)
-	h.safeClose(conn, "websocket close")
+
+	logging.Log().Debug("retiring in-flight connection attempt, an incoming connection took over", remoteSKI)
+	dial.supersede()
 }
 
-// registerConnection registers a new SHIP connection
+// supersedeGracePeriod is how long a retired outgoing dial waits for the incoming
+// connection that took it over to register. Registration happens right after the
+// websocket upgrade, so this only has to cover the rest of that handshake.
+const supersedeGracePeriod = 2 * time.Second
+
+// awaitSupersedingConnection waits for the incoming connection that retired an outgoing
+// dial to establish itself.
+//
+// Retiring the dial is decided during the TLS handshake, before the incoming connection
+// has proven it can get any further: it can still fail the subprotocol or certificate
+// checks in ServeHTTP, lose an identifier conflict, or simply be dropped by the peer.
+// Reporting the dial as a success in that case would leave the SKI with no connection and
+// nothing scheduled to fix it, so the caller has to be told the attempt failed.
+func (h *Hub) awaitSupersedingConnection(remoteSKI string) bool {
+	deadline := time.Now().Add(supersedeGracePeriod)
+
+	for {
+		if h.isSkiConnected(remoteSKI) {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// retire closes a connection that lost a double connection resolution.
+//
+// SHIP 12.2.2: "If an older connection is already in the SME data exchange phase, the
+// SHIP node with the bigger SKI value SHOULD initiate a connection termination as
+// described in section 13.4.7." The reason for that announce is "unspecific" — per SHIP
+// 13.4.7.1.1 "removedConnection" means the node was removed from the list of known
+// devices, which is not the case here.
+func (h *Hub) retire(connection api.ShipConnectionInterface) {
+	if connection == nil {
+		return
+	}
+
+	go func() {
+		if state, _ := connection.ShipHandshakeState(); state == model.SmeStateComplete {
+			connection.CloseConnection(true, 0, string(model.ConnectionCloseReasonTypeUnspecific))
+			return
+		}
+		connection.CloseConnection(false, 4001, "double connection")
+	}()
+}
+
+// registerConnection registers a new SHIP connection, retiring any connection it
+// displaces (SHIP 12.2.2: the most recent connection is the one that is kept).
+//
+// The swap is atomic: the registry never passes through a state where the SKI has no
+// connection, so a displaced connection can tell it was replaced rather than
+// disconnected — see HandleConnectionClosed.
 func (h *Hub) registerConnection(connection api.ShipConnectionInterface) {
 	h.muxCon.Lock()
-	defer h.muxCon.Unlock()
 
 	ski := connection.RemoteSKI()
+	displaced := h.connections[ski]
+	if displaced == connection {
+		displaced = nil
+	}
 	h.connections[ski] = connection
 
 	// Cancel any pending connection delay timer since connection succeeded
 	h.cancelConnectionDelayTimer(ski)
+	h.muxCon.Unlock()
+
+	if displaced != nil {
+		logging.Log().Debug("closing existing double connection, keep the new one", ski)
+		h.retire(displaced)
+	}
+}
+
+// startShipConnection runs the SHIP handshake on an established websocket connection
+// and registers it.
+func (h *Hub) startShipConnection(conn *websocket.Conn, service *api.ServiceDetails, role ship.ShipRole) {
+	conn.SetPongHandler(nil)
+	if err := conn.SetReadDeadline(time.Time{}); err != nil {
+		logging.Log().Debug("failed to reset read deadline", err)
+	}
+	conn.SetReadLimit(ws.MaxMessageSize)
+
+	dataHandler := ws.NewWebsocketConnection(conn, service.SKI())
+	shipConnection := ship.NewConnectionHandler(h, dataHandler, role,
+		h.localService.ShipID(), service.SKI(), service.ShipID())
+	shipConnection.Run()
+
+	h.registerConnection(shipConnection)
 }
 
 // connectionForService finds an active connection for a given service using multiple identifiers.

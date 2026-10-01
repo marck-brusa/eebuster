@@ -67,9 +67,10 @@ func (c *ShipConnection) sendSpineData(data []byte) error {
 	shipMsg := []byte{model.MsgTypeData}
 	shipMsg = append(shipMsg, eebusMsg...)
 
-	err = c.dataWriter.WriteMessageToWebsocketConnection(shipMsg)
-	if err != nil {
+	if err := c.dataWriter.WriteMessageToWebsocketConnection(shipMsg); err != nil {
 		logging.Log().Debug("error sending message: ", err)
+		// tear down so the SKI is freed for reconnect instead of a zombie writer
+		c.CloseConnection(false, 0, "")
 		return err
 	}
 

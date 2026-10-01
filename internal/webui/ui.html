@@ -482,6 +482,7 @@ tr.phase-asym .phase-bar{background:var(--amber)}
       <div class="brand-mark">EEBUS</div>
       <h1>Network Intelligence</h1>
       <p data-i18n="brand.tagline">Live engineering testbench</p>
+      <p class="mono" id="app-version" style="font-size:11px;margin-top:4px;color:var(--muted)"></p>
     </div>
     <nav class="nav" aria-label="Primary navigation">
       <div class="nav-label" data-i18n="nav.label">Workspace</div>
@@ -4198,6 +4199,7 @@ async function jumpToTraceFrame(seq) {
 
 async function boot() {
   state.version = await safeApi("/version", {});
+  document.getElementById("app-version").textContent = state.version.version ? `v${state.version.version}` : "";
   showPage(localStorage.getItem("eebus-active-page") || "dashboard");
   document.querySelectorAll("#range-buttons button").forEach(button => button.classList.toggle("active", Number(button.dataset.range) === state.range));
 

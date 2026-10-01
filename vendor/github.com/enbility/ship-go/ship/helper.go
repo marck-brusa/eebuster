@@ -9,13 +9,21 @@ import (
 )
 
 // convert incoming EEBUS json format into standard json format
-func JsonFromEEBUSJson(json []byte) []byte {
-	var result = bytes.ReplaceAll(json, []byte("[{"), []byte("{"))
+func JsonFromEEBUSJson(data []byte) []byte {
+	// The PMCP device mistakenly adds an `0x00` byte at the end of many
+	// messages. Trim it first so the remaining bytes are valid JSON.
+	data = bytes.Trim(data, "\x00")
+
+	// Compact JSON to remove extra whitespaces
+	var compacted bytes.Buffer
+	if err := json.Compact(&compacted, data); err == nil {
+		data = compacted.Bytes()
+	}
+
+	var result = bytes.ReplaceAll(data, []byte("[{"), []byte("{"))
 	result = bytes.ReplaceAll(result, []byte("},{"), []byte(","))
 	result = bytes.ReplaceAll(result, []byte("}]"), []byte("}"))
 	result = bytes.ReplaceAll(result, []byte("[]"), []byte("{}"))
-	// The PMCP device mistakenly adds an `0x00` byte at the end of many messages.
-	result = bytes.Trim(result, "\x00")
 	return result
 }
 

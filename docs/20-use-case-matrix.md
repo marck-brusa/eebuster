@@ -61,6 +61,9 @@ real vehicle.
 | `lpc-heartbeat-loss` | disruptive | Stop heartbeat for failsafe observation |
 | `lpc-failsafe-window` | read-only | Announced failsafe duration must lie in the 2–24 h window (LPC UC TS) |
 | `lpc-duration-roundtrip` | live-control | A written limit duration must be visible on readback |
+| `lpc-heartbeat-timeout` | read-only | The device's heartbeat must announce a timeout of at most 60 s (LPC-006) |
+| `lpc-negative-limit` | live-control | A negative limit must be rejected (LPC-003) |
+| `lpc-failsafe-duration-range` | live-control | A failsafe duration below 2 h must be rejected, 2 h accepted |
 | `conformance-window` | read-only | Exercise reads, then require the wire trace to be free of conformance errors |
 | `mpc-phase-plausibility` | read-only | Per-phase currents/voltages must be plausible for their units (catches mA-as-A scale faults) |
 | `mpc-phase-consistency` | read-only | Per-phase powers must add up to the reported total |

@@ -42,14 +42,20 @@ func (c *ShipConnection) handshakeProtocol_smeProtHStateServerListenProposal(mes
 
 	messageProtocolHandshake := model.MessageProtocolHandshake{}
 	if err := json.Unmarshal([]byte(data), &messageProtocolHandshake); err != nil {
-		c.endHandshakeWithError(err)
+		// TC_SHIP_PROT_005: an unexpected/malformed SME message -> common abort
+		// with error=2 (unexpected message)
+		logging.Log().Debug(err)
+		c.abortProtocolHandshake(model.MessageProtocolHandshakeErrorErrorTypeUnexpectedMessage)
 		return
 	}
 
 	if messageProtocolHandshake.MessageProtocolHandshake.HandshakeType != model.ProtocolHandshakeTypeTypeAnnounceMax {
-		c.endHandshakeWithError(fmt.Errorf("%w from remote SKI %s: expected %s, got %s",
-			api.ErrInvalidHandshake, c.remoteSKI, model.ProtocolHandshakeTypeTypeAnnounceMax, 
+		// TC_SHIP_PROT_005: a valid SME message that is not the expected
+		// announceMax -> common abort with error=2 (unexpected message)
+		logging.Log().Debug(fmt.Errorf("%w from remote SKI %s: expected %s, got %s",
+			api.ErrInvalidHandshake, c.remoteSKI, model.ProtocolHandshakeTypeTypeAnnounceMax,
 			messageProtocolHandshake.MessageProtocolHandshake.HandshakeType))
+		c.abortProtocolHandshake(model.MessageProtocolHandshakeErrorErrorTypeUnexpectedMessage)
 		return
 	}
 
@@ -115,12 +121,16 @@ func (c *ShipConnection) handshakeProtocol_smeProtHStateClientListenChoice(messa
 
 	msgHandshake := messageProtocolHandshake.MessageProtocolHandshake
 
-	abort := false
 	if msgHandshake.HandshakeType != model.ProtocolHandshakeTypeTypeSelect {
-		logging.Log().Debug("invalid protocol handshake response")
-		abort = true
+		// TC_SHIP_PROT_006: a valid SME message that is not the expected select
+		// -> common abort with error=2 (unexpected message). A malformed select
+		// (wrong version/format) is a selection mismatch (error=3), handled below.
+		logging.Log().Debug("unexpected message, expected protocol handshake select")
+		c.abortProtocolHandshake(model.MessageProtocolHandshakeErrorErrorTypeUnexpectedMessage)
+		return
 	}
 
+	abort := false
 	if msgHandshake.Version.Major != 1 {
 		logging.Log().Debug("unsupported protocol major version")
 		abort = true
@@ -168,12 +178,14 @@ func (c *ShipConnection) abortProtocolHandshake(err model.MessageProtocolHandsha
 	c.stopTimerSafe()
 
 	msg := model.MessageProtocolHandshakeError{
-		Error: err,
+		MessageProtocolHandshakeError: model.MessageProtocolHandshakeErrorType{
+			Error: err,
+		},
 	}
 
 	_ = c.sendShipModel(model.MsgTypeControl, msg)
 
-	c.setState(model.SmeStateError, fmt.Errorf("%w with remote SKI %s: %v", 
+	c.setState(model.SmeStateError, fmt.Errorf("%w with remote SKI %s: %v",
 		api.ErrInvalidHandshake, c.remoteSKI, err))
 
 	c.CloseConnection(false, 0, "")

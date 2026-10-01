@@ -1,4 +1,4 @@
-# github.com/enbility/eebus-go v0.7.1-0.20260731142702-0aa83d264add
+# github.com/enbility/eebus-go v0.7.1-0.20260930170458-8583642861c3
 ## explicit; go 1.24.1
 github.com/enbility/eebus-go/api
 github.com/enbility/eebus-go/features/client
@@ -27,7 +27,7 @@ github.com/enbility/eebus-go/usecases/usecase
 # github.com/enbility/go-avahi v0.0.0-20240909195612-d5de6b280d7a
 ## explicit; go 1.17
 github.com/enbility/go-avahi
-# github.com/enbility/ship-go v0.6.1-0.20260518113001-134687068e3c
+# github.com/enbility/ship-go v0.6.1-0.20260928110648-a84426bc3810
 ## explicit; go 1.24.0
 github.com/enbility/ship-go/api
 github.com/enbility/ship-go/cert
@@ -39,7 +39,7 @@ github.com/enbility/ship-go/pairing
 github.com/enbility/ship-go/ship
 github.com/enbility/ship-go/util
 github.com/enbility/ship-go/ws
-# github.com/enbility/spine-go v0.7.1-0.20260520153416-0104ce40c885
+# github.com/enbility/spine-go v0.7.1-0.20260921145843-eb2cd4daba13
 ## explicit; go 1.24.1
 github.com/enbility/spine-go/api
 github.com/enbility/spine-go/model

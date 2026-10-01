@@ -28,7 +28,15 @@ func (h *Hub) HandleConnectionClosed(connection api.ShipConnectionInterface, han
 	// only remove this connection if it is the registered one for the ski!
 	// as we can have double connections but only one can be registered
 	// Use the new atomic method to avoid race conditions
-	h.UnregisterConnectionIfMatch(remoteSki, connection)
+	wasRegistered := h.UnregisterConnectionIfMatch(remoteSki, connection)
+
+	// This connection was displaced by a more recent one to the same SKI (SHIP 12.2.2).
+	// The peer is still connected, so reporting a disconnect here would tear down the
+	// application state belonging to the connection that just won.
+	if !wasRegistered && h.isSkiConnected(remoteSki) {
+		logging.Log().Debug("superseded connection closed, peer remains connected", remoteSki)
+		return
+	}
 
 	// connection close was after a completed handshake, so we can reset the attempt counter
 	if handshakeCompleted {

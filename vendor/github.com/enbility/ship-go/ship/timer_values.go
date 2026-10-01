@@ -10,10 +10,18 @@ func getHelloInitTimeout() time.Duration {
 	return tHelloInit
 }
 
+func getHelloIncTimeout() time.Duration {
+	return tHelloInc
+}
+
 func getAbortDelay() time.Duration {
 	return tAbortDelay
 }
 
 func getCmiTimeout() time.Duration {
 	return cmiTimeout
+}
+
+func getAccessMethodsTimeout() time.Duration {
+	return accessMethodsTimeout
 }

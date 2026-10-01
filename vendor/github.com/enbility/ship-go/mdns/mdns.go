@@ -51,9 +51,9 @@ func DefaultProviderFactory() *ProviderFactory {
 // The logicalID (the map key in announcedPairings) is stable and returned to callers.
 // providerID is transient and updated transparently when interfaces change.
 type announcedPairing struct {
-	serviceName string               // mDNS service name — stable across re-announcements
-	txtRecord   *api.ShipPairingTXT  // TXT record data
-	providerID  string               // current provider-side instance ID (changes on re-announcement)
+	serviceName string              // mDNS service name — stable across re-announcements
+	txtRecord   *api.ShipPairingTXT // TXT record data
+	providerID  string              // current provider-side instance ID (changes on re-announcement)
 }
 
 type MdnsManager struct {
@@ -105,7 +105,7 @@ type MdnsManager struct {
 	// created during re-announcement. This keeps caller-held IDs valid indefinitely.
 	announcedPairings    map[string]*announcedPairing
 	announcedPairingsMux sync.RWMutex
-	instanceCounter       int // monotonic counter for stable logical ID and service name generation
+	instanceCounter      int // monotonic counter for stable logical ID and service name generation
 
 	// the currently available mDNS entries with the serviceName as the key in the map
 	entries map[string]*api.MdnsEntry
@@ -188,7 +188,7 @@ func NewMDNS(
 		entries:           make(map[string]*api.MdnsEntry),
 		pairingEntries:    make(map[string]*api.ShipPairingTXT),
 		announcedPairings: make(map[string]*announcedPairing),
-		instanceCounter:    0,
+		instanceCounter:   0,
 		providerFactory:   DefaultProviderFactory(),
 	}
 
@@ -930,8 +930,8 @@ func (m *MdnsManager) UnregisterPairingCallback() {
 
 // detectServiceType determines the service type based on the serviceType parameter
 func (m *MdnsManager) detectServiceType(serviceType string) ServiceType {
-	// Check the serviceType parameter with exact matching
-	switch serviceType {
+	// Compare case insensitively per RFC 6763
+	switch strings.ToLower(serviceType) {
 	case shipPairingZeroConfServiceType: // "_shippairing._tcp"
 		return ServiceTypeShipPairing
 	case shipZeroConfServiceType: // "_ship._tcp"
@@ -964,6 +964,18 @@ func (m *MdnsManager) processMdnsEntry(elements map[string]string, serviceName, 
 // makes key comparison case-insensitive, mapItems retains the spec spelling
 // for audit clarity while lookups go through the lowercased form.
 func (m *MdnsManager) processShipPairingMdnsEntry(elements map[string]string, serviceName string, remove bool) {
+	// A removal is identified by its service instance name alone. mDNS remove
+	// events often carry no TXT data (avahi can only echo elements cached at
+	// add time, zeroconf reports incomplete records), so removal must be
+	// handled before any TXT validation.
+	if remove {
+		if _, exists := m.pairingMdnsEntry(serviceName); exists {
+			m.removePairingMdnsEntry(serviceName)
+			logging.Log().Debug("mdns: remove shippairing", serviceName)
+		}
+		return
+	}
+
 	// check for mandatory text elements
 	mapItems := []string{"txtvers", "parType", "forId", "forPar", "trustId", "trustPar", "trustCurve", "type", "trustNonce", "alg", "digest"}
 	for _, item := range mapItems {
@@ -993,22 +1005,6 @@ func (m *MdnsManager) processShipPairingMdnsEntry(elements map[string]string, se
 
 	logString := fmt.Sprintf(" - forId: %s, forPar: %s, trustId: %s, trustPar: %s, trustCurve: %s, type: %s, trustNonce: %s, alg: %s, digest: %s",
 		forId, forPar, trustId, trustPar, trustCurve, elType, trustNonce, alg, digest)
-
-	_, exists := m.pairingMdnsEntry(serviceName)
-
-	if remove && exists {
-		// remove
-		// there will be a remove for each address with avahi, but we'll delete it right away
-		m.removePairingMdnsEntry(serviceName)
-
-		logging.Log().Debug("mdns: remove", logString)
-		return
-	}
-
-	if remove || exists {
-		return
-	}
-
 	// new
 	newEntry := &api.ShipPairingTXT{
 		TxtVers:    txtvers,
@@ -1029,9 +1025,22 @@ func (m *MdnsManager) processShipPairingMdnsEntry(elements map[string]string, se
 		return
 	}
 
-	m.setPairingMdnsEntry(serviceName, newEntry)
+	// A re-report of a known instance name with identical content is a TTL
+	// refresh — ignore it. Different content means devZ corrected its request
+	// reusing the same instance name (pairing spec §5.5 option 2), or the
+	// goodbye that should have preceded the new announcement was lost; §4.2
+	// devA rule 2 requires the evaluation to begin again in both cases, so
+	// update the cache and re-deliver.
+	if cached, exists := m.pairingMdnsEntry(serviceName); exists {
+		if *cached == *newEntry {
+			return
+		}
+		logging.Log().Debug("mdns: changed", logString)
+	} else {
+		logging.Log().Debug("mdns: new", logString)
+	}
 
-	logging.Log().Debug("mdns: new", logString)
+	m.setPairingMdnsEntry(serviceName, newEntry)
 
 	m.mux.Lock()
 	callback := m.pairingCallback
@@ -1449,7 +1458,9 @@ func (m *MdnsManager) SearchPairingServices(callback func(*api.ShipPairingTXT) b
 	return nil
 }
 
-// RequestPairingEntries triggers an immediate discovery scan for SHIP Pairing Services (implements MdnsPairingInterface)
+// RequestPairingEntries returns a snapshot of the currently-live
+// _shippairing._tcp records from the local browse cache; it performs no
+// network operation (implements MdnsPairingInterface)
 func (m *MdnsManager) RequestPairingEntries() (map[string]*api.ShipPairingTXT, error) {
 	// Ensure the mDNS manager is started
 	if !m.isStarted {

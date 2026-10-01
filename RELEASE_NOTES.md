@@ -1,5 +1,30 @@
 # Release notes
 
+## 1.0.0-rc13
+
+- **EEBusTracer sees the whole session.** A tracer that attaches to the live feed mid-session
+  first gets the most recent 5000 frames (connection setup, discovery, the initial reads), then
+  the live stream. Before, a late tracer saw little more than heartbeats.
+- **Dashboard reads go to the device.** LPC limit and failsafe, MPC and OPEV/OSCEV reads request
+  the data from the device and wait up to 3 s for the reply, so they show in a tracer and never
+  report a stale value; without a reply in time the local copy is shown as before.
+- **EV values of a combined-phase device.** The EV tile, EV current and EV power stayed empty
+  for a device that measures one combined phase; they now show its values.
+- **Missing values show as missing.** Grid, PV and battery tiles printed 0 W for values the
+  device does not report, and the power chart drew them as flat 0 W lines; both now show a
+  dash or nothing. The lower chart uses the full panel width.
+- **The version shows in the sidebar**, under the title.
+- **Three more LPC checks.** `lpc-heartbeat-timeout` requires the device's own heartbeat to
+  announce a timeout of at most 60 s; `lpc-negative-limit` requires a negative limit to be
+  rejected; `lpc-failsafe-duration-range` requires a failsafe duration below 2 h to be rejected.
+  For the last one `PUT /lpc/{ski}/failsafe?unchecked=true` sends a duration that eebus-go would
+  refuse, and `GET /lpc/{ski}/heartbeat` now also returns `heartbeat_timeout_s`.
+- **eebus-go, ship-go and spine-go updated** to their current development heads (2026-09-30).
+  Most relevant: a write of a complete limit or key-value list is kept in the cache right away,
+  so a second write before the device's notify (e.g. OPEV obligations followed by OSCEV
+  recommendations, which share one list) no longer reverts the first; SHIP handshake and TLS
+  fingerprint checks follow the SHIP test cases; SPINE partial updates merge correctly.
+
 ## 1.0.0-rc12
 
 - **The OPEV card shows the right inputs up front.** It learns the phases the device declares

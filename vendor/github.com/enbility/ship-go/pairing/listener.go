@@ -91,7 +91,34 @@ func (l *PairingListener) StartListening(ctx context.Context, secret api.Pairing
 		return err
 	}
 
+	// A browse callback fires only once per service instance; announcements
+	// that arrived while no listener was active were dropped and will not be
+	// re-delivered, so evaluate the currently-live records now. The order is
+	// load-bearing: the callback above is registered first, then the snapshot
+	// is read — every record is in at least one of the two deliveries, and a
+	// duplicate delivery is benign (an accepted request stops the listener, a
+	// rejected one re-fails identically). Runs on its own goroutine because
+	// evaluation re-enters both l.mux and the hub, and callers may hold locks
+	// across StartListening.
+	go l.evaluateCurrentEntries()
+
 	return nil
+}
+
+// evaluateCurrentEntries evaluates the pairing records currently live in the
+// local mDNS browse cache through the regular discovery pipeline.
+func (l *PairingListener) evaluateCurrentEntries() {
+	entries, err := l.mdns.RequestPairingEntries()
+	if err != nil {
+		// The subscription for future announcements is already in place;
+		// failing to read the snapshot must not tear the listener down.
+		logging.Log().Error("pairing listener: could not read current pairing records", "error", err)
+		return
+	}
+
+	if err := l.ProcessPendingEntries(entries); err != nil {
+		logging.Log().Error("pairing listener: failed to evaluate current pairing records", "error", err)
+	}
 }
 
 // StopListening stops listening for pairing requests (implements PairingListenerInterface)
@@ -122,6 +149,9 @@ func (l *PairingListener) GetListenerStatus() api.ListenerStatus {
 }
 
 // ProcessPendingEntries processes a batch of pairing entries (implements PairingListenerInterface)
+//
+// Deprecated: currently-live records are evaluated automatically when
+// StartListening succeeds; external callers no longer need to replay them.
 func (l *PairingListener) ProcessPendingEntries(entries map[string]*api.ShipPairingTXT) error {
 	if len(entries) == 0 {
 		return nil

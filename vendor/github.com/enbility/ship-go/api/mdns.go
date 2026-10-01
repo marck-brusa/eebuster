@@ -146,14 +146,14 @@ type MdnsPairingInterface interface {
 	// The search runs until the callback returns false or an error occurs
 	SearchPairingServices(callback func(*ShipPairingTXT) bool) error
 
-	// RequestPairingEntries triggers an immediate discovery scan for SHIP Pairing Services.
-	// This supplements continuous pairing discovery by forcing an immediate search.
-	// Returns a map of currently discovered pairing services keyed by service name.
-	//
-	// This method is the pairing equivalent of RequestMdnsEntries() for regular SHIP services.
+	// RequestPairingEntries returns a snapshot of the currently-live
+	// _shippairing._tcp records from the local browse cache, keyed by service
+	// name. It performs no network operation: the cache is maintained
+	// continuously by the provider's browser (records enter on announcements
+	// and leave on goodbyes/TTL expiry).
 	//
 	// Returns:
-	//   - map[string]*ShipPairingTXT: Currently discovered pairing services
+	//   - map[string]*ShipPairingTXT: Currently live pairing records
 	//   - error: nil if request succeeds, error if the mDNS manager is not started
 	RequestPairingEntries() (map[string]*ShipPairingTXT, error)
 

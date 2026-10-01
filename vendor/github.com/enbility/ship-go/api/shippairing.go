@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -88,9 +89,8 @@ type PairingListenerInterface interface {
 	// Provides information about listening activity, requests seen, and any errors.
 	GetListenerStatus() ListenerStatus
 
-	// ProcessPendingEntries processes a batch of pairing entries that were found
-	// but not yet processed. This is typically used when reactivating after
-	// device replacement timeouts to handle existing mDNS announcements.
+	// ProcessPendingEntries evaluates a batch of pairing records through the
+	// same validation pipeline as live discovery.
 	//
 	// Parameters:
 	//   - entries: Map of service names to ShipPairingTXT records to process
@@ -103,6 +103,9 @@ type PairingListenerInterface interface {
 	//   - Stops processing after first successful pairing (SHIP spec behavior)
 	//   - Handles invalid entries gracefully, continuing with remaining entries
 	//   - No-op if listener is not active or entries is nil/empty
+	//
+	// Deprecated: StartListening evaluates the currently-live mDNS records
+	// automatically; external callers no longer need to replay them.
 	ProcessPendingEntries(entries map[string]*ShipPairingTXT) error
 }
 
@@ -535,16 +538,41 @@ func (sp *ShipPairingTXT) FromMap(txtMap map[string]string) error {
 	return nil
 }
 
+// isUppercaseHex reports whether s consists of exactly length uppercase
+// hexadecimal digits ([0-9A-F]{length} per pairing spec section 5.4, Table 1).
+func isUppercaseHex(s string, length int) bool {
+	if len(s) != length {
+		return false
+	}
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'A' || c > 'F') {
+			return false
+		}
+	}
+	return true
+}
+
 // Validate checks if all TXT record field values conform to SHIP Pairing Service specification.
 // This method validates field content after the structure has been populated (typically after
-// calling FromMap). It ensures that enum values are within supported ranges and algorithms
-// are supported by this implementation.
+// calling FromMap). It ensures that enum values are within supported ranges, algorithms
+// are supported by this implementation, and hexadecimal values match the exact formats
+// of pairing spec section 5.4, Table 1.
+//
+// The format checks are load-bearing for security, not pedantry: a shippairing digest is
+// calculated over the TXT values as announced, so a record whose values are malformed in a
+// way that survives lenient parsing (lowercase hex, wrong-length nonce) carries a digest
+// that still verifies. Format validation is the only gate that rejects such records
+// (see TC_SPS_TXT_009).
 //
 // Returns:
 //   - nil if all field values are valid per SHIP specification
 //   - PairingValidationError if any field contains an unsupported or invalid value
 //
 // Validation checks:
+//   - txtvers must be "1"
+//   - forId and trustId must be non-empty (SHIP ID)
+//   - forPar, trustPar and digest must be 64 uppercase hexadecimal digits
+//   - trustNonce must be 32 uppercase hexadecimal digits (128-bit nonce)
 //   - Algorithm must be "hmacSha256" (only supported HMAC algorithm)
 //   - Parameter type must be "fpSha256" (fingerprint SHA-256)
 //   - Command type must be "addCu" (only supported pairing command)
@@ -554,6 +582,11 @@ func (sp *ShipPairingTXT) FromMap(txtMap map[string]string) error {
 //
 //	Call this method after FromMap() to ensure received pairing data is processable
 func (sp *ShipPairingTXT) Validate() error {
+	// Check TXT record format version
+	if sp.TxtVers != "1" {
+		return NewPairingFieldValidationError("txtvers", "invalid txtvers, expected '1'")
+	}
+
 	// Check required algorithm
 	if sp.Alg != AlgorithmHMACSHA256 {
 		return NewPairingValidationError("unsupported algorithm: " + sp.Alg)
@@ -580,6 +613,28 @@ func (sp *ShipPairingTXT) Validate() error {
 	}
 	if !valid {
 		return NewPairingValidationError("unsupported trust curve: " + sp.TrustCurve)
+	}
+
+	// Check SHIP ID fields are present
+	if strings.TrimSpace(sp.ForId) == "" {
+		return NewPairingFieldValidationError("forId", "value must not be empty")
+	}
+	if strings.TrimSpace(sp.TrustId) == "" {
+		return NewPairingFieldValidationError("trustId", "value must not be empty")
+	}
+
+	// Check hexadecimal value formats per pairing spec section 5.4, Table 1
+	if !isUppercaseHex(sp.ForPar, 64) {
+		return NewPairingFieldValidationError("forPar", "value must be 64 uppercase hexadecimal digits")
+	}
+	if !isUppercaseHex(sp.TrustPar, 64) {
+		return NewPairingFieldValidationError("trustPar", "value must be 64 uppercase hexadecimal digits")
+	}
+	if !isUppercaseHex(sp.TrustNonce, 32) {
+		return NewPairingFieldValidationError("trustNonce", "value must be 32 uppercase hexadecimal digits")
+	}
+	if !isUppercaseHex(sp.Digest, 64) {
+		return NewPairingFieldValidationError("digest", "value must be 64 uppercase hexadecimal digits")
 	}
 
 	return nil

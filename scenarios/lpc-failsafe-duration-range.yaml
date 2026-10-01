@@ -1,0 +1,31 @@
+name: lpc-failsafe-duration-range
+description: >
+  Writes a failsafe duration minimum of 1 h 54 min, below the 2 h LPC allows, bypassing the
+  stack's own range check, and requires the device to reject it (test case
+  ATC_COM_PT_CSConnection_008, FCAPL_DUR_01). Then writes 2 h, which must be accepted, so the
+  device ends with a valid failsafe duration.
+covers: "LPC failsafe: a failsafe duration below the 2 h minimum."
+goal: "Proves the device range-checks the failsafe duration it is given."
+hint: "Leaves the device's failsafe duration at 2 h."
+category: LPC
+risk: live-control
+requires:
+  capabilities: [lpc.failsafe]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/failsafe?unchecked=true"
+      body: {duration: "PT1H54M"}
+  - sleep: 2
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/failsafe"
+      not_equals: {duration: "PT1H54M"}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/failsafe"
+      body: {duration: "PT2H"}
+  - sleep: 2
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/failsafe"
+      equals: {duration: "PT2H"}

@@ -174,12 +174,28 @@ func (c *ShipConnection) handleState(timeout bool, message []byte) {
 	// smeProtocol
 
 	case model.SmeProtHStateServerListenProposal:
+		if timeout {
+			// TC_SHIP_PROT_003: no protocol handshake arrived within the wait
+			// timer -> common abort with error=1 (timeout)
+			c.abortProtocolHandshake(model.MessageProtocolHandshakeErrorErrorTypeTimeout)
+			return
+		}
 		c.handshakeProtocol_smeProtHStateServerListenProposal(message)
 
 	case model.SmeProtHStateServerListenConfirm:
+		if timeout {
+			c.abortProtocolHandshake(model.MessageProtocolHandshakeErrorErrorTypeTimeout)
+			return
+		}
 		c.handshakeProtocol_smeProtHStateServerListenConfirm(message)
 
 	case model.SmeProtHStateClientListenChoice:
+		if timeout {
+			// TC_SHIP_PROT_004: no select arrived within the wait timer ->
+			// common abort with error=1 (timeout)
+			c.abortProtocolHandshake(model.MessageProtocolHandshakeErrorErrorTypeTimeout)
+			return
+		}
 		c.stopTimerSafe()
 		c.handshakeProtocol_smeProtHStateClientListenChoice(message)
 
@@ -198,12 +214,30 @@ func (c *ShipConnection) handleState(timeout bool, message []byte) {
 		c.handshakePin_smePinStateCheckListen(message)
 
 	case model.SmePinStateCheckOk:
+		// SHIP 13.4.4.3: PIN verification succeeded, so both sides enable connection data exchange
+		c.enterConnectionDataExchange()
+		// SHIP 13.4.6.2: access methods identification runs in parallel to connection data exchange
 		c.handshakeAccessMethods_Init()
 
-	// smeAccessMethods
+	// connection data exchange (SHIP 13.4.5), with access methods identification (SHIP 13.4.6)
+	// running in parallel
 
 	case model.SmeAccessMethodsRequest:
-		c.handshakeAccessMethods_Request(message)
+		if timeout {
+			// SHIP 13.4.6.2.1: the requester CAN close the connection if it does not receive a
+			// proper "access methods" message in time
+			c.endDataExchangeWithError(fmt.Errorf("%w: no access methods response from remote SKI %s within %v",
+				api.ErrConnectionTimeout, c.remoteSKI, getAccessMethodsTimeout()))
+			return
+		}
+		c.handleDataExchangeSmeMessage(message)
+
+	case model.SmeStateComplete:
+		// no timer runs once complete, so a timeout here is a stale one
+		if timeout {
+			return
+		}
+		c.handleDataExchangeSmeMessage(message)
 	}
 }
 
@@ -213,13 +247,11 @@ func (c *ShipConnection) setAndHandleState(state model.ShipMessageExchangeState)
 	c.handleState(false, nil)
 }
 
-// SHIP handshake is approved, now set the new state and the SPINE read handler
+// access methods identification succeeded and the remote's SHIP ID is verified, so the connection
+// is complete. SPINE processing was already set up when connection data exchange was entered.
 func (c *ShipConnection) approveHandshake() {
-	// Report to SPINE local device about this remote device connection
-	c.dataReader = c.infoProvider.SetupRemoteService(c.remoteSKI, c)
 	c.stopTimerSafe()
 	c.setState(model.SmeStateComplete, nil)
-	c.processBufferedSpineMessages()
 }
 
 // end the handshake process because of an error
@@ -239,6 +271,44 @@ func (c *ShipConnection) endHandshakeWithError(err error) {
 	c.infoProvider.HandleShipHandshakeStateUpdate(c.remoteSKI, state)
 }
 
+// end a connection that already entered connection data exchange because of an error
+//
+// Unlike endHandshakeWithError this announces the termination first, per SHIP 13.4.7, so that a
+// data message still in flight can be completed. CloseConnection only announces while the state
+// is a data exchange state, which is why the error state is set afterwards.
+func (c *ShipConnection) endDataExchangeWithError(err error) {
+	c.stopTimerSafe()
+
+	logging.Log().Debug(c.RemoteSKI(), "SHIP data exchange error:", err)
+
+	c.CloseConnection(true, 0, err.Error())
+
+	c.setState(model.SmeStateError, err)
+}
+
+// enterConnectionDataExchange hands the connection to the application, so SPINE data is processed
+// from now on without waiting for the access methods exchange (SHIP IG Transport and Connectivity
+// 2.1 "Immediate readiness"). This is the only place the application is handed the connection.
+//
+// Incoming SPINE data is also only delivered in a data exchange state. The first one,
+// SmeAccessMethodsRequest, is set by handshakeAccessMethods_Init right after this.
+func (c *ShipConnection) enterConnectionDataExchange() {
+	c.setDataReader(c.infoProvider.SetupRemoteService(c.remoteSKI, c))
+}
+
+// isDataExchangeState reports whether a state belongs to SHIP connection data exchange (SHIP
+// 13.4.5). Both sides enable it once PIN verification succeeded (SHIP 13.4.4.3), and access
+// methods identification then runs in parallel to it (SHIP 13.4.6.2), so SmeAccessMethodsRequest
+// and SmeStateApproved are data exchange states just like SmeStateComplete.
+func isDataExchangeState(state model.ShipMessageExchangeState) bool {
+	switch state {
+	case model.SmeAccessMethodsRequest, model.SmeStateApproved, model.SmeStateComplete:
+		return true
+	default:
+		return false
+	}
+}
+
 // set the handshake timer to a new duration and start the channel
 func (c *ShipConnection) setHandshakeTimer(timerType timeoutTimerType, duration time.Duration) {
 	c.stopHandshakeTimer()
@@ -252,6 +322,7 @@ func (c *ShipConnection) setHandshakeTimer(timerType timeoutTimerType, duration 
 
 	c.handshakeTimerType = timerType
 	c.handshakeTimerRunning = true
+	c.handshakeTimerDeadline = time.Now().Add(duration)
 	c.handshakeTimer = time.AfterFunc(duration, func() {
 		defer close(done) // Signal completion when this goroutine exits
 
@@ -321,6 +392,40 @@ func (c *ShipConnection) getHandshakeTimerType() timeoutTimerType {
 	defer c.handshakeTimerMux.Unlock()
 
 	return c.handshakeTimerType
+}
+
+// handshakeTimerRemaining returns the time left on the running handshake timer, if it is of the
+// given type
+func (c *ShipConnection) handshakeTimerRemaining(timerType timeoutTimerType) (time.Duration, bool) {
+	c.handshakeTimerMux.Lock()
+	defer c.handshakeTimerMux.Unlock()
+
+	if c.handshakeTimer == nil || c.handshakeTimerType != timerType {
+		return 0, false
+	}
+
+	return max(time.Until(c.handshakeTimerDeadline), 0), true
+}
+
+// extendHandshakeTimer adds extra to the running handshake timer, if it is of the given type.
+//
+// The timer is stopped and rescheduled under handshakeTimerMux, so it cannot expire between
+// reading the time left and extending it. A timer that already fired is left alone: its expiry
+// is being handled. After a successful Stop its callback has not run, so Reset reuses the same
+// callback and done channel.
+func (c *ShipConnection) extendHandshakeTimer(timerType timeoutTimerType, extra time.Duration) bool {
+	c.handshakeTimerMux.Lock()
+	defer c.handshakeTimerMux.Unlock()
+
+	if c.handshakeTimer == nil || c.handshakeTimerType != timerType || !c.handshakeTimer.Stop() {
+		return false
+	}
+
+	remaining := max(time.Until(c.handshakeTimerDeadline), 0) + extra
+	c.handshakeTimerDeadline = time.Now().Add(remaining)
+	c.handshakeTimer.Reset(remaining)
+
+	return true
 }
 
 // stopTimerSafe atomically stops the handshake timer if it's running

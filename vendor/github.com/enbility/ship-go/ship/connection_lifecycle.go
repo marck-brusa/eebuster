@@ -8,6 +8,20 @@ import (
 	"github.com/enbility/ship-go/util"
 )
 
+// validCloseReason maps a free-form close reason to a valid SHIP
+// ConnectionCloseReasonType, defaulting to unspecific. TC_SHIP_TERM_001 requires
+// the announced close message to carry a valid reason value; callers pass
+// human-readable strings (e.g. "User close") that are not valid SHIP enum values.
+func validCloseReason(reason string) model.ConnectionCloseReasonType {
+	switch model.ConnectionCloseReasonType(reason) {
+	case model.ConnectionCloseReasonTypeUnspecific,
+		model.ConnectionCloseReasonTypeRemovedconnection:
+		return model.ConnectionCloseReasonType(reason)
+	default:
+		return model.ConnectionCloseReasonTypeUnspecific
+	}
+}
+
 // NewConnectionHandler creates a new SHIP connection handler
 func NewConnectionHandler(
 	dataProvider api.ShipConnectionInfoProviderInterface,
@@ -77,14 +91,15 @@ func (c *ShipConnection) CloseConnection(safe bool, code int, reason string) {
 			state == model.SmeHelloStateRemoteAbortDone ||
 			state == model.SmeHelloStateRejected
 
-		// this may not be used for Connection Data Exchange is entered!
-		if safe && state == model.SmeStateComplete {
+		// SHIP 13.4.7 termination applies once connection data exchange is entered, which
+		// includes access methods identification (SHIP 13.4.6.2), and not to earlier states
+		if safe && isDataExchangeState(state) {
 			// SHIP 13.4.7: Connection Termination Announce
 			closeMessage := model.ConnectionClose{
 				ConnectionClose: model.ConnectionCloseType{
 					Phase:   model.ConnectionClosePhaseTypeAnnounce,
 					MaxTime: util.Ptr(uint(500)),
-					Reason:  util.Ptr(model.ConnectionCloseReasonType(reason)),
+					Reason:  util.Ptr(validCloseReason(reason)),
 				},
 			}
 

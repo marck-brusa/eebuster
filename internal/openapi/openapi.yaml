@@ -209,7 +209,13 @@ paths:
     put:
       tags: [use-cases]
       summary: Write the LPC failsafe value and/or minimum hold duration (either field alone is fine)
-      parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
+      parameters:
+        - { $ref: "#/components/parameters/Ski" }
+        - { $ref: "#/components/parameters/Entity" }
+        - name: unchecked
+          in: query
+          schema: { type: boolean }
+          description: "true sends a duration outside 2-24 h as is, to test the device's own range check"
       requestBody: { $ref: "#/components/requestBodies/FailsafeLimit" }
       responses: { "200": { description: OK } }
 
@@ -235,9 +241,9 @@ paths:
   /api/v1/lpc/{ski}/heartbeat:
     get:
       tags: [use-cases]
-      summary: Whether the peer is within the heartbeat's expected duration
+      summary: Whether the peer is within the heartbeat's expected duration, and the heartbeatTimeout it announces
       parameters: [{ $ref: "#/components/parameters/Ski" }, { $ref: "#/components/parameters/Entity" }]
-      responses: { "200": { description: OK } }
+      responses: { "200": { description: "OK: within_duration, plus heartbeat_timeout_s once the device has sent a heartbeat" } }
 
   /api/v1/lpp/{ski}/limit:
     get:

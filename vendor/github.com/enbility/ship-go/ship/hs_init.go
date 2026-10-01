@@ -60,13 +60,28 @@ func (c *ShipConnection) handshakeInit_cmiStateEvaluate(message []byte) bool {
 	msgType, data := c.parseMessage(message, false)
 
 	if msgType != model.MsgTypeInit {
+		// TC_SHIP_CMI_001: as server, reject an invalid CMI message by sending a
+		// CMI message (MessageType=0, MessageValue=0) before closing.
+		c.rejectInvalidCmiMessage()
 		c.endHandshakeWithError(fmt.Errorf("invalid SHIP MessageType, expected 0 and got %s", string(msgType)))
 		return false
 	}
 	if len(data) > 0 && data[0] != byte(0) {
+		c.rejectInvalidCmiMessage()
 		c.endHandshakeWithError(fmt.Errorf("invalid SHIP MessageValue, expected 0 and got %s", string(data)))
 		return false
 	}
 
 	return true
+}
+
+// rejectInvalidCmiMessage sends a CMI message (MessageType=0, MessageValue=0) to
+// reject an invalid incoming CMI message. Per SHIP only the server responds in the
+// CMI phase (the client does not), so this is a no-op for the client role.
+func (c *ShipConnection) rejectInvalidCmiMessage() {
+	if c.role != ShipRoleServer {
+		return
+	}
+
+	_ = c.dataWriter.WriteMessageToWebsocketConnection(model.ShipInit)
 }

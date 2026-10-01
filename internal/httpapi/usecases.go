@@ -148,7 +148,9 @@ func (s *Server) handleLPCWriteFailsafe(w http.ResponseWriter, r *http.Request) 
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "detail": err.Error()})
 		return
 	}
-	if err := s.stack.LPC().WriteFailsafe(r.PathValue("ski"), body, hint); err != nil {
+	// ?unchecked=true sends a duration outside 2-24 h as is, to test the device's range check.
+	unchecked := r.URL.Query().Get("unchecked") == "true"
+	if err := s.stack.LPC().WriteFailsafe(r.PathValue("ski"), body, hint, unchecked); err != nil {
 		writeUsecaseError(w, err)
 		return
 	}
@@ -190,7 +192,11 @@ func (s *Server) handleLPCHeartbeatStatus(w http.ResponseWriter, r *http.Request
 		writeUsecaseError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{"within_duration": within})
+	out := map[string]any{"within_duration": within}
+	if timeout, ok, err := s.stack.LPC().HeartbeatTimeout(r.PathValue("ski"), hint); err == nil && ok {
+		out["heartbeat_timeout_s"] = timeout.Seconds()
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) handleLPPReadLimit(w http.ResponseWriter, r *http.Request) {

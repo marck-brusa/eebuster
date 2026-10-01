@@ -152,6 +152,31 @@ func (t *AddCuReplacementTracker) StopTimer(shipID string) {
 	t.timer = nil
 }
 
+// StopAll cancels any active replacement timer and clears tracking state.
+//
+// Unlike StopTimer, this does not require the caller to know which device is
+// being tracked; it unconditionally tears down whatever timer is running. It
+// should be called during Hub shutdown to prevent the timeout callback from
+// firing after the Hub is torn down — otherwise handleAddCuReplacementTimeout
+// could reactivate the pairing listener and call into an already-shut-down
+// pairing service and mDNS up to the full timeout later, and the pending
+// time.AfterFunc would pin the Hub in memory for the same window.
+//
+// Thread-safety: This method is thread-safe and can be called concurrently.
+func (t *AddCuReplacementTracker) StopAll() {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	if t.timer != nil {
+		t.timer.Stop()
+		logging.Log().Debug("AddCu replacement timer stopped during shutdown", "shipID", t.pairedDeviceShipID)
+	}
+
+	t.pairedDeviceShipID = ""
+	t.disconnectionTime = time.Time{}
+	t.timer = nil
+}
+
 // IsTracking returns true if the tracker is currently tracking the specified device.
 //
 // This method checks whether a timer is active for the given device, useful for

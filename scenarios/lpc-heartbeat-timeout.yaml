@@ -1,0 +1,21 @@
+name: lpc-heartbeat-timeout
+description: >
+  Reads the heartbeat the device sends as Controllable System and checks the heartbeatTimeout it
+  announces. LPC requires the CS heartbeat at least every 60 s with a timeout of at most 60 s
+  (EEBus UC TS LPC V1.0.0, LPC-006, "DeviceDiagnosisHeartbeat_Timeout60Seconds"; test case
+  ATC_COM_PT_CSHeartbeat_001). An Energy Guard uses it to detect that the device is gone.
+covers: "LPC scenario 3: the heartbeat timeout the device announces."
+goal: "Proves the device announces a timeout of at most 60 s, as LPC requires."
+hint: "Fails if the device sends no heartbeat at all."
+category: LPC
+risk: read-only
+requires:
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - sleep: 2
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/heartbeat"
+      greater_than: {heartbeat_timeout_s: 0}
+      less_or_equal: {heartbeat_timeout_s: 60}

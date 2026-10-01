@@ -300,7 +300,7 @@ func (z *ZeroconfProvider) chanListener(pairingMode api.PairingMode, cb api.Mdns
 
 		case service := <-zcPairingRemoved:
 			// Handle removed pairing services
-			if service == nil || len(service.Text) == 0 {
+			if service == nil {
 				continue
 			}
 
@@ -308,7 +308,6 @@ func (z *ZeroconfProvider) chanListener(pairingMode api.PairingMode, cb api.Mdns
 
 			if !uniqueKeys {
 				logging.Log().Errorf("duplicate keys in txt record: %v", service.Text)
-				continue
 			}
 
 			addresses := service.AddrIPv4

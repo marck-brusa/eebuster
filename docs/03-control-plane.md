@@ -135,11 +135,11 @@ All endpoints are under `/api/v1`.
 | Method | Path | Purpose |
 |---|---|---|
 | GET/PUT | `/lpc/{ski}/limit` | Consumption limit |
-| GET/PUT | `/lpc/{ski}/failsafe` | Failsafe value and duration |
+| GET/PUT | `/lpc/{ski}/failsafe` | Failsafe value and duration; `?unchecked=true` sends a duration outside 2–24 h as is |
 | GET | `/lpc/{ski}/nominal-max` | Declared maximum consumption |
 | POST | `/lpc/heartbeat/start` | Start heartbeat |
 | POST | `/lpc/heartbeat/stop` | Stop heartbeat |
-| GET | `/lpc/{ski}/heartbeat` | Heartbeat state |
+| GET | `/lpc/{ski}/heartbeat` | Heartbeat state and the device's announced `heartbeat_timeout_s` |
 | GET/PUT | `/lpp/{ski}/limit` | Production limit |
 | GET/PUT | `/lpp/{ski}/failsafe` | Production failsafe value and duration |
 | GET | `/lpp/{ski}/nominal-max` | Declared maximum production |

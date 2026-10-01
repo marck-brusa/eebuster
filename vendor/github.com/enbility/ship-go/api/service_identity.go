@@ -102,7 +102,7 @@ func (s ServiceIdentity) String() string {
 		parts = append(parts, fmt.Sprintf("ShipID:%s", s.ShipID))
 	}
 
-	if s.Fingerprint != "" {
+	if len(s.Fingerprint) == 64 {
 		parts = append(parts, fmt.Sprintf("Fingerprint:%s", s.Fingerprint[:8]+"...")) // Truncate for readability
 	}
 
