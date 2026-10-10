@@ -1,0 +1,24 @@
+name: opev-limit-descriptions
+description: >
+  Reads the load-control limit descriptions the vehicle publishes for Overload Protection
+  (EEBus UC TS OPEV V1.0.1b) and checks them against the use case's content tables: every
+  obligation is a maxValueLimit in ampere with scope overloadProtection and links, through
+  its measurement id, to a current measurement that names its phase (Table 6); the phases
+  are a, b and c, each with its own limit, and a combined "abc" limit may exist in addition
+  (Table 8); a published permitted-value-set entry carries a usable current range (Table 9).
+  A vehicle that supports asymmetric charging (EVCC scenario 3) must declare a limit on each
+  phase, or an Energy Guard cannot curtail the phases independently [OPEV-002]. Needs a
+  vehicle associated.
+covers: "OPEV scenario 1: the limit descriptions, phases and permitted ranges the vehicle declares."
+goal: "Proves an Energy Guard can learn which phases it may curtail, and within which range."
+hint: "Needs a vehicle. Catches one combined limit instead of one per phase, and permitted-value entries without a range."
+category: OPEV
+risk: read-only
+spec: {use_case: OPEV, scenario: 1, table: "Table 6, Table 8, Table 9", requirements: [OPEV-002], verification: wire}
+requires:
+  vehicle: true
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - limit_descriptions: {use_case: OPEV}

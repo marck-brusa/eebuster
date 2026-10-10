@@ -13,12 +13,17 @@ goal: "Proves the device accepts a current limit and reports it back."
 hint: "Needs a vehicle."
 category: Conformance
 risk: live-control
+spec: {use_case: OPEV, scenario: 1, requirements: [OPEV-001, OPEV-003, OPEV-004], verification: readback}
 requires:
+  vehicle: true
   capabilities: [opev.write]
   use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: cem-opev/StartHeartbeat}
+  - sleep: 2
   - put:
       path: "/api/v1/opev/{peer.ski}/limits"
       body:
@@ -29,6 +34,7 @@ steps:
       get: "/api/v1/opev/{peer.ski}"
       not_null: [limits]
       equals: {limits.0.value_a: 6, limits.0.is_active: true}
+finally:
   - put:
       path: "/api/v1/opev/{peer.ski}/limits"
       body:

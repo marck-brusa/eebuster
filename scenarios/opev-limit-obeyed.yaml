@@ -1,0 +1,51 @@
+name: opev-limit-obeyed
+description: >
+  Writes a 6 A obligation on every phase the vehicle declares while it charges and requires
+  the measured charging current of every phase (EVCEM scenario 1) to fall to 6 A or below
+  within 20 s; then writes the 0 A pause signal and requires every phase to fall to 0 A.
+  Releases the obligations at the end. This is Overload Protection end to end (EEBus UC TS
+  OPEV V1.0.1b scenario 1): the Energy Guard curtails, the vehicle obeys [OPEV-001]. Needs a
+  charging session; without one the measured current cannot show the reaction.
+covers: "OPEV scenario 1: the measured current follows a 6 A obligation and the 0 A pause."
+goal: "Proves the car actually curtails its charging current when told to."
+hint: "Needs a charging session. Interrupts charging for a few seconds."
+category: OPEV
+risk: live-control
+spec: {use_case: OPEV, scenario: 1, requirements: [OPEV-001], verification: readback}
+requires:
+  vehicle: true
+  charging: true
+  capabilities: [opev.write, energy_snapshot]
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment, measurementOfElectricityDuringEvCharging]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # The vehicle evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: cem-opev/StartHeartbeat}
+  - sleep: 2
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 6, is_active: true}
+  - wait_for:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      timeout: 20s
+      length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
+      each_less_than: {ev.vehicles.0.current_per_phase_a: 6.5}
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 0, is_active: true}
+  - wait_for:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      timeout: 20s
+      length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
+      each_less_than: {ev.vehicles.0.current_per_phase_a: 0.5}
+finally:
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 6, is_active: false}

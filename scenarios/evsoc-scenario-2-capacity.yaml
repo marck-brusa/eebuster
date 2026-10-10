@@ -1,0 +1,20 @@
+name: evsoc-scenario-2-capacity
+description: >
+  Reads the vehicle's nominal battery capacity; it must be present, positive and stated in Wh.
+covers: "EVSOC scenario 2: the vehicle's nominal battery capacity in Wh."
+goal: "Proves the vehicle reports its battery size."
+hint: "Needs a vehicle."
+category: EVSOC
+risk: read-only
+spec: {use_case: EVSOC, scenario: 2, table: Table 10, requirements: [EVSOC-002], verification: readback}
+requires:
+  use_cases: [evStateOfCharge]
+  scenarios: [2]
+  vehicle: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/evsoc/{peer.ski}"
+      greater_than: {nominal_capacity.value: 0}
+      equals: {nominal_capacity.unit: Wh}

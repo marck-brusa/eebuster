@@ -1,0 +1,19 @@
+name: mgcp-scenario-6-voltage
+description: >
+  Reads voltage_per_phase_v at the grid connection point. Scenarios 2 to 4 are mandatory for
+  the grid connection point; the others are tested when advertised.
+covers: "MGCP scenario 6: one voltage per phase, plausible in volt."
+goal: "Proves the grid connection point reports this value."
+category: MGCP
+risk: read-only
+spec: {use_case: MGCP, scenario: 6, test_case: ATC_SCE6_PT_GCPACVoltage_001, requirements: [MGCP-TS-006, MGCP-TS-011], verification: readback}
+requires:
+  use_cases: [monitoringOfGridConnectionPoint]
+  scenarios: [6]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mgcp/{peer.ski}"
+      not_null: [voltage_per_phase_v]
+      each_between: {voltage_per_phase_v: [0, 1000]}

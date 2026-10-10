@@ -17,6 +17,26 @@ func (s *Server) handlePeerProfile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, profile)
 }
 
+// handlePeerManufacturer reads the manufacturer data of every entity of the peer.
+func (s *Server) handlePeerManufacturer(w http.ResponseWriter, r *http.Request) {
+	if entities, err := s.stack.PeerManufacturer(r.PathValue("ski")); err != nil {
+		writeUsecaseError(w, err)
+	} else {
+		writeJSON(w, http.StatusOK, map[string]any{"entities": entities})
+	}
+}
+
+// handlePeerSubscriptions lists what the peer subscribed to on our side: a device that
+// implements a use case's heartbeat or error-state scenario holds a subscription to our
+// DeviceDiagnosis feature.
+func (s *Server) handlePeerSubscriptions(w http.ResponseWriter, r *http.Request) {
+	if subs, subscribers, err := s.stack.PeerSubscriptions(r.PathValue("ski")); err != nil {
+		writeUsecaseError(w, err)
+	} else {
+		writeJSON(w, http.StatusOK, map[string]any{"subscriptions": subs, "server_feature_subscribers": subscribers})
+	}
+}
+
 func (s *Server) handleEnergySnapshot(w http.ResponseWriter, r *http.Request) {
 	ski := r.PathValue("ski")
 	snap, err := s.stack.EnergySnapshot(ski)

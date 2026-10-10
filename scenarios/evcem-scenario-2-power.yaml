@@ -1,0 +1,23 @@
+name: evcem-scenario-2-power
+description: >
+  Reads the vehicle's charging power per phase during a session: one value per measured
+  phase, each present and plausible in watt. A device that measures one combined phase reports
+  a single value. Skipped when the vehicle does not advertise the optional scenario 2.
+covers: "EVCEM scenario 2: the charging power per phase, plausible in watt."
+goal: "Proves a HEMS can see what the car is drawing."
+hint: "Needs a charging session."
+category: EVCEM
+risk: read-only
+spec: {use_case: EVCEM, scenario: 2, table: "Table 8, Table 10", requirements: [EVCEM-003, EVCEM-004], verification: readback}
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [measurementOfElectricityDuringEvCharging]
+  scenarios: [2]
+  charging: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      length_greater_than: {ev.vehicles.0.power_per_phase_w: 0}
+      each_between: {ev.vehicles.0.power_per_phase_w: [0, 100000]}

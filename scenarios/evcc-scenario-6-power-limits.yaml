@@ -1,0 +1,28 @@
+name: evcc-scenario-6-power-limits
+description: >
+  Reads the vehicle's charging power limits. The minimum charging power is mandatory when the
+  vehicle uses ISO 15118; the maximum is optional and the standby power recommended, so only
+  the minimum is required and the other two are recorded as observed. The stack reports an
+  absent maximum or standby value as 0.
+covers: "EVCC scenario 6: the vehicle's minimum charging power; maximum and standby as observed."
+goal: "Proves the station reports the vehicle's power range."
+hint: "Needs a vehicle."
+category: EVCC
+risk: read-only
+spec: {use_case: EVCC, scenario: 6, table: Table 11, requirements: [EVCC-016, EVCC-017], verification: readback}
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [evCommissioningAndConfiguration]
+  scenarios: [6]
+  vehicle: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      not_null: [ev.vehicles.0.charging_power_limits_w.minimum]
+      greater_or_equal: {ev.vehicles.0.charging_power_limits_w.minimum: 0}
+  - capture:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      values: {maximum_w: ev.vehicles.0.charging_power_limits_w.maximum, standby_w: ev.vehicles.0.charging_power_limits_w.standby}
+      optional: true

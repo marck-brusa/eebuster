@@ -5,6 +5,7 @@ goal: "Proves a battery reports its state, so a HEMS can plan with it."
 hint: "Skipped unless the device advertises the battery use case."
 category: Storage
 risk: read-only
+spec: {use_case: VABD, scenario: 1, verification: readback}
 requires:
   capabilities: [energy_snapshot]
   use_cases: [visualizationOfAggregatedBatteryData]
@@ -13,4 +14,5 @@ steps:
   - wait_connected: {timeout: 30s}
   - assert:
       get: "/api/v1/energy/{peer.ski}/snapshot"
-      not_null: [power.battery_w, battery]
+      not_null: [power.battery_w]
+      length_greater_than: {battery: 0}

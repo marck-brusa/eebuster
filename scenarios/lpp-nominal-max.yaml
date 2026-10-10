@@ -1,0 +1,20 @@
+name: lpp-nominal-max
+description: >
+  Reads the device's declared maximum production and checks that it is positive. A device that
+  is not an energy manager should announce its Power Production Nominal Max.
+covers: "LPP scenario 4: the device's declared maximum production."
+goal: "Proves a controller knows the producer's range before limiting it."
+hint: "Skipped on a pure consumer."
+category: LPP
+risk: read-only
+spec: {use_case: LPP, scenario: 4, test_case: ATC_COM_PT_CSUnlCntrl_003, requirements: [LPP-TS-010/1, LPP-TS-010/2, LPP-TS-038], verification: readback}
+requires:
+  scenarios: [4]
+  capabilities: [lpp.read]
+  use_cases: [limitationOfPowerProduction]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/lpp/{peer.ski}/nominal-max"
+      greater_than: {value_w: 0}

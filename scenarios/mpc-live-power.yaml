@@ -4,6 +4,7 @@ covers: "MPC: total power."
 goal: "Proves the device reports a real number for its consumption."
 category: MPC
 risk: read-only
+spec: {use_case: MPC, scenario: 1, test_case: ATC_SCE1_PT_MUTotalActivePower_001, requirements: [MPC-TS-001], verification: readback}
 requires:
   capabilities: [mpc.read]
   use_cases: [monitoringOfPowerConsumption]

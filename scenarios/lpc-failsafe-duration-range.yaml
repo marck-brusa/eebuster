@@ -9,12 +9,16 @@ goal: "Proves the device range-checks the failsafe duration it is given."
 hint: "Leaves the device's failsafe duration at 2 h."
 category: LPC
 risk: live-control
+spec: {use_case: LPC, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPC-TS-001, LPC-TS-015/1, LPC-TS-016, LPC-TS-038], verification: readback}
 requires:
   capabilities: [lpc.failsafe]
   use_cases: [limitationOfPowerConsumption]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
   - put:
       path: "/api/v1/lpc/{peer.ski}/failsafe?unchecked=true"
       body: {duration: "PT1H54M"}
@@ -29,3 +33,7 @@ steps:
   - assert:
       get: "/api/v1/lpc/{peer.ski}/failsafe"
       equals: {duration: "PT2H"}
+finally:
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/failsafe"
+      body: {duration: "PT2H"}

@@ -5,8 +5,9 @@
 // Usage:
 //
 //	eebus-testbench [serve] [-config path] [-data-dir dir]
-//	eebus-testbench run <scenario.yaml> [-junit path] [-base-url url]
-//	eebus-testbench run-all <dir> [-junit path] [-base-url url]
+//	eebus-testbench run <scenario.yaml> [-base-url url] [-junit|-html|-json|-csv|-xlsx path]
+//	eebus-testbench run-all <dir> [-base-url url] [-use-case LPC,MPC] [-read-only] [-junit|-html|-json|-csv|-xlsx path]
+//	eebus-testbench report <run.json|report.html> [-html|-json|-junit|-csv|-xlsx path]
 //	eebus-testbench firewall [-port 4712] [-add] [-remove]
 package main
 
@@ -30,10 +31,12 @@ func main() {
 		runScenarioCmd(args)
 	case "run-all":
 		runAllScenariosCmd(args)
+	case "report":
+		runReportCmd(args)
 	case "firewall":
 		runFirewall(args)
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command %q (want serve, run, run-all, or firewall)\n", cmd)
+		fmt.Fprintf(os.Stderr, "unknown command %q (want serve, run, run-all, report, or firewall)\n", cmd)
 		os.Exit(2)
 	}
 }

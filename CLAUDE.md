@@ -3,8 +3,9 @@
 A single Go binary that acts as an EEBUS energy manager (CEM) against a device under test:
 mDNS discovery, SHIP pairing, LPC/LPP limits, MPC/MGCP reads, a web dashboard, a REST API, a
 YAML scenario runner, a wire-level message trace with a conformance checker, and built-in
-simulated devices. One process, no container; the only child process is the optionally
-bundled EEBusTracer, spawned by serve when its binary sits next to the executable.
+simulated devices. One process, no container; the only child processes are the optionally
+bundled EEBusTracer, spawned by serve when its binary sits next to the executable, and the
+system file manager when a browser on the same machine asks to open the reports folder.
 
 Read before changing behaviour:
 
@@ -20,13 +21,14 @@ This is a development and integration tool, not an EEBUS certification or confor
 
 | Path | Contents |
 | --- | --- |
-| `cmd/eebus-testbench/` | `serve`, `run`, `run-all`, `firewall` subcommands |
+| `cmd/eebus-testbench/` | `serve`, `run`, `run-all`, `report`, `firewall` subcommands |
 | `internal/eebusgo/` | stack and use cases (LPC, LPP, MPC, MGCP, EV, PV, battery) |
 | `internal/httpapi/` | REST API — the tool's public contract |
 | `internal/webui/` | dashboard, a single hand-written `ui.html` |
 | `internal/scenario/` | YAML scenario runner, a pure REST client |
-| `internal/conformance/` | wire-frame checks against SHIP TS §11 / SPINE TS §5, spec ref on every finding |
-| `internal/trace/` | bounded raw-frame store behind the Message trace page and `/api/v1/trace` |
+| `internal/testrun/` | recorded test runs: selection, identification, run-level checks, persistence; a pure REST client |
+| `internal/report/` | run record and its HTML, JUnit, CSV and XLSX renderers |
+| `internal/ucspec/` | scenario requirement tables (M/R/O) of the EEBUS use case specifications |
 | `internal/conformance/` | wire-frame checks against SHIP TS §11 / SPINE TS §5, spec ref on every finding |
 | `internal/trace/` | bounded raw-frame store behind the Message trace page and `/api/v1/trace` |
 | `internal/simulator/` | simulated devices |
@@ -86,6 +88,11 @@ This is a development and integration tool, not an EEBUS certification or confor
   the tracked template.
 - Preserve unrelated user changes. Do not commit unless asked.
 - Keep documentation operational: what an engineer needs to install, run, extend or debug.
+- Test reports name real devices. They live in `<data-dir>/reports/`; never commit one, and
+  use synthetic identifiers in report fixtures.
+- Scenario files cite specification identifiers (scenario numbers, requirement and test case
+  ids) and paraphrase the criterion in one line. Never paste text or tables from the
+  specifications: their terms forbid redistribution.
 
 ## Tests
 

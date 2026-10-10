@@ -1,0 +1,22 @@
+name: mgcp-scenario-2-power
+description: >
+  Reads the momentary active power at the grid connection point. Under the use case's sign
+  convention consumption from the grid is positive and feed-in negative, so either sign is
+  valid; the value must be present and plausible in watt. Scenarios 2 to 4 are mandatory for
+  the grid connection point; the others are tested when advertised.
+covers: "MGCP scenario 2: the momentary power at the grid connection point."
+goal: "Proves a grid meter reports what the house exchanges with the grid."
+hint: "Skipped unless the device is a grid meter."
+category: MGCP
+risk: read-only
+spec: {use_case: MGCP, scenario: 2, test_case: ATC_SCE2_PT_GCPTotalActivePower_001, requirements: [MGCP-TS-002, MGCP-TS-010], verification: readback}
+requires:
+  capabilities: [mgcp.read]
+  use_cases: [monitoringOfGridConnectionPoint]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mgcp/{peer.ski}"
+      not_null: [power_w]
+      between: {power_w: [-1000000, 1000000]}

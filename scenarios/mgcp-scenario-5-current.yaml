@@ -1,0 +1,22 @@
+name: mgcp-scenario-5-current
+description: >
+  Reads the per-phase currents at the grid connection point. Each must be present and within
+  +/-1000 A, which also catches milliampere values published as ampere; the sign follows the
+  use case's load convention, consumption positive. Scenarios 2 to 4 are mandatory for the
+  grid connection point; the others are tested when advertised.
+covers: "MGCP scenario 5: one current per phase, plausible in ampere."
+goal: "Proves the grid connection point reports this value."
+category: MGCP
+risk: read-only
+spec: {use_case: MGCP, scenario: 5, test_case: ATC_SCE5_PT_GCPActiveACCurrent_001, requirements: [MGCP-TS-005, MGCP-TS-010], verification: readback}
+requires:
+  use_cases: [monitoringOfGridConnectionPoint]
+  scenarios: [5]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mgcp/{peer.ski}"
+      not_null: [current_per_phase_a]
+      length_greater_than: {current_per_phase_a: 0}
+      each_between: {current_per_phase_a: [-1000, 1000]}

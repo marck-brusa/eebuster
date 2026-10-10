@@ -417,6 +417,46 @@
   .help-hints dt { font-family: var(--mono, monospace); font-size: 12px; }
   .help-hints dd { margin: 0; color: var(--muted); }
   @media (max-width: 640px) { .help-hints { grid-template-columns: 1fr; } .help-hints dd { margin-bottom: 6px; } }
+  .test-group { margin-bottom: 14px; }
+  .test-group-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .test-group-head .grow { flex: 1; min-width: 200px; }
+  .test-group-title { font-weight: 700; }
+  .test-group-sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .test-group-sub.missing { color: var(--amber); }
+  .test-group .test-row:first-of-type { border-top: 0; }
+  .test-group-toggle { font-family: inherit; min-width: 28px; }
+  .test-group.collapsed .test-group-body { display: none; }
+  .test-group.collapsed .test-group-head { border-bottom: 0; }
+  .test-head.selectable { grid-template-columns: auto 1fr auto auto; }
+  .check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .check input { width: 15px; height: 15px; margin: 0; accent-color: var(--cyan); }
+  .test-spec { color: var(--quiet); font-size: 11px; margin-top: 3px; font-family: var(--mono, monospace); }
+  .tests-filter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tests-filter select { min-width: 160px; }
+  .run-panel { margin-bottom: 14px; }
+  .run-options { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .run-options input[type=text] { min-width: 160px; }
+  .run-options .run-notes { flex: 1; min-width: 200px; }
+  .run-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  .run-headline { font-size: 15px; font-weight: 700; margin: 8px 0 6px; }
+  .run-progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 6px 0; }
+  .run-progress > div { height: 100%; background: var(--cyan); transition: width .4s ease; }
+  .run-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .run-links a { font-size: 11px; padding: 5px 8px; border: 1px solid var(--line-bright); border-radius: 6px; color: var(--text); text-decoration: none; }
+  .run-links a.primary-link { border-color: var(--cyan); color: var(--cyan); }
+  .run-history-panel { margin-bottom: 14px; }
+  .run-folder { margin-top: 3px; user-select: all; overflow-wrap: anywhere; }
+  #run-history { max-height: 230px; overflow: auto; }
+  .test-steps summary { color: var(--muted); font-size: 11px; cursor: pointer; margin-top: 6px; }
+  .run-history-row { display: grid; grid-template-columns: 150px 90px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12px; }
+  .run-history-row:first-child { border-top: 0; }
+  .assert-line { font-size: 11px; color: var(--muted); padding-left: 70px; }
+  .assert-line.bad { color: var(--red); }
+  @media (max-width: 760px) {
+    .test-head.selectable { grid-template-columns: auto 1fr; }
+    .run-history-row { grid-template-columns: 1fr; gap: 4px; }
+    .assert-line { padding-left: 0; }
+  }
   .test-result { margin-top: 9px; display: none; }
   .test-result.show { display: block; }
   .step { display: grid; grid-template-columns: 62px 1fr auto; gap: 8px; padding: 5px 0; font-size: 11px; }
@@ -905,28 +945,49 @@ tr.phase-asym .phase-bar{background:var(--amber)}
       <section class="page" id="page-tests">
         <div class="page-head">
           <div>
-            <div class="eyebrow" data-i18n="page.test.eyebrow">Python + scenario DSL</div>
+            <div class="eyebrow" data-i18n="page.test.eyebrow">Scenario DSL</div>
             <h2 data-i18n="page.test.title">Use-case test runner</h2>
-            <p data-i18n="page.test.sub">Repeatable examples that run through the same REST paths as the dashboard.</p>
+            <p data-i18n="page.test.sub">Test cases grouped by use case.</p>
           </div>
           <div class="page-actions">
+            <button class="primary" id="run-selected" data-i18n="btn.runSelected">Run selected</button>
             <button id="run-readonly" data-i18n="btn.runReadonly">Run read-only</button>
-            <button class="primary" id="run-all-tests" data-i18n="btn.runAll">Run complete suite</button>
+            <button id="run-all-tests" data-i18n="btn.runAll">Run complete suite</button>
           </div>
+        </div>
+        <div class="panel panel-pad run-panel">
+          <div class="run-options">
+            <label class="check"><input type="checkbox" id="run-long"> <span data-i18n="tests.includeLong">Include long-running test cases</span></label>
+            <label class="check"><input type="checkbox" id="run-unadvertised"> <span data-i18n="tests.includeUnadvertised">Include use cases the device does not advertise</span></label>
+            <label class="check"><input type="checkbox" id="run-frames" checked> <span data-i18n="tests.includeFrames">Embed the wire frames in the report</span></label>
+            <input type="text" id="run-tester" data-i18n-placeholder="tests.testerPlaceholder" placeholder="Tester">
+            <input type="text" id="run-notes" class="run-notes" data-i18n-placeholder="tests.notesPlaceholder" placeholder="Notes">
+          </div>
+          <div id="run-current"><div class="muted" data-i18n="run.none">No run yet.</div></div>
+        </div>
+        <div class="panel panel-pad run-history-panel">
+          <div class="panel-head"><div><h3 data-i18n="run.previous">Reports</h3><div class="muted small mono run-folder" id="run-reports-dir"></div></div><button class="small" id="open-reports-folder" hidden data-i18n="run.openFolder">Open folder</button></div>
+          <div id="run-history"><div class="muted" data-i18n="run.noPrevious">The reports folder is empty.</div></div>
         </div>
         <div class="panel panel-pad" style="margin-bottom:14px">
           <div class="panel-head">
             <div class="tests-summary">
               <span class="badge" id="tests-total" data-i18n="tests.total0">0 tests</span>
+              <span class="badge" id="tests-selected">0</span>
               <span class="badge ok" id="tests-passed" data-i18n="tests.passed0">0 passed</span>
               <span class="badge warn" id="tests-skipped" data-i18n="tests.skipped0">0 skipped</span>
               <span class="badge err" id="tests-failed" data-i18n="tests.failed0">0 failed</span>
             </div>
-            <code class="muted">./eebus-testbench run-all scenarios -base-url http://127.0.0.1:8080</code>
+            <div class="tests-filter">
+              <select id="test-filter"><option value="" data-i18n="tests.filterAll">All use cases</option></select>
+              <input type="text" id="test-search" data-i18n-placeholder="tests.search" placeholder="Search">
+              <button class="small" id="tests-collapse-all" data-i18n="btn.collapseAll">Collapse all</button>
+              <button class="small" id="tests-expand-all" data-i18n="btn.expandAll">Expand all</button>
+            </div>
           </div>
-          <div class="notice" data-i18n="tests.notice"><strong>Live-control tests change the connected device.</strong> Unsupported use cases are marked skipped, not failed. A failed supported test remains a real failure.</div>
+          <div class="notice" data-i18n="tests.notice"><strong>Live-control tests change the connected device.</strong></div>
         </div>
-        <div class="panel" id="test-list"><div class="empty" data-i18n="empty.loadingTests">Loading test catalog…</div></div>
+        <div id="test-list"><div class="panel"><div class="empty" data-i18n="empty.loadingTests">Loading test catalog…</div></div></div>
       </section>
 
       <section class="page" id="page-help">
@@ -1194,7 +1255,7 @@ const I18N = {
     "page.uc.sub": "Typed controls for the use cases the testbench implements.",
     "page.test.eyebrow": "Scenario DSL",
     "page.test.title": "Use-case test runner",
-    "page.test.sub": "Repeatable examples that run through the same REST paths as the dashboard.",
+    "page.test.sub": "Test cases grouped by use case. Select single test cases or whole use cases, or run everything; every run is recorded and its report can be opened or downloaded.",
     "page.diag.eyebrow": "Deep inspection",
     "page.diag.title": "Diagnostics",
     "page.diag.sub": "Runtime stacks, network details, events, and process logs.",
@@ -1290,7 +1351,7 @@ const I18N = {
     "tests.passed0": "0 passed",
     "tests.skipped0": "0 skipped",
     "tests.failed0": "0 failed",
-    "tests.notice": "<strong>Live-control tests change the connected device.</strong> Unsupported use cases are marked skipped, not failed. A failed supported test remains a real failure.",
+    "tests.notice": "<strong>Live-control and disruptive test cases change the connected device.</strong> Use cases the device does not advertise are skipped, not failed. Cleanup test cases return the device to a neutral state at the end of a run.",
     "diag.scripting": "Scripting the API",
     "diag.scripting.text": "every panel here is a thin wrapper over the REST API at",
     "diag.docs": "Interactive docs:",
@@ -1437,6 +1498,55 @@ const I18N = {
     "js.runningProgress": "Running {i} / {n}",
     "js.runComplete": "Test run complete",
     "js.scenariosExecuted": "{n} scenarios executed",
+    "reason.not_run": "not run",
+    "reason.not_verifiable_on_wire": "not verifiable on the wire",
+    "reason.precondition_not_met": "precondition not met",
+    "reason.phases_not_declared": "phases not declared",
+    "reason.capability_missing": "testbench capability missing",
+    "reason.scenario_not_advertised": "optional scenario not advertised",
+    "reason.use_case_not_advertised": "use case not advertised",
+    "run.openFolder": "Open folder",
+    "run.showInFolder": "Show in folder",
+    "run.loadResults": "Load results",
+    "run.folderOpened": "Folder opened",
+    "run.folderHint": "Where the report files are. Copy, move or delete files there; the list follows.",
+    "run.running": "Running {i} of {n}: {current}",
+    "run.finished": "Run finished",
+    "run.started": "Run {id} started",
+    "run.noPrevious": "The reports folder is empty.",
+    "run.previous": "Reports",
+    "run.formatCsvSteps": "CSV (steps)",
+    "run.formatFramesLog": "Wire log",
+    "run.formatCsv": "CSV (test cases)",
+    "run.formatHtml": "HTML file",
+    "run.openReport": "Open report",
+    "run.cancelled": "Cancelling after the current step",
+    "run.cancel": "Cancel",
+    "run.none": "No run yet. Select test cases and start one.",
+    "tests.scenarioN": "scenario {n}",
+    "tests.probe": "needs device probe",
+    "tests.cleanup": "cleanup",
+    "tests.longRunning": "long-running",
+    "tests.notAdvertised": "Not advertised by the selected device",
+    "tests.advertised": "Advertised by the selected device: scenarios {s}",
+    "tests.groupCommon": "Connection, discovery and wire format",
+    "tests.nothingSelected": "Select at least one test case.",
+    "tests.selectedCount": "{n} selected",
+    "tests.selectGroup": "Select every test case of this use case",
+    "tests.search": "Search test cases",
+    "tests.filterAll": "All use cases",
+    "tests.notesPlaceholder": "Notes for the report",
+    "tests.testerPlaceholder": "Tester name for the report",
+    "tests.includeLong": "Include long-running test cases",
+    "tests.stepsCount": "{n} steps",
+    "tests.includeUnadvertised": "Include use cases the device does not advertise",
+    "tests.includeFrames": "Embed the wire frames in the report",
+    "btn.runGroup": "Run use case",
+    "btn.collapseAll": "Collapse all",
+    "btn.expandAll": "Expand all",
+    "tests.collapse": "Collapse this use case",
+    "tests.expand": "Expand this use case",
+    "btn.runSelected": "Run selected",
     "js.logsUnavailable": "Unable to read logs.",
     "js.noLogLines": "No log lines yet.",
     "js.streamConnected": "stream connected",
@@ -1637,7 +1747,7 @@ const I18N = {
     "page.uc.sub": "Typisierte Bedienelemente für die vom Testbench implementierten Anwendungsfälle.",
     "page.test.eyebrow": "Szenario-DSL",
     "page.test.title": "Anwendungsfall-Testrunner",
-    "page.test.sub": "Wiederholbare Beispiele, die über dieselben REST-Pfade wie das Dashboard laufen.",
+    "page.test.sub": "Testfälle nach Anwendungsfall gruppiert. Einzelne Testfälle oder ganze Anwendungsfälle auswählen oder alles ausführen; jeder Lauf wird aufgezeichnet und sein Bericht lässt sich öffnen oder herunterladen.",
     "page.diag.eyebrow": "Detailanalyse",
     "page.diag.title": "Diagnose",
     "page.diag.sub": "Laufende Stacks, Netzwerkdetails, Ereignisse und Prozessprotokolle.",
@@ -1733,7 +1843,7 @@ const I18N = {
     "tests.passed0": "0 bestanden",
     "tests.skipped0": "0 übersprungen",
     "tests.failed0": "0 fehlgeschlagen",
-    "tests.notice": "<strong>Live-Control-Tests verändern das verbundene Gerät.</strong> Nicht unterstützte Anwendungsfälle werden als übersprungen markiert, nicht als fehlgeschlagen. Ein fehlgeschlagener unterstützter Test bleibt ein echter Fehler.",
+    "tests.notice": "<strong>Steuernde und störende Testfälle verändern das verbundene Gerät.</strong> Anwendungsfälle, die das Gerät nicht anbietet, werden übersprungen, nicht als Fehler gewertet. Aufräum-Testfälle bringen das Gerät am Ende eines Laufs in einen neutralen Zustand.",
     "diag.scripting": "API skripten",
     "diag.scripting.text": "jedes Panel hier ist ein dünner Wrapper über der REST-API unter",
     "diag.docs": "Interaktive Doku:",
@@ -1880,6 +1990,55 @@ const I18N = {
     "js.runningProgress": "Läuft {i} / {n}",
     "js.runComplete": "Testlauf abgeschlossen",
     "js.scenariosExecuted": "{n} Szenarien ausgeführt",
+    "reason.not_run": "nicht ausgeführt",
+    "reason.not_verifiable_on_wire": "über die Leitung nicht prüfbar",
+    "reason.precondition_not_met": "Vorbedingung nicht erfüllt",
+    "reason.phases_not_declared": "Phasen nicht deklariert",
+    "reason.capability_missing": "Fähigkeit des Testbench fehlt",
+    "reason.scenario_not_advertised": "optionales Szenario nicht angeboten",
+    "reason.use_case_not_advertised": "Anwendungsfall nicht angeboten",
+    "run.openFolder": "Ordner öffnen",
+    "run.showInFolder": "Im Ordner zeigen",
+    "run.loadResults": "Ergebnisse laden",
+    "run.folderOpened": "Ordner geöffnet",
+    "run.folderHint": "Hier liegen die Berichtsdateien. Dateien dort kopieren, verschieben oder löschen; die Liste folgt.",
+    "run.running": "Läuft {i} von {n}: {current}",
+    "run.finished": "Lauf beendet",
+    "run.started": "Lauf {id} gestartet",
+    "run.noPrevious": "Der Berichtsordner ist leer.",
+    "run.previous": "Berichte",
+    "run.formatCsvSteps": "CSV (Schritte)",
+    "run.formatFramesLog": "Draht-Log",
+    "run.formatCsv": "CSV (Testfälle)",
+    "run.formatHtml": "HTML-Datei",
+    "run.openReport": "Bericht öffnen",
+    "run.cancelled": "Bricht nach dem aktuellen Schritt ab",
+    "run.cancel": "Abbrechen",
+    "run.none": "Noch kein Lauf. Testfälle auswählen und einen starten.",
+    "tests.scenarioN": "Szenario {n}",
+    "tests.probe": "braucht Gerätezugang",
+    "tests.cleanup": "Aufräumen",
+    "tests.longRunning": "lang laufend",
+    "tests.notAdvertised": "Vom ausgewählten Gerät nicht angeboten",
+    "tests.advertised": "Vom ausgewählten Gerät angeboten: Szenarien {s}",
+    "tests.groupCommon": "Verbindung, Discovery und Leitungsformat",
+    "tests.nothingSelected": "Mindestens einen Testfall auswählen.",
+    "tests.selectedCount": "{n} ausgewählt",
+    "tests.selectGroup": "Alle Testfälle dieses Anwendungsfalls auswählen",
+    "tests.search": "Testfälle suchen",
+    "tests.filterAll": "Alle Anwendungsfälle",
+    "tests.notesPlaceholder": "Notizen für den Bericht",
+    "tests.testerPlaceholder": "Name des Testers für den Bericht",
+    "tests.includeLong": "Lang laufende Testfälle einschließen",
+    "tests.stepsCount": "{n} Schritte",
+    "tests.includeUnadvertised": "Anwendungsfälle einschließen, die das Gerät nicht anbietet",
+    "tests.includeFrames": "Die Frames vom Draht in den Bericht einbetten",
+    "btn.runGroup": "Anwendungsfall ausführen",
+    "btn.collapseAll": "Alle einklappen",
+    "btn.expandAll": "Alle ausklappen",
+    "tests.collapse": "Diesen Anwendungsfall einklappen",
+    "tests.expand": "Diesen Anwendungsfall ausklappen",
+    "btn.runSelected": "Auswahl ausführen",
     "js.logsUnavailable": "Protokolle können nicht gelesen werden.",
     "js.noLogLines": "Noch keine Protokollzeilen.",
     "js.streamConnected": "Stream verbunden",
@@ -2080,7 +2239,7 @@ const I18N = {
     "page.uc.sub": "测试台已实现用例的类型化控件。",
     "page.test.eyebrow": "场景 DSL",
     "page.test.title": "用例测试运行器",
-    "page.test.sub": "可重复的示例，通过与仪表板相同的 REST 路径运行。",
+    "page.test.sub": "测试用例按用例分组。可选择单个测试用例或整个用例，或全部运行；每次运行都会记录，其报告可打开或下载。",
     "page.diag.eyebrow": "深度检查",
     "page.diag.title": "诊断",
     "page.diag.sub": "运行中的协议栈、网络详情、事件与进程日志。",
@@ -2176,7 +2335,7 @@ const I18N = {
     "tests.passed0": "0 个通过",
     "tests.skipped0": "0 个跳过",
     "tests.failed0": "0 个失败",
-    "tests.notice": "<strong>实时控制测试会改变已连接设备的状态。</strong>不支持的用例标记为跳过而非失败。受支持的测试失败仍是真正的失败。",
+    "tests.notice": "<strong>控制类和干扰类测试用例会改变已连接的设备。</strong>设备未通告的用例会被跳过，而不是判为失败。清理测试用例会在运行结束时使设备恢复到中性状态。",
     "diag.scripting": "API 脚本化",
     "diag.scripting.text": "此处每个面板都是 REST API 的轻量封装，位于",
     "diag.docs": "交互式文档：",
@@ -2323,6 +2482,55 @@ const I18N = {
     "js.runningProgress": "运行中 {i} / {n}",
     "js.runComplete": "测试运行完成",
     "js.scenariosExecuted": "已执行 {n} 个场景",
+    "reason.not_run": "未运行",
+    "reason.not_verifiable_on_wire": "无法通过线路验证",
+    "reason.precondition_not_met": "前提条件不满足",
+    "reason.phases_not_declared": "未声明相位",
+    "reason.capability_missing": "测试台缺少能力",
+    "reason.scenario_not_advertised": "可选场景未通告",
+    "reason.use_case_not_advertised": "用例未通告",
+    "run.openFolder": "打开文件夹",
+    "run.showInFolder": "在文件夹中显示",
+    "run.loadResults": "载入结果",
+    "run.folderOpened": "文件夹已打开",
+    "run.folderHint": "报告文件所在位置。可在其中复制、移动或删除文件，列表随之更新。",
+    "run.running": "正在运行 {i}/{n}：{current}",
+    "run.finished": "运行已结束",
+    "run.started": "运行 {id} 已开始",
+    "run.noPrevious": "报告文件夹为空。",
+    "run.previous": "报告",
+    "run.formatCsvSteps": "CSV（步骤）",
+    "run.formatFramesLog": "线路日志",
+    "run.formatCsv": "CSV（测试用例）",
+    "run.formatHtml": "HTML 文件",
+    "run.openReport": "打开报告",
+    "run.cancelled": "将在当前步骤后取消",
+    "run.cancel": "取消",
+    "run.none": "尚无运行。请选择测试用例并开始运行。",
+    "tests.scenarioN": "场景 {n}",
+    "tests.probe": "需要设备探针",
+    "tests.cleanup": "清理",
+    "tests.longRunning": "长时间运行",
+    "tests.notAdvertised": "所选设备未通告",
+    "tests.advertised": "所选设备已通告：场景 {s}",
+    "tests.groupCommon": "连接、发现与线路格式",
+    "tests.nothingSelected": "请至少选择一个测试用例。",
+    "tests.selectedCount": "已选 {n} 个",
+    "tests.selectGroup": "选择此用例的全部测试用例",
+    "tests.search": "搜索测试用例",
+    "tests.filterAll": "全部用例",
+    "tests.notesPlaceholder": "报告备注",
+    "tests.testerPlaceholder": "报告中的测试人员姓名",
+    "tests.includeLong": "包含长时间运行的测试用例",
+    "tests.stepsCount": "{n} 个步骤",
+    "tests.includeUnadvertised": "包含设备未通告的用例",
+    "tests.includeFrames": "在报告中嵌入线路帧",
+    "btn.runGroup": "运行此用例",
+    "btn.collapseAll": "全部折叠",
+    "btn.expandAll": "全部展开",
+    "tests.collapse": "折叠此用例",
+    "tests.expand": "展开此用例",
+    "btn.runSelected": "运行所选",
     "js.logsUnavailable": "无法读取日志。",
     "js.noLogLines": "尚无日志行。",
     "js.streamConnected": "流已连接",
@@ -2815,6 +3023,7 @@ async function loadProfile() {
   try {
     state.profile = await api(`/peers/${encodeURIComponent(state.selectedSki)}/profile`);
     renderProfile(); renderUsecaseSupport(); populateEntitySelects(); renderDashboardIntelligence();
+    if (state.tests.length) renderTests();
   } catch (error) {
     state.profile = null; renderProfile(error); renderUsecaseSupport();
   }
@@ -3441,27 +3650,150 @@ async function refreshReachability() {
 async function loadTestCatalog() {
   state.tests = await safeApi("/scenarios/catalog", []);
   renderTests();
+  await loadRunHistory();
 }
 
 const CATEGORY_TONE = {
   "LPC": "purple", "LPP": "purple", "MPC": "green", "MGCP": "green", "EV charging": "cyan",
   "Conformance": "amber", "Storage": "green", "Generation": "green", "HVAC": "green",
 };
+const RISK_TONE = {"read-only": "ok", "live-control": "warn", "disruptive": "err"};
+const COMMON_GROUP = "Common";
+
+function loadTestSelection() {
+  try { return new Set(JSON.parse(localStorage.getItem("eebus-test-selection") || "[]")); }
+  catch (_) { return new Set(); }
+}
+function saveTestSelection() {
+  try { localStorage.setItem("eebus-test-selection", JSON.stringify([...state.testSelection])); }
+  catch (_) { /* a private window keeps the selection for this page only */ }
+}
+state.testSelection = loadTestSelection();
+state.testResults = {};
+state.run = null;
+state.runTimer = null;
+
+function groupOf(test) { return test.use_case || COMMON_GROUP; }
+
+// Which use-case groups are folded away. A group the user never touched follows the device:
+// use cases it does not advertise start collapsed, the rest open. Explicit choices are kept
+// per browser.
+function groupToggles() {
+  if (!state.groupToggles) {
+    state.groupToggles = {};
+    try { state.groupToggles = JSON.parse(localStorage.getItem("eebus-test-groups") || "{}") || {}; } catch (_) { /* per-viewer convenience only */ }
+  }
+  return state.groupToggles;
+}
+function groupCollapsed(key, advertised) {
+  const toggles = groupToggles();
+  return key in toggles ? Boolean(toggles[key]) : advertised === false;
+}
+function setGroupCollapsed(keys, collapsed) {
+  const toggles = groupToggles();
+  keys.forEach(key => { toggles[key] = collapsed; });
+  try { localStorage.setItem("eebus-test-groups", JSON.stringify(toggles)); } catch (_) { /* per-viewer convenience only */ }
+  renderTests();
+}
+
+// The catalog arrives in run order, so groups keep the order the runner executes them in.
+function testGroups() {
+  const groups = [];
+  const byKey = new Map();
+  for (const test of state.tests) {
+    const key = groupOf(test);
+    if (!byKey.has(key)) {
+      const group = {key, title: key === COMMON_GROUP ? t("tests.groupCommon") : (test.spec?.use_case_title || key), tests: []};
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    byKey.get(key).tests.push(test);
+  }
+  return groups;
+}
+
+// What the selected device advertises for a use case, from its profile; undefined while the
+// profile is not loaded, so nothing is claimed before it is known.
+function advertisedFor(key) {
+  if (!state.profile) return undefined;
+  const details = (state.profile?.use_case_details || []).filter(d => (d.acronym || d.name) === key && d.available);
+  return details.length ? [...new Set(details.flatMap(d => d.scenarios || []))].sort((a, b) => a - b) : null;
+}
+
+function specLine(spec) {
+  if (!spec) return "";
+  const parts = [];
+  if (spec.use_case && spec.scenario) parts.push(`${spec.use_case} ${tf("tests.scenarioN", {n: spec.scenario})}${spec.device_level ? ` (${spec.device_level})` : ""}`);
+  if (spec.test_case) parts.push(spec.test_case);
+  if (spec.requirements?.length) parts.push(spec.requirements.join(", "));
+  return parts.join(" · ");
+}
 
 function renderTests() {
+  const filter = document.getElementById("test-filter");
+  const groups = testGroups();
+  const previous = filter.value;
+  filter.innerHTML = `<option value="">${esc(t("tests.filterAll"))}</option>` +
+    groups.map(g => `<option value="${esc(g.key)}">${esc(g.key)}</option>`).join("");
+  filter.value = groups.some(g => g.key === previous) ? previous : "";
+  const search = document.getElementById("test-search").value.trim().toLowerCase();
   document.getElementById("tests-total").textContent = tf("js.testsCount", {n: state.tests.length});
   const host = document.getElementById("test-list");
-  host.innerHTML = state.tests.length ? state.tests.map(test => `
-    <div class="test-row" data-test-row="${esc(test.id)}">
-      <div class="test-head">
-        <div><div class="test-name">${esc(test.name)}</div>${test.covers || test.goal
-          ? `${test.covers ? `<div class="test-hint"><span class="test-label">${esc(t("tests.covers"))}</span> ${esc(test.covers)}</div>` : ""}${test.goal ? `<div class="test-hint"><span class="test-label">${esc(t("tests.goal"))}</span> ${esc(test.goal)}</div>` : ""}${test.hint ? `<div class="test-description">${esc(test.hint)}</div>` : ""}<details class="test-more"><summary>${esc(t("tests.more"))}</summary><div class="test-description">${esc(test.description || "")}</div></details>`
-          : `<div class="test-description">${esc(test.description || t("js.scenarioExample"))}</div>`}</div>
-        <div><span class="badge tone-${esc(CATEGORY_TONE[test.category] || "none")}">${esc(test.category)}</span> <span class="badge ${test.risk === "read-only" ? "ok" : test.risk === "disruptive" ? "err" : "warn"}">${esc(test.risk)}</span></div>
-        <button class="small" data-run-test="${esc(test.id)}">${esc(t("btn.run"))}</button>
+  const visibleGroups = groups.filter(g => !filter.value || g.key === filter.value);
+  host.innerHTML = visibleGroups.length ? visibleGroups.map(group => {
+    const tests = group.tests.filter(test => !search || [test.id, test.name, test.covers, specLine(test.spec)].join(" ").toLowerCase().includes(search));
+    if (!tests.length) return "";
+    const advertised = group.key === COMMON_GROUP ? undefined : advertisedFor(group.key);
+    const allSelected = tests.every(test => state.testSelection.has(test.id));
+    const sub = advertised === undefined ? "" : advertised
+      ? `<div class="test-group-sub">${esc(tf("tests.advertised", {s: advertised.join(", ") || "-"}))}</div>`
+      : `<div class="test-group-sub missing">${esc(t("tests.notAdvertised"))}</div>`;
+    // A search opens every group that matches; otherwise the group keeps its own state.
+    const collapsed = !search && groupCollapsed(group.key, advertised);
+    return `<div class="panel test-group${collapsed ? " collapsed" : ""}" data-test-group="${esc(group.key)}">
+      <div class="test-group-head">
+        <button class="small test-group-toggle" data-toggle-group="${esc(group.key)}" aria-expanded="${collapsed ? "false" : "true"}" title="${esc(t(collapsed ? "tests.expand" : "tests.collapse"))}">${collapsed ? "▸" : "▾"}</button>
+        <label class="check"><input type="checkbox" data-select-group="${esc(group.key)}" ${allSelected ? "checked" : ""} title="${esc(t("tests.selectGroup"))}"></label>
+        <div class="grow"><div class="test-group-title">${esc(group.key === COMMON_GROUP ? group.title : `${group.key} · ${group.title}`)}</div>${sub}</div>
+        <span class="badge">${esc(tf("js.testsCount", {n: tests.length}))}</span>
+        <button class="small" data-run-group="${esc(group.key)}">${esc(t("btn.runGroup"))}</button>
       </div>
-      <div class="test-result" id="test-result-${esc(test.id)}"></div>
-    </div>`).join("") : `<div class="empty">${esc(t("js.noScenarios"))}</div>`;
+      <div class="test-group-body">${tests.map(renderTestRow).join("")}</div>
+    </div>`;
+  }).join("") : `<div class="panel"><div class="empty">${esc(t("js.noScenarios"))}</div></div>`;
+  for (const [id, result] of Object.entries(state.testResults)) renderTestResult(id, result);
+  updateTestSummary();
+}
+
+function renderTestRow(test) {
+  const badges = [
+    `<span class="badge ${RISK_TONE[test.risk] || ""}">${esc(test.risk)}</span>`,
+    test.long_running ? `<span class="badge warn">${esc(t("tests.longRunning"))}</span>` : "",
+    test.cleanup ? `<span class="badge">${esc(t("tests.cleanup"))}</span>` : "",
+    test.spec?.verification === "needs-device-probe" ? `<span class="badge">${esc(t("tests.probe"))}</span>` : "",
+  ].join(" ");
+  const line = specLine(test.spec);
+  return `<div class="test-row" data-test-row="${esc(test.id)}">
+    <div class="test-head selectable">
+      <label class="check"><input type="checkbox" data-select-test="${esc(test.id)}" ${state.testSelection.has(test.id) ? "checked" : ""}></label>
+      <div>
+        <div class="test-name">${esc(test.name)}</div>
+        ${test.covers ? `<div class="test-hint"><span class="test-label">${esc(t("tests.covers"))}</span> ${esc(test.covers)}</div>` : `<div class="test-description">${esc(test.description || t("js.scenarioExample"))}</div>`}
+        ${test.goal ? `<div class="test-hint"><span class="test-label">${esc(t("tests.goal"))}</span> ${esc(test.goal)}</div>` : ""}
+        ${test.hint ? `<div class="test-hint muted">${esc(test.hint)}</div>` : ""}
+        ${line ? `<div class="test-spec">${esc(line)}</div>` : ""}
+        ${test.description && test.covers ? `<details class="test-more"><summary>${esc(t("tests.more"))}</summary><div class="test-description">${esc(test.description)}</div></details>` : ""}
+      </div>
+      <div>${badges}</div>
+      <button class="small" data-run-test="${esc(test.id)}">${esc(t("btn.run"))}</button>
+    </div>
+    <div class="test-result" id="test-result-${esc(test.id)}"></div>
+  </div>`;
+}
+
+function runReasonText(reason) {
+  const key = `reason.${reason}`;
+  return reason ? (t(key) === key ? reason : t(key)) : "";
 }
 
 function renderTestResult(id, result) {
@@ -3470,46 +3802,156 @@ function renderTestResult(id, result) {
   host.className = "test-result show";
   const row = document.querySelector(`[data-test-row="${id}"]`);
   if (row) row.className = `test-row row-${result.status}`;
-  host.innerHTML = `<div class="badge ${result.status === "passed" ? "ok" : result.status === "skipped" ? "warn" : "err"}">${esc(result.status)} · ${esc(result.duration_s)}s</div>
-    <div>${(result.steps || []).map(step => `<div class="step"><span class="status-${esc(step.status)}">${esc(step.status)}</span><span>${esc(step.step)}${step.detail ? ` · ${esc(step.detail)}` : ""}</span><span>${esc(step.duration_s)}s</span></div>`).join("")}</div>`;
-  updateTestSummary();
+  const reason = result.reason ? ` · ${esc(runReasonText(result.reason))}` : "";
+  const steps = result.steps || [];
+  host.innerHTML = `<div class="badge ${result.status === "passed" ? "ok" : result.status === "skipped" ? "warn" : result.status === "running" ? "" : "err"}">${esc(result.status)} · ${esc(result.duration_s ?? 0)}s</div>${reason}
+    ${steps.length ? `<details class="test-steps" ${result.status === "failed" ? "open" : ""}><summary>${esc(tf("tests.stepsCount", {n: steps.length}))}</summary><div>${steps.map(step => `<div class="step"><span class="status-${esc(step.status)}">${esc(step.status)}</span><span>${esc(step.step)}${step.detail ? ` · ${esc(step.detail)}` : ""}</span><span>${esc(step.duration_s)}s</span></div>${
+      (step.assertions || []).filter(a => !a.ok || step.status === "failed").map(a => `<div class="assert-line ${a.ok ? "" : "bad"}">${a.ok ? "✓" : "✗"} ${esc(a.key)} ${esc(String(a.op).replaceAll("_", " "))} ${a.expected !== undefined ? esc(JSON.stringify(a.expected)) : ""} → ${esc(JSON.stringify(a.actual))}</div>`).join("")
+    }`).join("")}</div></details>` : ""}`;
 }
 
 function updateTestSummary() {
-  const results = [...document.querySelectorAll(".test-result.show .badge")].map(item => item.textContent.split(" · ")[0]);
-  document.getElementById("tests-passed").textContent = tf("js.passedCount", {n: results.filter(x=>x==="passed").length});
-  document.getElementById("tests-skipped").textContent = tf("js.skippedCount", {n: results.filter(x=>x==="skipped").length});
-  document.getElementById("tests-failed").textContent = tf("js.failedCount", {n: results.filter(x=>x==="failed").length});
+  const results = Object.values(state.testResults);
+  document.getElementById("tests-passed").textContent = tf("js.passedCount", {n: results.filter(x => x.status === "passed").length});
+  document.getElementById("tests-skipped").textContent = tf("js.skippedCount", {n: results.filter(x => x.status === "skipped").length});
+  document.getElementById("tests-failed").textContent = tf("js.failedCount", {n: results.filter(x => x.status === "failed").length});
+  const known = new Set(state.tests.map(test => test.id));
+  document.getElementById("tests-selected").textContent = tf("tests.selectedCount", {n: [...state.testSelection].filter(id => known.has(id)).length});
 }
 
-async function runOneTest(id, button) {
-  const host = document.getElementById(`test-result-${id}`);
-  host.className = "test-result show"; host.innerHTML = `<span class="badge warn">${esc(t("js.runningBadge"))}</span>`;
-  try {
-    const result = await action(button, () => api(`/scenarios/${encodeURIComponent(id)}/run`, {method:"POST"}));
-    renderTestResult(id, result);
-    return result;
-  } catch (error) {
-    renderTestResult(id, {status:"failed",duration_s:0,steps:[{status:"failed",step:"request",duration_s:0,detail:errorDetail(error)}]});
-    return null;
-  }
+// The peer a run describes: the selected device's configured name, or its SKI.
+function runPeer() {
+  return selectedConfigPeer()?.name || state.selectedSki || "";
 }
 
-async function runTests(readOnly, button) {
-  const tests = readOnly ? state.tests.filter(test => test.risk === "read-only") : state.tests;
+// Cleanup test cases belong to every run that changes the device; an explicit list of test
+// cases runs exactly what it names, so they are added here for the use cases it touches.
+function withCleanup(ids) {
+  const chosen = state.tests.filter(test => ids.includes(test.id));
+  const touched = new Set(chosen.filter(test => test.risk !== "read-only").map(groupOf));
+  const cleanup = state.tests.filter(test => test.cleanup && touched.has(groupOf(test)) && !ids.includes(test.id)).map(test => test.id);
+  return [...ids, ...cleanup];
+}
+
+async function startRun(selection, button) {
   if (!selectedConnected()) {
     toast(t("js.deviceNotConnected"), t("js.connectFirst"), "warn");
     return;
   }
-  button.disabled = true;
-  const original = button.textContent; button.textContent = tf("js.runningProgress", {i: 0, n: tests.length});
-  try {
-    for (let i = 0; i < tests.length; i++) {
-      button.textContent = tf("js.runningProgress", {i: i + 1, n: tests.length});
-      await runOneTest(tests[i].id, null);
+  const body = {
+    peer: runPeer(), selection,
+    include_long_running: document.getElementById("run-long").checked,
+    include_unadvertised: document.getElementById("run-unadvertised").checked,
+    include_frames: document.getElementById("run-frames").checked,
+    tester: document.getElementById("run-tester").value, notes: document.getElementById("run-notes").value,
+  };
+  try { localStorage.setItem("eebus-tester", body.tester); } catch (_) { /* per-viewer convenience only */ }
+  const started = await action(button, () => api("/runs", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)}));
+  if (started?.run_id) {
+    state.testResults = {};
+    document.querySelectorAll(".test-result").forEach(el => { el.className = "test-result"; el.innerHTML = ""; });
+    document.querySelectorAll(".test-row").forEach(el => { el.className = "test-row"; });
+    toast(tf("run.started", {id: started.run_id}));
+    showRun(started.run);
+    pollRun(started.run_id);
+  }
+}
+
+function pollRun(id) {
+  clearTimeout(state.runTimer);
+  const tick = async () => {
+    const run = await safeApi(`/runs/${encodeURIComponent(id)}`, null);
+    if (run) showRun(run);
+    if (run?.status === "running") {
+      state.runTimer = setTimeout(tick, 2000);
+    } else {
+      if (run) toast(t("run.finished"), run.summary?.headline || "", run.status === "passed" ? "ok" : "warn");
+      await loadRunHistory();
     }
-    toast(t("js.runComplete"), tf("js.scenariosExecuted", {n: tests.length}));
-  } finally { button.disabled = false; button.textContent = original; }
+  };
+  state.runTimer = setTimeout(tick, 1000);
+}
+
+function showRun(run) {
+  state.run = run;
+  for (const result of run.test_cases || []) {
+    state.testResults[result.id] = result;
+    renderTestResult(result.id, result);
+  }
+  const current = run.progress?.current;
+  if (run.status === "running" && current && !state.testResults[current]) {
+    renderTestResult(current, {status: "running", duration_s: 0, steps: []});
+  }
+  updateTestSummary();
+  renderRunPanel(run);
+}
+
+function runLinks(id, frames) {
+  const base = `${API}/runs/${encodeURIComponent(id)}`;
+  return `<div class="run-links">
+    <a class="primary-link" href="${base}/report.html" target="_blank" rel="noopener">${esc(t("run.openReport"))}</a>
+    <a href="${base}/report.html?download=1">${esc(t("run.formatHtml"))}</a>
+    <a href="${base}/report.json">JSON</a>
+    <a href="${base}/junit.xml">JUnit</a>
+    <a href="${base}/report.csv?table=cases">${esc(t("run.formatCsv"))}</a>
+    <a href="${base}/report.csv?table=steps">${esc(t("run.formatCsvSteps"))}</a>
+    <a href="${base}/report.xlsx">Excel</a>
+    ${frames ? `<a href="${base}/frames.log">${esc(t("run.formatFramesLog"))}</a>` : ""}
+    ${state.canOpenFolder && state.run?.status !== "running" ? `<a href="#" data-folder-run="${esc(id)}">${esc(t("run.showInFolder"))}</a>` : ""}
+  </div>`;
+}
+
+function renderRunPanel(run) {
+  const host = document.getElementById("run-current");
+  if (!run) { host.innerHTML = `<div class="muted">${esc(t("run.none"))}</div>`; return; }
+  const running = run.status === "running";
+  const progress = run.progress || {};
+  const percent = progress.total ? Math.round(100 * progress.index / progress.total) : 0;
+  const tone = run.status === "passed" ? "ok" : running || run.status === "cancelled" ? "warn" : "err";
+  host.innerHTML = `<div class="run-head">
+      <span class="badge ${tone}">${esc(run.status)}</span>
+      <span class="mono small">${esc(run.id)}</span>
+      <span class="muted small">${esc(new Date(run.started_at).toLocaleString())}</span>
+      <span class="muted small">${esc(run.device?.label || run.device?.ski || "")}</span>
+      ${running ? `<button class="small" data-cancel-run="${esc(run.id)}">${esc(t("run.cancel"))}</button>` : ""}
+    </div>
+    <div class="run-headline">${esc(run.summary?.headline || "")}</div>
+    ${running ? `<div class="run-progress"><div style="width:${percent}%"></div></div><div class="muted small">${esc(tf("run.running", {i: progress.index || 0, n: progress.total || 0, current: progress.current || ""}))}</div>` : ""}
+    ${(run.notices || []).map(n => `<div class="notice" style="margin-top:6px">${esc(n)}</div>`).join("")}
+    ${runLinks(run.id, run.frames_count > 0)}`;
+}
+
+async function loadRunHistory() {
+  const data = await safeApi("/runs", {runs: [], active: ""});
+  state.canOpenFolder = !!data.can_open_folder;
+  document.getElementById("run-reports-dir").textContent = data.reports_dir_windows || data.reports_dir || "";
+  document.getElementById("run-reports-dir").title = t("run.folderHint");
+  document.getElementById("open-reports-folder").hidden = !state.canOpenFolder;
+  const host = document.getElementById("run-history");
+  host.innerHTML = data.runs.length ? data.runs.map(run => `<div class="run-history-row">
+      <span>${esc(new Date(run.started_at).toLocaleString())}</span>
+      <span><span class="badge ${run.status === "passed" ? "ok" : run.status === "running" || run.status === "cancelled" ? "warn" : "err"}">${esc(run.status)}</span></span>
+      <span>${esc(run.headline)}<div class="muted small">${esc([run.peer_label || run.peer_ski, run.selection, run.tester].filter(Boolean).join(" · "))}</div></span>
+      <span class="run-links" style="margin:0">
+        <a class="primary-link" href="${API}/runs/${encodeURIComponent(run.id)}/report.html" target="_blank" rel="noopener">${esc(t("run.openReport"))}</a>
+        ${run.frames > 0 ? `<a href="${API}/runs/${encodeURIComponent(run.id)}/frames.log">${esc(t("run.formatFramesLog"))}</a>` : ""}
+        ${state.canOpenFolder ? `<a href="#" data-folder-run="${esc(run.id)}">${esc(t("run.showInFolder"))}</a>` : ""}
+        <a href="#" data-show-run="${esc(run.id)}">${esc(t("run.loadResults"))}</a>
+      </span>
+    </div>`).join("") : `<div class="muted">${esc(t("run.noPrevious"))}</div>`;
+  if (data.active && (!state.run || state.run.id !== data.active || state.run.status !== "running")) {
+    const run = await safeApi(`/runs/${encodeURIComponent(data.active)}`, null);
+    if (run) { showRun(run); pollRun(run.id); }
+  } else if (!state.run && data.runs.length) {
+    const run = await safeApi(`/runs/${encodeURIComponent(data.runs[0].id)}`, null);
+    if (run) showRun(run);
+  }
+}
+
+function onRunEvent(record) {
+  if (String(record.event || "").startsWith("run_") && record.data?.run_id && state.run?.id !== record.data.run_id && record.event === "run_started") {
+    pollRun(record.data.run_id);
+  }
 }
 
 function populateLogStacks() {
@@ -3533,7 +3975,11 @@ function connectEvents() {
   const source = new EventSource(`${API}/events/stream`);
   state.eventSource = source;
   source.onopen = () => document.getElementById("stream-state").textContent = t("js.streamConnected");
-  source.onmessage = event => appendEvent(JSON.parse(event.data));
+  source.onmessage = event => {
+    const record = JSON.parse(event.data);
+    appendEvent(record);
+    onRunEvent(record);
+  };
   source.onerror = () => {
     document.getElementById("stream-state").textContent = t("js.reconnecting");
     source.close(); setTimeout(connectEvents, 2500);
@@ -4284,8 +4730,35 @@ document.getElementById("browse-usecases").addEventListener("click", event => {
   }
   action(button, loadProfile, t("js.ucRefreshed")).catch(() => {});
 });
-document.getElementById("run-readonly").addEventListener("click", event => runTests(true, event.currentTarget));
-document.getElementById("run-all-tests").addEventListener("click", event => runTests(false, event.currentTarget));
+document.getElementById("run-readonly").addEventListener("click", event => startRun({read_only: true}, event.currentTarget));
+document.getElementById("run-all-tests").addEventListener("click", event => startRun({}, event.currentTarget));
+document.getElementById("run-selected").addEventListener("click", event => {
+  const known = new Set(state.tests.map(test => test.id));
+  const ids = [...state.testSelection].filter(id => known.has(id));
+  if (!ids.length) { toast(t("tests.nothingSelected"), "", "warn"); return; }
+  startRun({ids: withCleanup(ids)}, event.currentTarget);
+});
+document.getElementById("test-filter").addEventListener("change", renderTests);
+document.getElementById("open-reports-folder").addEventListener("click", event => {
+  action(event.currentTarget, () => api("/reports/open", {method: "POST"}), t("run.folderOpened")).catch(() => {});
+});
+document.getElementById("test-search").addEventListener("input", renderTests);
+try { document.getElementById("run-tester").value = localStorage.getItem("eebus-tester") || ""; } catch (_) { /* no stored name */ }
+document.getElementById("test-list").addEventListener("change", event => {
+  const test = event.target.closest("[data-select-test]");
+  const group = event.target.closest("[data-select-group]");
+  if (test) {
+    if (test.checked) state.testSelection.add(test.dataset.selectTest); else state.testSelection.delete(test.dataset.selectTest);
+  }
+  if (group) {
+    const groupTests = state.tests.filter(item => groupOf(item) === group.dataset.selectGroup);
+    groupTests.forEach(item => { if (group.checked) state.testSelection.add(item.id); else state.testSelection.delete(item.id); });
+    document.querySelectorAll(`[data-test-group="${CSS.escape(group.dataset.selectGroup)}"] [data-select-test]`).forEach(box => { box.checked = group.checked; });
+  }
+  if (test || group) { saveTestSelection(); updateTestSummary(); }
+});
+document.getElementById("tests-collapse-all").addEventListener("click", () => setGroupCollapsed(testGroups().map(g => g.key), true));
+document.getElementById("tests-expand-all").addEventListener("click", () => setGroupCollapsed(testGroups().map(g => g.key), false));
 document.getElementById("refresh-logs").addEventListener("click", loadLogs);
 document.getElementById("log-stack").addEventListener("change", loadLogs);
 document.getElementById("event-level").addEventListener("change", renderEvents);
@@ -4455,7 +4928,35 @@ document.addEventListener("click", async event => {
     return;
   }
   const run = event.target.closest("[data-run-test]");
-  if (run) { await runOneTest(run.dataset.runTest, run); return; }
+  if (run) { await startRun({ids: [run.dataset.runTest]}, run); return; }
+  const runGroup = event.target.closest("[data-run-group]");
+  if (runGroup) { await startRun({use_cases: [runGroup.dataset.runGroup]}, runGroup); return; }
+  const toggleGroup = event.target.closest("[data-toggle-group]");
+  if (toggleGroup) { setGroupCollapsed([toggleGroup.dataset.toggleGroup], toggleGroup.getAttribute("aria-expanded") === "true"); return; }
+  const cancelRun = event.target.closest("[data-cancel-run]");
+  if (cancelRun) {
+    await action(cancelRun, () => api(`/runs/${encodeURIComponent(cancelRun.dataset.cancelRun)}/cancel`, {method: "POST"}), t("run.cancelled"));
+    return;
+  }
+  const folderRun = event.target.closest("[data-folder-run]");
+  if (folderRun) {
+    event.preventDefault();
+    await action(null, () => api(`/reports/open?run=${encodeURIComponent(folderRun.dataset.folderRun)}`, {method: "POST"}), t("run.folderOpened"));
+    return;
+  }
+  const showRunLink = event.target.closest("[data-show-run]");
+  if (showRunLink) {
+    event.preventDefault();
+    const shown = await safeApi(`/runs/${encodeURIComponent(showRunLink.dataset.showRun)}`, null);
+    if (shown) {
+      state.testResults = {};
+      document.querySelectorAll(".test-result").forEach(el => { el.className = "test-result"; el.innerHTML = ""; });
+      document.querySelectorAll(".test-row").forEach(el => { el.className = "test-row"; });
+      showRun(shown);
+      if (shown.status === "running") pollRun(shown.id);
+    }
+    return;
+  }
   const profileRemove = event.target.closest("[data-profile-remove]");
   if (profileRemove) {
     state.profileSteps.splice(Number(profileRemove.dataset.profileRemove), 1);

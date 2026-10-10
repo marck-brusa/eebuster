@@ -82,6 +82,11 @@ peers: []
 #    port: 4712
 #    path: /ship/
 #    trust: auto        # auto = connect at startup; manual = only when you click Trust
+#    parameters:        # device-specific test values; omitted ones are derived from the
+#                       # device's announced nominal maximum (see docs/21-test-report.md)
+#      nominal_max_w: 11000
+#      limits_w: [11000, 5500, 4200]
+#      failsafe_w: [4200, 2000]
 
 stacks:
   eebus-go-remote:
@@ -117,8 +122,9 @@ simulator:
         phases: 3
         combined_phase: false   # true: one measurement and one limit on phase "abc", as a
                                 # device that meters all phases together publishes them
-        charge_speedup: 60      # simulated seconds per real second, so a charge is
-                                # watchable; 1 charges in real time
+        charge_speedup: 1       # simulated seconds per real second: 1 charges in real time,
+                                # so the vehicle keeps charging through a long test run; 60
+                                # makes a charge watchable
 
   # What a simulated device does, regardless of type:
   #   - accepts LPC consumption limits (write 4 kW and its reported power drops until

@@ -1,0 +1,21 @@
+name: mpc-scenario-2-energy
+description: >
+  Reads the total consumed energy twice, 10 s apart. It must be present and must not decrease.
+covers: "MPC scenario 2: consumed energy, which never decreases."
+goal: "Proves the device reports a consumed-energy counter."
+category: MPC
+risk: read-only
+spec: {use_case: MPC, scenario: 2, test_case: ATC_SCE2_PT_MUTotalConsumedEnergy_001, requirements: [MPC-TS-003], verification: readback}
+requires:
+  use_cases: [monitoringOfPowerConsumption]
+  scenarios: [2]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - capture:
+      get: "/api/v1/mpc/{peer.ski}"
+      values: {consumed: energy_consumed_wh}
+  - sleep: 10
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      greater_or_equal: {energy_consumed_wh: "{captured.consumed}"}

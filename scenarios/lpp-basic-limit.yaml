@@ -1,19 +1,33 @@
 name: lpp-basic-limit
-description: Applies a short production limit and verifies readback.
-covers: "LPP: a short production limit, written and read back."
+description: >
+  Writes a short production limit and reads it back. The production limit follows the passive
+  sign convention of the use case: a negative number of watts, so -1500 W is written and
+  -1500 W must come back. The device evaluates writes only once the energy guard's heartbeat
+  arrives; the CEM entity sends one heartbeat for LPC and LPP alike. The limit is released at
+  the end.
+covers: "LPP scenario 1: a -1500 W production limit, written and read back."
 goal: "Proves a producer accepts a feed-in limit."
-hint: "Skipped on a pure consumer."
+hint: "Skipped on a pure consumer. Changes the device's feed-in while it runs."
 category: LPP
 risk: live-control
+spec: {use_case: LPP, scenario: 1, test_case: ATC_COM_PT_CSConnection_007, requirements: [LPP-TS-001, LPP-TS-035], verification: readback}
 requires:
-  capabilities: [lpp.write, lpp.read]
+  capabilities: [lpp.write, lpp.read, heartbeat]
   use_cases: [limitationOfPowerProduction]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
   - put:
       path: "/api/v1/lpp/{peer.ski}/limit"
-      body: {value_w: 1500, is_active: true, is_changeable: true, duration: "PT1M"}
+      body: {value_w: -1500, is_active: true, is_changeable: true, duration: "PT1M"}
+  - expect_event: {event: eg-lpp-DataUpdateLimit, within: 5s}
   - assert:
       get: "/api/v1/lpp/{peer.ski}/limit"
-      equals: {value_w: 1500, is_active: true}
+      equals: {value_w: -1500, is_active: true}
+finally:
+  - put:
+      path: "/api/v1/lpp/{peer.ski}/limit"
+      template: lpp.limit.release

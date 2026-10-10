@@ -1,0 +1,19 @@
+name: vabd-scenario-2-charge-energy
+description: >
+  Reads battery.0.energy_charged_wh from the energy snapshot.
+covers: "VABD scenario 2: the cumulated charge energy."
+goal: "Proves the device reports this value."
+category: VABD
+risk: read-only
+spec: {use_case: VABD, scenario: 2, verification: readback}
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [visualizationOfAggregatedBatteryData]
+  scenarios: [2]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      not_null: [battery.0.energy_charged_wh]
+      greater_or_equal: {battery.0.energy_charged_wh: 0}

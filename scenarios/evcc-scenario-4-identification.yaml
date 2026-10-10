@@ -1,0 +1,28 @@
+name: evcc-scenario-4-identification
+description: >
+  Reads the vehicle's identifications from the energy snapshot. Every identification must be
+  of type eui48 or eui64 [EVCC-007] and its value a MAC address in the format EVCC Table 8
+  prescribes: hexadecimal digits A-F and 0-9 in pairs separated by "-", six pairs for eui48,
+  eight for eui64. A lowercase or colon-separated address is not that format.
+covers: "EVCC scenario 4: the vehicle's identification, a MAC address in the specified format."
+goal: "Proves a CEM can tell vehicles apart by an identification in the specified format."
+hint: "Needs a vehicle."
+category: EVCC
+risk: read-only
+spec: {use_case: EVCC, scenario: 4, table: Table 8, requirements: [EVCC-007, EVCC-008], verification: readback}
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [evCommissioningAndConfiguration]
+  scenarios: [4]
+  vehicle: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      length_greater_than: {ev.vehicles.0.identifications: 0}
+      # Six hexadecimal pairs (eui48), optionally two more (eui64). Written without {n}: the
+      # runner substitutes {name} references in step arguments.
+      each_matches:
+        ev.vehicles.0.identification_types: "eui48|eui64"
+        ev.vehicles.0.identifications: "[0-9A-F][0-9A-F](-[0-9A-F][0-9A-F])(-[0-9A-F][0-9A-F])(-[0-9A-F][0-9A-F])(-[0-9A-F][0-9A-F])(-[0-9A-F][0-9A-F])((-[0-9A-F][0-9A-F])(-[0-9A-F][0-9A-F]))?"

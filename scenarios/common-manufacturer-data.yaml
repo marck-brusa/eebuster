@@ -1,0 +1,19 @@
+name: common-manufacturer-data
+description: >
+  Reads the device classification of every entity of the device, requesting it from the device
+  first. Brand or vendor and a serial number identify the device to an energy manager and in
+  this report; the software revision is reported when the device gives one.
+covers: "Device classification: brand or vendor, and a serial number."
+goal: "Proves the device identifies itself."
+category: Discovery
+risk: read-only
+spec: {document: "SPINE TS ResourceSpecification 1.3.0 (DeviceClassification manufacturer data)", verification: readback}
+requires:
+  capabilities: [device_profile]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/peers/{peer.ski}/manufacturer"
+      length_greater_than: {entities: 0}
+      some_not_null: {entities: ["data.brand_name|data.vendor_name", data.serial_number]}

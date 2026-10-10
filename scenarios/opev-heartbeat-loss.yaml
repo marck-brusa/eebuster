@@ -1,24 +1,48 @@
 name: opev-heartbeat-loss
 description: >
-  Starts our Energy Guard heartbeat towards the EV, then stops it (EEBus UC TS OPEV V1.0.1b
-  scenario 2, "EV checks Energy Guard availability"): once the heartbeat stays away for more
-  than 4 seconds, the EV must switch to a safe current setting on its own [OPEV-005]. The
-  device-side reaction is observable in EVCEM measurements during a live session; this
-  scenario drives the guard side and leaves the device in the heartbeat-restored state.
-covers: "OPEV scenario 2: our heartbeat towards the car stops."
-goal: "Checks the car falls to a safe current when the Energy Guard disappears."
-hint: "The test only stops the heartbeat: watch the car's current to see the reaction."
-category: Conformance
+  Writes a 10 A obligation on every phase while the vehicle charges, waits until the measured
+  current follows it, then stops our Energy Guard heartbeat (EEBus UC TS OPEV V1.0.1b
+  scenario 2, "EV checks Energy Guard availability"). Once the heartbeat has stayed away for
+  more than 4 s the vehicle should switch to a safe current setting [OPEV-005]: the test
+  requires that 6 s after the stop no phase draws more than the last obligation, and records
+  what the vehicle did. The heartbeat is restarted and the obligation released at the end.
+covers: "OPEV scenario 2: our heartbeat towards the car stops; the car stays within the last obligation."
+goal: "Checks the car does not draw more than allowed once the Energy Guard disappears."
+hint: "Needs a charging session. Stops our heartbeat for 6 s."
+category: OPEV
 risk: disruptive
+spec: {use_case: OPEV, scenario: 2, requirements: [OPEV-005], verification: readback}
 requires:
-  capabilities: [opev.heartbeat]
-  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+  vehicle: true
+  charging: true
+  capabilities: [opev.write, opev.heartbeat, energy_snapshot]
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment, measurementOfElectricityDuringEvCharging]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
   - call: {method: cem-opev/StartHeartbeat}
-  - sleep: 3
+  - sleep: 2
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 10, is_active: true}
+  - wait_for:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      timeout: 20s
+      length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
+      each_less_than: {ev.vehicles.0.current_per_phase_a: 10.5}
   - call: {method: cem-opev/StopHeartbeat}
-  - log: "Heartbeat stopped; per OPEV-005 the EV must fall to a safe current within ~4s. Watch EVCEM currents during a live session."
   - sleep: 6
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
+      each_less_than: {ev.vehicles.0.current_per_phase_a: 10.5}
+  - log: "The currents of the previous step are what the vehicle drew 6 s after the heartbeat stopped; a safe current setting is at or below the last obligation."
+finally:
   - call: {method: cem-opev/StartHeartbeat}
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 10, is_active: false}

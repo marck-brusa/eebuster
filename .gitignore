@@ -1,4 +1,6 @@
 config/eebus.yaml
+# Test reports name real devices (SKIs, serials, addresses): site information, never tracked.
+/data/reports/
 # This repository is public. If you clone a private or vendor repository inside it for
 # cross-referencing while debugging, add it to .git/info/exclude (local, never committed) so
 # `git add -A` cannot pick it up.

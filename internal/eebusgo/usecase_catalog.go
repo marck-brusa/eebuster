@@ -61,6 +61,11 @@ var useCaseCatalog = map[string]useCaseCatalogEntry{
 		Description:     "Charging-station identity (vendor, brand, serial, software revision) and operating state.",
 		TypedOperations: []string{"station identity", "snapshot"},
 	},
+	"evChargingSummary": {
+		Acronym: "EVCS", Title: "EV Charging Summary", Domain: "e-mobility",
+		Description:     "The charging session summary an energy broker sends to the station.",
+		TypedOperations: []string{},
+	},
 	"coordinatedEvCharging": {
 		Acronym: "CEVC", Title: "Coordinated EV Charging", Domain: "e-mobility",
 		Description:     "Charge strategy, energy demand, and charge plan.",

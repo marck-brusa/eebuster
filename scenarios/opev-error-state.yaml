@@ -1,26 +1,52 @@
 name: opev-error-state
 description: >
-  Announces an Energy Guard error state and clears it again (EEBus UC TS OPEV V1.0.1b
-  scenario 3, "Energy Guard sends error state"): while the error is announced, the EV must
-  stop trusting our curtailment and switch to a safe current setting [OPEV-007]. The
-  device-side reaction is observable in EVCEM measurements during a live session; this
-  scenario always ends with the error cleared.
-covers: "OPEV scenario 3: the Energy Guard announces an error, then clears it."
-goal: "Checks the car stops trusting our limits and falls to a safe current."
-hint: "The test only sends the error: watch the car's current to see the reaction."
-category: Conformance
+  Writes a 10 A obligation on every phase while the vehicle charges, waits until the measured
+  current follows it, then announces an Energy Guard failure (EEBus UC TS OPEV V1.0.1b
+  scenario 3, "Energy Guard sends error state"). While the failure stands the vehicle should
+  stop trusting our curtailment and switch to a safe current setting [OPEV-007]: the test
+  requires that 6 s after the announcement no phase draws more than the last obligation, and
+  records what the vehicle did. The failure is cleared and the obligation released at the end.
+covers: "OPEV scenario 3: the Energy Guard announces an error; the car stays within the last obligation."
+goal: "Checks the car does not draw more than allowed once the Energy Guard reports a failure."
+hint: "Needs a charging session. Announces a failure for 6 s."
+category: OPEV
 risk: disruptive
+spec: {use_case: OPEV, scenario: 3, requirements: [OPEV-007], verification: readback}
 requires:
-  capabilities: [opev.operating_state]
-  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+  vehicle: true
+  charging: true
+  capabilities: [opev.write, opev.operating_state, energy_snapshot]
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment, measurementOfElectricityDuringEvCharging]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  - call: {method: cem-opev/StartHeartbeat}
+  - sleep: 2
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 10, is_active: true}
+  - wait_for:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      timeout: 20s
+      length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
+      each_less_than: {ev.vehicles.0.current_per_phase_a: 10.5}
   - put:
       path: "/api/v1/opev/operating-state"
       body: {failure: true}
-  - log: "Failure state announced; per OPEV-007 the EV must not rely on curtailment while it stands."
-  - sleep: 5
+  - sleep: 6
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
+      each_less_than: {ev.vehicles.0.current_per_phase_a: 10.5}
+  - log: "The currents of the previous step are what the vehicle drew 6 s after the failure was announced; a safe current setting is at or below the last obligation."
+finally:
   - put:
       path: "/api/v1/opev/operating-state"
       body: {failure: false}
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 10, is_active: false}

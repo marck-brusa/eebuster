@@ -1,0 +1,21 @@
+name: lpc-cleanup
+description: >
+  Leaves the device as a run should find it: the testbench's heartbeat running and no active
+  consumption limit. Runs at the end of every run that changed the device, also after a
+  cancellation.
+covers: "LPC: heartbeat restarted and the consumption limit released."
+goal: "Returns the device to a neutral state after a run."
+category: LPC
+risk: live-control
+cleanup: true
+spec: {use_case: LPC, verification: readback}
+requires:
+  capabilities: [heartbeat, lpc.write]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - call: {method: eg-lpc/StartHeartbeat}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release

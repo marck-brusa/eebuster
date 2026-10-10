@@ -7,6 +7,7 @@ import (
 	"time"
 
 	eebusapi "github.com/enbility/eebus-go/api"
+	"github.com/enbility/eebus-go/features/client"
 	"github.com/enbility/eebus-go/features/server"
 	spineapi "github.com/enbility/spine-go/api"
 	"github.com/enbility/spine-go/model"
@@ -41,18 +42,32 @@ type evSim struct {
 	powerIDs   []model.MeasurementIdType
 	energyID   model.MeasurementIdType
 	socID      model.MeasurementIdType
-	limitIDs   []model.LoadControlLimitIdType
 
-	mu         sync.Mutex
-	soc        float64 // percent
-	energyWh   float64 // charged this session
-	curtailedA []float64
-	limitOn    []bool
-	finished   bool
-	stationA   float64 // last per-phase share of the station's own LPC limit
-	lastTick   time.Time
-	stop       chan struct{}
+	mu       sync.Mutex
+	soc      float64 // percent
+	energyWh float64 // charged this session
+	// obligations (OPEV) cap what the vehicle draws per phase; recommendations (OSCEV) give it
+	// the self-produced current per phase to charge with.
+	obligations     limitSet
+	recommendations limitSet
+	finished        bool
+	stationA        float64 // last per-phase share of the station's own LPC limit
+	lastTick        time.Time
+	stop            chan struct{}
+
+	// The Energy Guard or CEM the vehicle watches (OPEV and OSCEV scenarios 2 and 3): its DeviceDiagnosis
+	// feature once subscribed, when its heartbeat last arrived, and whether it announced a
+	// failure. safeReason remembers why the vehicle last held its safe current, for the log.
+	guard       *client.DeviceDiagnosis
+	guardEntity spineapi.EntityRemoteInterface
+	guardSeen   time.Time
+	guardFailed bool
+	safeReason  string
 }
+
+// guardTimeout is how long the Energy Guard's heartbeat may stay away before the vehicle
+// falls to its safe current (OPEV-005).
+const guardTimeout = 4 * time.Second
 
 const evNominalV = 230.0
 
@@ -86,7 +101,7 @@ func evDefaults(cfg config.SimulatedEV) config.SimulatedEV {
 		cfg.Phases = 3
 	}
 	if cfg.ChargeSpeedup <= 0 {
-		cfg.ChargeSpeedup = 60
+		cfg.ChargeSpeedup = 1
 	}
 	return cfg
 }
@@ -125,11 +140,11 @@ func newEVSim(id string, cfg config.SimulatedEV, device spineapi.DeviceLocalInte
 
 	e := &evSim{
 		cfg: cfg, id: id, entity: entity,
-		soc:        cfg.SoCStartPercent,
-		curtailedA: make([]float64, len(measuredPhases(cfg))),
-		limitOn:    make([]bool, len(measuredPhases(cfg))),
-		lastTick:   time.Now(),
-		stop:       make(chan struct{}),
+		soc:             cfg.SoCStartPercent,
+		obligations:     newLimitSet("obligation", len(measuredPhases(cfg))),
+		recommendations: newLimitSet("recommendation", len(measuredPhases(cfg))),
+		lastTick:        time.Now(),
+		stop:            make(chan struct{}),
 	}
 
 	if err := e.addIdentityFeatures(); err != nil {
@@ -161,6 +176,21 @@ func (e *evSim) addIdentityFeatures() error {
 		SerialNumber: util.Ptr(model.DeviceClassificationStringType(e.cfg.Serial)),
 	})
 
+	// EVCC scenario 4: the vehicle's identification, as a locally administered EUI-48 that
+	// cannot collide with a real vehicle's address.
+	ident := e.entity.GetOrAddFeature(model.FeatureTypeTypeIdentification, model.RoleTypeServer)
+	if ident == nil {
+		return fmt.Errorf("simulator %s: EV Identification feature", e.id)
+	}
+	ident.AddFunctionType(model.FunctionTypeIdentificationListData, true, false)
+	ident.SetData(model.FunctionTypeIdentificationListData, &model.IdentificationListDataType{
+		IdentificationData: []model.IdentificationDataType{{
+			IdentificationId:    util.Ptr(model.IdentificationIdType(0)),
+			IdentificationType:  util.Ptr(model.IdentificationTypeTypeEui48),
+			IdentificationValue: util.Ptr(model.IdentificationValueType("02-00-00-00-00-01")),
+		}},
+	})
+
 	diag := e.entity.GetOrAddFeature(model.FeatureTypeTypeDeviceDiagnosis, model.RoleTypeServer)
 	if diag == nil {
 		return fmt.Errorf("simulator %s: EV DeviceDiagnosis feature", e.id)
@@ -172,6 +202,10 @@ func (e *evSim) addIdentityFeatures() error {
 	}
 	e.dd = dd
 	dd.SetLocalOperatingState(model.DeviceDiagnosisOperatingStateTypeNormalOperation)
+	// The client side of DeviceDiagnosis watches the Energy Guard's heartbeat and state.
+	if e.entity.GetOrAddFeature(model.FeatureTypeTypeDeviceDiagnosis, model.RoleTypeClient) == nil {
+		return fmt.Errorf("simulator %s: EV DeviceDiagnosis client feature", e.id)
+	}
 
 	// The two configuration keys a CEM reads before it curtails: which communication standard
 	// is in use (ISO 15118 or the far more limited IEC 61851), and whether the phases may be
@@ -362,8 +396,29 @@ func (e *evSim) addElectricalFeatures() error {
 	return nil
 }
 
-// OPEV scenario 1 on the receiving side: one obligation per phase, writable by a CEM, each
-// pointing at that phase's current measurement.
+// limitSet is one kind of per-phase current limit the vehicle takes from a CEM, one limit per
+// measured phase, each pointing at that phase's current measurement.
+type limitSet struct {
+	kind   string
+	ids    []model.LoadControlLimitIdType
+	on     []bool
+	valueA []float64
+}
+
+func newLimitSet(kind string, phases int) limitSet {
+	return limitSet{kind: kind, on: make([]bool, phases), valueA: make([]float64, phases)}
+}
+
+// capA lowers want to the limit of phase i when that limit is active and lower.
+func (l *limitSet) capA(i int, want float64) float64 {
+	if l.on[i] && l.valueA[i] < want {
+		want = l.valueA[i]
+	}
+	return want
+}
+
+// OPEV and OSCEV scenario 1 on the receiving side: one obligation (overload protection) and
+// one recommendation (self-consumption) per phase, writable by a CEM.
 func (e *evSim) addLoadControl() error {
 	f := e.entity.GetOrAddFeature(model.FeatureTypeTypeLoadControl, model.RoleTypeServer)
 	if f == nil {
@@ -378,28 +433,38 @@ func (e *evSim) addLoadControl() error {
 	}
 	e.lc = lc
 
-	for i := range measuredPhases(e.cfg) {
-		id := lc.AddLimitDescription(model.LoadControlLimitDescriptionDataType{
-			LimitType:      util.Ptr(model.LoadControlLimitTypeTypeMaxValueLimit),
-			LimitCategory:  util.Ptr(model.LoadControlCategoryTypeObligation),
-			LimitDirection: util.Ptr(model.EnergyDirectionTypeConsume),
-			MeasurementId:  util.Ptr(e.currentIDs[i]),
-			Unit:           util.Ptr(model.UnitOfMeasurementTypeA),
-			ScopeType:      util.Ptr(model.ScopeTypeTypeOverloadProtection),
-		})
-		if id == nil {
-			return fmt.Errorf("simulator %s: EV limit description %d", e.id, i)
-		}
-		e.limitIDs = append(e.limitIDs, *id)
-		if err := lc.UpdateLimitDataForIds([]eebusapi.LoadControlLimitDataForID{{
-			Data: model.LoadControlLimitDataType{
-				Value:             model.NewScaledNumberType(e.cfg.MaxCurrentA),
-				IsLimitChangeable: util.Ptr(true),
-				IsLimitActive:     util.Ptr(false),
-			},
-			Id: *id,
-		}}); err != nil {
-			return err
+	kinds := []struct {
+		set      *limitSet
+		category model.LoadControlCategoryType
+		scope    model.ScopeTypeType
+	}{
+		{&e.obligations, model.LoadControlCategoryTypeObligation, model.ScopeTypeTypeOverloadProtection},
+		{&e.recommendations, model.LoadControlCategoryTypeRecommendation, model.ScopeTypeTypeSelfConsumption},
+	}
+	for _, kind := range kinds {
+		for i := range measuredPhases(e.cfg) {
+			id := lc.AddLimitDescription(model.LoadControlLimitDescriptionDataType{
+				LimitType:      util.Ptr(model.LoadControlLimitTypeTypeMaxValueLimit),
+				LimitCategory:  util.Ptr(kind.category),
+				LimitDirection: util.Ptr(model.EnergyDirectionTypeConsume),
+				MeasurementId:  util.Ptr(e.currentIDs[i]),
+				Unit:           util.Ptr(model.UnitOfMeasurementTypeA),
+				ScopeType:      util.Ptr(kind.scope),
+			})
+			if id == nil {
+				return fmt.Errorf("simulator %s: EV %s description %d", e.id, kind.set.kind, i)
+			}
+			kind.set.ids = append(kind.set.ids, *id)
+			if err := lc.UpdateLimitDataForIds([]eebusapi.LoadControlLimitDataForID{{
+				Data: model.LoadControlLimitDataType{
+					Value:             model.NewScaledNumberType(e.cfg.MaxCurrentA),
+					IsLimitChangeable: util.Ptr(true),
+					IsLimitActive:     util.Ptr(false),
+				},
+				Id: *id,
+			}}); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -418,24 +483,36 @@ func (e *evSim) announceUseCases() {
 	e.entity.AddUseCaseSupport(model.UseCaseActorTypeEV, model.UseCaseNameTypeOverloadProtectionByEVChargingCurrentCurtailment,
 		model.SpecificationVersionType("1.0.1"), "", true,
 		[]model.UseCaseScenarioSupportType{1, 2, 3})
+	e.entity.AddUseCaseSupport(model.UseCaseActorTypeEV, model.UseCaseNameTypeOptimizationOfSelfConsumptionDuringEVCharging,
+		model.SpecificationVersionType("1.0.1"), "", true,
+		[]model.UseCaseScenarioSupportType{1, 2, 3})
 }
 
 // chargingCurrentA is the whole vehicle-side behaviour: charge at the maximum the battery
-// accepts, unless something curtails it. A curtailment below the vehicle's own minimum
-// pauses charging rather than undercutting it -- what a real EV does, and the reason a 0 A
-// obligation is a pause signal rather than a trickle.
+// accepts, or at the self-produced current a trusted CEM recommends, unless something
+// curtails it. A current below the vehicle's own minimum pauses charging rather than
+// undercutting it -- what a real EV does, and the reason a 0 A obligation is a pause signal
+// rather than a trickle.
 func (e *evSim) chargingCurrentA(stationLimitA float64) []float64 {
-	out := make([]float64, len(e.limitOn))
+	out := make([]float64, len(e.obligations.on))
 	if e.finished {
 		return out
 	}
+	safe := e.guardMissing() != ""
 	for i := range out {
 		want := e.cfg.MaxCurrentA
-		if e.limitOn[i] && e.curtailedA[i] < want {
-			want = e.curtailedA[i]
+		if !safe {
+			// A CEM that is gone or failed is not trusted with self-consumption (OSCEV-007).
+			want = e.recommendations.capA(i, want)
 		}
+		want = e.obligations.capA(i, want)
 		if stationLimitA > 0 && stationLimitA < want {
 			want = stationLimitA
+		}
+		if safe && want > e.cfg.MinCurrentA {
+			// Without a trustworthy Energy Guard the vehicle holds its safe current, the
+			// minimum it charges with, so no overload can occur meanwhile (OPEV-005, OPEV-007).
+			want = e.cfg.MinCurrentA
 		}
 		if want < e.cfg.MinCurrentA {
 			want = 0
@@ -443,6 +520,21 @@ func (e *evSim) chargingCurrentA(stationLimitA float64) []float64 {
 		out[i] = want
 	}
 	return out
+}
+
+// guardMissing says why the vehicle cannot trust its Energy Guard right now: "heartbeat"
+// once the guard's heartbeat has stayed away for more than guardTimeout after having been
+// seen, "failure" while the guard announces a failure, or "" while all is well. Called with
+// the mutex held.
+func (e *evSim) guardMissing() string {
+	reason := ""
+	switch {
+	case e.guardFailed:
+		reason = "failure"
+	case !e.guardSeen.IsZero() && time.Since(e.guardSeen) > guardTimeout:
+		reason = "heartbeat"
+	}
+	return reason
 }
 
 // tick advances the battery and republishes. stationLimitA is the per-phase share of any
@@ -454,6 +546,17 @@ func (e *evSim) tick(stationLimitA float64) (powerW float64) {
 	elapsed := now.Sub(e.lastTick).Seconds()
 	e.lastTick = now
 	e.stationA = stationLimitA
+	if reason := e.guardMissing(); reason != e.safeReason {
+		e.safeReason = reason
+		switch reason {
+		case "heartbeat":
+			log.Printf("simulator[%s]: EV: no Energy Guard heartbeat for more than %s, holding the safe current of %.0fA (OPEV-005)", e.id, guardTimeout, e.cfg.MinCurrentA)
+		case "failure":
+			log.Printf("simulator[%s]: EV: the Energy Guard announced a failure, holding the safe current of %.0fA (OPEV-007)", e.id, e.cfg.MinCurrentA)
+		default:
+			log.Printf("simulator[%s]: EV: the Energy Guard is back, following its limits again", e.id)
+		}
+	}
 	currents := e.chargingCurrentA(stationLimitA)
 	for _, a := range currents {
 		powerW += a * evNominalV * phasesPerMeasurement(e.cfg)
@@ -487,21 +590,26 @@ func (e *evSim) publish() {
 	// identifier" and, per SPINE Table 7, broadcasts it over the *existing* entries instead of
 	// adding it. Into an empty data set that stores nothing at all -- and the update still
 	// reports success, so the device answers every read with an empty list while looking
-	// healthy. Setting all three is also what a real device sends.
+	// healthy. Setting all three is also what a real device sends. valueSource is mandatory in
+	// the EVCEM and EVSOC content tables.
 	now := model.NewAbsoluteOrRelativeTimeTypeFromTime(time.Now())
 	measurement := func(id model.MeasurementIdType, value float64) eebusapi.MeasurementDataForID {
 		return eebusapi.MeasurementDataForID{
 			Data: model.MeasurementDataType{
-				ValueType: util.Ptr(model.MeasurementValueTypeTypeValue),
-				Timestamp: now,
-				Value:     model.NewScaledNumberType(value),
+				ValueType:   util.Ptr(model.MeasurementValueTypeTypeValue),
+				Timestamp:   now,
+				Value:       model.NewScaledNumberType(value),
+				ValueSource: util.Ptr(model.MeasurementValueSourceTypeMeasuredValue),
 			},
 			Id: id,
 		}
 	}
+	// The state of charge is a calculated value (EVSOC Table 9); the rest is measured.
+	stateOfCharge := measurement(e.socID, soc)
+	stateOfCharge.Data.ValueSource = util.Ptr(model.MeasurementValueSourceTypeCalculatedValue)
 	data := []eebusapi.MeasurementDataForID{
 		measurement(e.energyID, energy),
-		measurement(e.socID, soc),
+		stateOfCharge,
 	}
 	for i := range currents {
 		data = append(data,
@@ -533,32 +641,35 @@ func sumOf(values []float64) (total float64) {
 	return total
 }
 
-// applyWrittenLimits reads back the per-phase obligations a CEM has written into our own
-// LoadControl feature. Polling the published data rather than hooking the write callback
-// keeps one code path for "what is the limit now", whether it arrived a moment ago or was
-// standing before this vehicle plugged in.
+// applyWrittenLimits reads back the per-phase obligations and recommendations a CEM has
+// written into our own LoadControl feature. Polling the published data rather than hooking
+// the write callback keeps one code path for "what is the limit now", whether it arrived a
+// moment ago or was standing before this vehicle plugged in.
 func (e *evSim) applyWrittenLimits() {
-	if e.lc == nil {
-		return
+	if e.lc != nil {
+		e.mu.Lock()
+		defer e.mu.Unlock()
+		e.pickUp(&e.obligations)
+		e.pickUp(&e.recommendations)
 	}
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	for i, id := range e.limitIDs {
-		data, err := e.lc.GetLimitDataForId(id)
-		if err != nil || data == nil {
-			continue
+}
+
+// pickUp copies the written state of one limit set. Called with the mutex held.
+func (e *evSim) pickUp(set *limitSet) {
+	for i, id := range set.ids {
+		if data, err := e.lc.GetLimitDataForId(id); err == nil && data != nil {
+			active := data.IsLimitActive != nil && *data.IsLimitActive
+			value := e.cfg.MaxCurrentA
+			if data.Value != nil {
+				value = data.Value.GetValue()
+			}
+			if set.on[i] != active || set.valueA[i] != value {
+				log.Printf("simulator[%s]: EV phase %s %s -> %.1fA active=%v",
+					e.id, measuredPhases(e.cfg)[i], set.kind, value, active)
+			}
+			set.on[i] = active
+			set.valueA[i] = value
 		}
-		active := data.IsLimitActive != nil && *data.IsLimitActive
-		value := e.cfg.MaxCurrentA
-		if data.Value != nil {
-			value = data.Value.GetValue()
-		}
-		if e.limitOn[i] != active || e.curtailedA[i] != value {
-			log.Printf("simulator[%s]: EV phase %s obligation -> %.1fA active=%v",
-				e.id, measuredPhases(e.cfg)[i], value, active)
-		}
-		e.limitOn[i] = active
-		e.curtailedA[i] = value
 	}
 }
 
@@ -584,4 +695,81 @@ func (e *evSim) Currents() []float64 {
 		out[i] = currents[0]
 	}
 	return out
+}
+
+// The Energy Guard side of OPEV scenarios 2 and 3: the vehicle subscribes to the guard's
+// DeviceDiagnosis feature as soon as a CEM entity appears, so its heartbeat and operating
+// state arrive as notifications, and reacts to their absence or to a failure in
+// chargingCurrentA.
+
+func (e *evSim) handleEvent(payload spineapi.EventPayload) {
+	switch {
+	case payload.Entity != nil && payload.EventType == spineapi.EventTypeEntityChange && payload.ChangeType == spineapi.ElementChangeAdd &&
+		payload.Entity.EntityType() == model.EntityTypeTypeCEM:
+		e.guardAppeared(payload.Entity)
+	case payload.EventType == spineapi.EventTypeDeviceChange && payload.ChangeType == spineapi.ElementChangeRemove:
+		e.guardGone(payload.Ski)
+	case payload.EventType == spineapi.EventTypeEntityChange && payload.ChangeType == spineapi.ElementChangeRemove && e.isGuard(payload.Entity):
+		e.guardGone(payload.Ski)
+	case payload.EventType == spineapi.EventTypeDataChange && e.isGuard(payload.Entity):
+		switch payload.Data.(type) {
+		case *model.DeviceDiagnosisHeartbeatDataType:
+			e.guardHeartbeat()
+		case *model.DeviceDiagnosisStateDataType:
+			e.guardState()
+		}
+	}
+}
+
+func (e *evSim) guardAppeared(entity spineapi.EntityRemoteInterface) {
+	dd, err := client.NewDeviceDiagnosis(e.entity, entity)
+	if err == nil {
+		_, err = dd.Subscribe()
+	}
+	if err != nil {
+		log.Printf("simulator[%s]: EV: subscribing to the Energy Guard's DeviceDiagnosis failed: %v", e.id, err)
+	} else {
+		e.mu.Lock()
+		e.guard, e.guardEntity = dd, entity
+		e.guardSeen, e.guardFailed = time.Time{}, false
+		e.mu.Unlock()
+		_, _ = dd.RequestHeartbeat()
+		_, _ = dd.RequestState()
+		log.Printf("simulator[%s]: EV: watching the Energy Guard %s (heartbeat and operating state)", e.id, entity.Device().Ski())
+	}
+}
+
+func (e *evSim) guardGone(ski string) {
+	e.mu.Lock()
+	if e.guardEntity != nil && e.guardEntity.Device().Ski() == ski {
+		e.guard, e.guardEntity = nil, nil
+		e.guardSeen, e.guardFailed = time.Time{}, false
+	}
+	e.mu.Unlock()
+}
+
+func (e *evSim) isGuard(entity spineapi.EntityRemoteInterface) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return entity != nil && e.guardEntity != nil && entity.Device().Ski() == e.guardEntity.Device().Ski() &&
+		fmt.Sprint(entity.Address().Entity) == fmt.Sprint(e.guardEntity.Address().Entity)
+}
+
+func (e *evSim) guardHeartbeat() {
+	e.mu.Lock()
+	e.guardSeen = time.Now()
+	e.mu.Unlock()
+}
+
+func (e *evSim) guardState() {
+	e.mu.Lock()
+	guard := e.guard
+	e.mu.Unlock()
+	if guard != nil {
+		if state, err := guard.GetState(); err == nil && state != nil && state.OperatingState != nil {
+			e.mu.Lock()
+			e.guardFailed = *state.OperatingState == model.DeviceDiagnosisOperatingStateTypeFailure
+			e.mu.Unlock()
+		}
+	}
 }

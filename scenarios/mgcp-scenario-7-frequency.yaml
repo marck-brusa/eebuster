@@ -1,0 +1,19 @@
+name: mgcp-scenario-7-frequency
+description: >
+  Reads frequency_hz at the grid connection point. Scenarios 2 to 4 are mandatory for the grid
+  connection point; the others are tested when advertised.
+covers: "MGCP scenario 7: the grid frequency, between 45 and 65 Hz."
+goal: "Proves the grid connection point reports this value."
+category: MGCP
+risk: read-only
+spec: {use_case: MGCP, scenario: 7, test_case: ATC_SCE7_PT_GCPFrequency_001, requirements: [MGCP-TS-007], verification: readback}
+requires:
+  use_cases: [monitoringOfGridConnectionPoint]
+  scenarios: [7]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mgcp/{peer.ski}"
+      not_null: [frequency_hz]
+      between: {frequency_hz: [45, 65]}

@@ -1,0 +1,17 @@
+name: lpp-scenarios-advertised
+description: >
+  Compares the scenarios the device advertises for limitationOfPowerProduction with the
+  scenario implementation table of the use case specification. A scenario the table marks
+  mandatory for the device's actor and that is not advertised fails the test case; recommended
+  and optional scenarios that are not advertised are listed in the detail.
+covers: "LPP: the advertised scenarios against the specification's mandatory scenarios."
+goal: "Proves the device announces every scenario of LPP it must implement."
+category: LPP
+risk: read-only
+spec: {use_case: LPP, verification: wire}
+requires:
+  use_cases: [limitationOfPowerProduction]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - scenarios_advertised: {use_case: LPP}

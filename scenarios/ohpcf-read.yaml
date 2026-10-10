@@ -2,12 +2,14 @@ name: ohpcf-read
 description: >
   Reads a heat pump compressor's flexibility offer (Optimization of Self-Consumption by Heat
   Pump Compressor Flexibility, EEBus UC TS OHPCF V1.0.0): optional power consumption,
-  requested power, pausability, and minimal run/pause windows.
+  requested power, pausability, and minimal run/pause windows. At least one of them must be
+  published: a device advertising the use case with none of them offers nothing to shift.
 covers: "OHPCF: the heat pump's flexibility offer."
 goal: "Proves a heat pump tells the HEMS how far it can shift its compressor."
 hint: "Skipped unless the device is a heat pump."
 category: HVAC
 risk: read-only
+spec: {use_case: OHPCF, scenario: 1, verification: readback}
 requires:
   use_cases: [optimizationOfSelfConsumptionByHeatPumpCompressorFlexibility]
 peer: device-under-test
@@ -15,3 +17,4 @@ steps:
   - wait_connected: {timeout: 30s}
   - assert:
       get: "/api/v1/ohpcf/{peer.ski}"
+      any_not_null: [optional_power_consumption, optional_power_consumption_available, requested_power_estimate_w, requested_power_max_w, minimal_run_duration_s, minimal_pause_duration_s]

@@ -1,0 +1,20 @@
+name: opev-cleanup
+description: >
+  Leaves the overload protection as a run should find it: the energy guard heartbeat running
+  and no failure state announced.
+covers: "OPEV: heartbeat restarted and the failure state cleared."
+goal: "Returns the device to a neutral state after a run."
+category: OPEV
+risk: live-control
+cleanup: true
+spec: {use_case: OPEV, verification: readback}
+requires:
+  capabilities: [opev.heartbeat, opev.operating_state]
+  use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - call: {method: cem-opev/StartHeartbeat}
+  - put:
+      path: "/api/v1/opev/operating-state"
+      body: {failure: false}

@@ -59,7 +59,11 @@ type Summary struct {
 	PerSKI map[string]int `json:"per_ski"`
 }
 
-const defaultCapacity = 2000
+// RingCapacity is how many frames the store keeps: a reader that falls further behind than
+// this has lost frames.
+const RingCapacity = 2000
+
+const defaultCapacity = RingCapacity
 
 // Store is safe for concurrent use. One conformance.Session is kept per SKI so cross-message
 // checks (declared units, counter monotonicity) survive across frames.
@@ -156,6 +160,15 @@ func (s *Store) Add(stack, dir, ski, payload string) Entry {
 // latest is the newest sequence in the store regardless of filtering, so pollers can advance
 // their cursor even when every new frame is filtered out.
 func (s *Store) Recent(after int64, limit int, ski, dir string, findingsOnly bool) (entries []Entry, latest int64) {
+	return s.recent(after, limit, ski, dir, findingsOnly, false)
+}
+
+// RecentRaw is Recent with the raw payloads kept, for reports that embed the frames.
+func (s *Store) RecentRaw(after int64, limit int, ski, dir string, findingsOnly bool) (entries []Entry, latest int64) {
+	return s.recent(after, limit, ski, dir, findingsOnly, true)
+}
+
+func (s *Store) recent(after int64, limit int, ski, dir string, findingsOnly, keepRaw bool) (entries []Entry, latest int64) {
 	if limit <= 0 || limit > defaultCapacity {
 		limit = defaultCapacity
 	}
@@ -176,7 +189,9 @@ func (s *Store) Recent(after int64, limit int, ski, dir string, findingsOnly boo
 		if findingsOnly && len(e.Findings) == 0 {
 			continue
 		}
-		e.Raw = ""
+		if !keepRaw {
+			e.Raw = ""
+		}
 		out = append(out, e)
 	}
 	if len(out) > limit {

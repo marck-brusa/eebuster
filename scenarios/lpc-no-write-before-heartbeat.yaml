@@ -1,0 +1,45 @@
+name: lpc-no-write-before-heartbeat
+description: >
+  Stops the testbench's heartbeat and waits until the device must be in its failsafe state,
+  then writes an active limit with a distinctive value. Without a heartbeat from the energy
+  guard the Controllable System must not evaluate the write, so the limit read back must not
+  carry that value. The heartbeat is then restarted and a deactivation written, which the
+  device must now accept. Restarts the heartbeat after.
+covers: "LPC: a limit written while the energy guard is silent is not evaluated; after the heartbeat returns, a deactivation is accepted."
+goal: "Proves the device ignores limits from a controller whose heartbeat it has not seen."
+hint: "Takes over two minutes."
+category: LPC
+risk: disruptive
+long_running: true
+spec: {use_case: LPC, test_case: ATC_COM_PT_CSFS_001, requirements: [LPC-TS-033, LPC-TS-036], verification: readback}
+requires:
+  capabilities: [heartbeat, lpc.write, lpc.read]
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - call: {method: eg-lpc/StopHeartbeat}
+  # Failsafe state after 120 s without a heartbeat.
+  - sleep: 130
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      body: {value_w: 1234, is_active: true, is_changeable: true}
+  - sleep: 2
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      not_equals: {value_w: 1234}
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release
+  - sleep: 2
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      equals: {is_active: false}
+finally:
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release

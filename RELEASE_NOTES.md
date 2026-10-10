@@ -1,5 +1,116 @@
 # Release notes
 
+## 1.0.0-rc14
+
+- **Test runs with reports.** A run executes a selection of test cases against one device and
+  records it: the testbench and its stack versions, the device (SKI, SHIP id, addresses,
+  manufacturer data and software revision of every entity, advertised use cases and
+  scenarios), the vehicles, the device parameters, the conditions before and after, every
+  request and response, every compared value, and the conformance findings and use-case events
+  of each step. The headline reads "20 test cases: 19 passed, 1 failed, 0 skipped."
+- **Five formats from one record**: a self-contained HTML report (filters, search, expand;
+  prints to PDF with every section open and a page header), JSON, JUnit XML with the run's
+  identification as properties, CSV of test cases and of steps, and an Excel workbook. The HTML
+  embeds the JSON; `eebus-testbench report` renders any format again from either.
+- **Runs are stored** in `<data-dir>/reports/` after every test case, so an interrupted run
+  still leaves a report, and a finished run writes its HTML report next to the JSON. The Test
+  runner shows the folder -- as Windows sees it when the testbench runs in WSL -- with **Open
+  folder** and, per report, **Show in folder**; the list is the folder's content, nothing
+  else. `POST /api/v1/runs` starts one; `/runs/{id}/report.html` and the other
+  formats render it; `/runs/{id}/cancel` stops after the current step. One run at a time.
+- **Test runner grouped by use case.** Check boxes per test case and per use case, a use-case
+  filter, search, **Run selected** and **Run use case**, long-running test cases on request,
+  tester and notes for the report, a run panel with progress and downloads, and previous runs.
+- **The library cites the specifications.** Every test case has a `spec:` block with the use
+  case, scenario, requirement ids and, for LPC, LPP, MPC and MGCP, the abstract test case of the
+  EEBUS High-Level Test Specification. 56 new test cases: a `*-scenarios-advertised` check per
+  use case against the mandatory scenarios of its specification, LPC limit and failsafe value
+  sets, heartbeat continuity and failsafe on heartbeat loss, one test case per scenario for MPC,
+  MGCP, EVCC, EVSECC, EVCEM, EVSOC, VAPD and VABD, OSCEV recommendations, cleanup test cases
+  that leave the device neutral, and placeholders for criteria that need a device probe.
+  `mpc-electrical-quality` was split into the MPC scenario 3, 4 and 5 test cases.
+- **Skips say why**: use case or optional scenario not advertised, no vehicle or charging
+  session, missing device parameter, testbench capability missing, phases not declared, not
+  verifiable on the wire, not run.
+- **Run-level checks**: wire conformance over the whole run, connection stability, vehicle
+  stability, and the device's LPC heartbeat: the longest time between its heartbeat frames,
+  measured from the trace, against the timeout it announces. A run shorter than that timeout
+  with no heartbeat yet skips the check rather than failing it.
+- **Device parameters** per peer in `eebus.yaml` (`parameters:`), referenced as
+  `{params.limits_w.0}`; absent ones are derived from the announced nominal maximum, and the
+  report says which.
+- **Scenario format**: `finally:` steps that always run once the steps started, `for_each`,
+  `capture`, `scenarios_advertised`, `conformance`, `wait_for` (repeat an assertion until it
+  holds, for values a device publishes on its own schedule), the assertions `between`, `each_between`, `each_matches`,
+  `one_of`, `any_not_null`, `each_not_null`, `some_not_null` and `length_at_least`, and
+  `requires.scenarios`, `vehicle`, `charging` and `parameters`. `expect_event` counts events
+  published after the previous step began. CI validates every scenario file against the
+  use-case tables.
+- **New reads**: `GET /peers/{ski}/manufacturer` (device classification of every entity, read
+  from the device) and `GET /evsoc/{ski}` (state of charge, capacity, state of health and
+  range with their measurement descriptions). `/version` adds the stack module versions, Go
+  version, host and platform; `/trace?raw=1` keeps the payloads.
+- `conformance-window` no longer clears the trace; it checks the frames of its own window.
+- The simulated vehicle publishes `valueSource` on its measurements, as EVCEM and EVSOC require,
+  and an identification for EVCC scenario 4.
+- **EV Charging Summary** (`evChargingSummary`, EVCS) is in the use-case catalog with its
+  scenario check.
+- LPC and OPEV write test cases start the energy guard heartbeat first: a device evaluates writes
+  only after it. `lpc-heartbeat-timeout` waits up to 70 s for the device's first heartbeat.
+- CI runs the read-only selection against the simulator and keeps the reports as an artifact.
+- **OPEV end to end.** `opev-limit-descriptions` judges the vehicle's limit descriptions
+  against the use case's content tables (one obligation per phase a, b and c, linked to a
+  current measurement, in ampere with scope overloadProtection; a combined "abc" limit only in
+  addition; permitted-value entries with a usable range; asymmetric charging needs a limit on
+  every phase), `opev-guard-subscription` requires the vehicle to subscribe to the Energy
+  Guard's heartbeat and operating state, `opev-limit-obeyed` requires the measured charging
+  current to follow a 6 A obligation and the 0 A pause, and `opev-heartbeat-loss` and
+  `opev-error-state` now verify on the wire that the vehicle stays within the last obligation
+  after the guard disappears or fails. The OPEV and OSCEV reads list the `descriptions`; the
+  new `GET /peers/{ski}/subscriptions` lists what the peer subscribed to on our side. New step
+  verbs `limit_descriptions` and `skip_unless` (skip a test case when a value the specification
+  leaves optional is absent).
+- **Wire frames in the report.** The dashboard embeds the run's frames by default (CLI:
+  `-include-frames`); the HTML report lists them per test case with time, direction, function,
+  classifier, size and findings, each payload one click away, and `/runs/{id}/frames.log` (CLI:
+  `-frames-log`) writes them in the EEBus Hub format EEBusTracer imports. `GET /runs/{id}`
+  leaves the frames out unless `?frames=1`.
+- **The simulated vehicle implements OPEV scenarios 2 and 3**: it subscribes to the Energy
+  Guard's DeviceDiagnosis, falls to its minimum current once the heartbeat has stayed away for
+  more than 4 s or the guard announces a failure, and follows the limits again when the guard
+  is back. The simulated station holds its failsafe consumption limit once the guard's
+  heartbeat has stayed away for more than twice the announced timeout and evaluates limit
+  writes only with a heartbeat (LPC-TS-036); it refuses a negative limit, a negative failsafe
+  limit and a failsafe duration outside 2 h to 24 h. `charge_speedup` defaults to 1, so the
+  vehicle keeps charging through a long run.
+- **Verdicts scoped to the device.** The wire-conformance check, the `conformance` step and the
+  per-step findings consider only frames the device sent; `expect_event` only events from the
+  scenario's peer. A configured peer in a reconnect gets the leading `wait_connected` timeout
+  to appear before the test case fails. The wire is sampled every 10 s during a test case, and
+  a check whose frames overran the trace window skips instead of judging. The vehicle check
+  compares vehicles by entity, so an identification arriving after the start is no change; the
+  heartbeat check's window starts where collection started.
+- **Test runner groups collapse**: a toggle per use case, **Collapse all** and **Expand all**;
+  use cases the device does not advertise start collapsed, choices are remembered per browser.
+- Reports whose file cannot be written stay available from memory; report files named like a
+  browser's duplicate download ("… (1).html") are listed; CSV cells that look like formulas are
+  neutralised; `POST /reports/open` refuses cross-site requests; run text that spells a
+  placeholder name no longer breaks the HTML report.
+- The scenario library was checked against the use-case specifications twice, by independent
+  reviews, with every disagreement settled against the specification text: corrected
+  requirement ids, tables, thresholds and preconditions, new LPC, LPP and MPC test cases, and
+  the removed duplicates. VAPD yield and VABD discharge energy are negative under the load
+  convention the scenarios prescribe; the EVCEM and MGCP energy tests reject negative values;
+  battery, PV, OHPCF and OSCEV reads must carry data; the EVCC identification must be eui48 or
+  eui64 in the MAC format of EVCC Table 8.
+- **OSCEV**: `oscev-limit-descriptions` judges the recommendation descriptions against OSCEV
+  Tables 6, 8 and 9, `oscev-guard-subscription` requires the vehicle's subscription to the
+  CEM's heartbeat and operating state, `oscev-cleanup` restores both. The simulated vehicle
+  advertises OSCEV, charges with a recommended current while it trusts the CEM, and publishes
+  its identification in the specified format.
+- New assertion `each_matches` (every element matches a regular expression). CI rejects a
+  `{name}` in a step argument that the runner cannot resolve.
+
 ## 1.0.0-rc13
 
 - **EEBusTracer sees the whole session.** A tracer that attaches to the live feed mid-session

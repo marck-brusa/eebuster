@@ -1,0 +1,23 @@
+name: mgcp-scenario-3-feed-in-energy
+description: >
+  Reads the total feed-in energy at the grid connection point; it must be present. The use case
+  places this counter under its load sign convention, so the sign is recorded as observed and
+  not judged. Scenarios 2 to 4 are mandatory for the grid connection point; the others are
+  tested when advertised.
+covers: "MGCP scenario 3: the total feed-in energy."
+goal: "Proves the grid connection point reports this value."
+category: MGCP
+risk: read-only
+spec: {use_case: MGCP, scenario: 3, test_case: ATC_SCE3_PT_GCPTotalFeedInEnergy_001, requirements: [MGCP-TS-003, MGCP-TS-010], verification: readback}
+requires:
+  use_cases: [monitoringOfGridConnectionPoint]
+  scenarios: [3]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mgcp/{peer.ski}"
+      not_null: [energy_feed_in_wh]
+  - capture:
+      get: "/api/v1/mgcp/{peer.ski}"
+      values: {feed_in_wh: energy_feed_in_wh}

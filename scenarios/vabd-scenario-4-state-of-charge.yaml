@@ -1,0 +1,19 @@
+name: vabd-scenario-4-state-of-charge
+description: >
+  Reads battery.0.state_of_charge from the energy snapshot.
+covers: "VABD scenario 4: the battery state of charge, 0 to 100 %."
+goal: "Proves the device reports this value."
+category: VABD
+risk: read-only
+spec: {use_case: VABD, scenario: 4, verification: readback}
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [visualizationOfAggregatedBatteryData]
+  scenarios: [4]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      not_null: [battery.0.state_of_charge]
+      between: {battery.0.state_of_charge: [0, 100]}

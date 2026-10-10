@@ -1,0 +1,21 @@
+name: mpc-notification
+description: >
+  Waits up to 120 s for the device to notify a new total power value on its own. No read is
+  sent during the window, so only a notification from the device satisfies it. The test
+  specification requires a changed value to be transmitted within 120 s; a charging session
+  makes the power change.
+covers: "MPC: a total power notification from the device within 120 s."
+goal: "Proves the device pushes its measurements instead of waiting to be polled."
+hint: "Needs a charging session so the power changes. Takes up to two minutes."
+category: MPC
+risk: read-only
+long_running: true
+spec: {use_case: MPC, scenario: 1, test_case: ATC_COM_PT_MUNotification_001, requirements: [MPC-TS-014], verification: wire}
+requires:
+  capabilities: [mpc.read]
+  use_cases: [monitoringOfPowerConsumption]
+  charging: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - expect_event: {event: ma-mpc-DataUpdatePower, within: 120s}

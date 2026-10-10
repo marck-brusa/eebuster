@@ -4,7 +4,9 @@ covers: "LPC: the device's declared maximum consumption."
 goal: "Proves a controller knows the device's range before limiting it."
 category: LPC
 risk: read-only
+spec: {use_case: LPC, scenario: 4, test_case: ATC_COM_PT_CSUnlCntrl_003, requirements: [LPC-TS-010/1, LPC-TS-010/2, LPC-TS-038], verification: readback}
 requires:
+  scenarios: [4]
   capabilities: [lpc.nominal_max]
   use_cases: [limitationOfPowerConsumption]
 peer: device-under-test

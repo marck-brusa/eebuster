@@ -14,6 +14,7 @@ import (
 
 	eebusapi "github.com/enbility/eebus-go/api"
 	"github.com/enbility/eebus-go/service"
+	ucapi "github.com/enbility/eebus-go/usecases/api"
 	cslpc "github.com/enbility/eebus-go/usecases/cs/lpc"
 	mumpc "github.com/enbility/eebus-go/usecases/mu/mpc"
 	shipapi "github.com/enbility/ship-go/api"
@@ -42,12 +43,20 @@ type Device struct {
 
 	// ev is the vehicle plugged into this station, when the config asks for one. It owns the
 	// EV-side use cases and the battery; the station meters whatever it draws.
-	ev     *evSim
-	evStop chan struct{}
+	ev *evSim
+	// clockStop ends the station's one-second clock (see run).
+	clockStop chan struct{}
 
 	mu          sync.Mutex
 	limitW      float64
 	limitActive bool
+	// The energy guard's heartbeat (LPC scenario 3): when it last arrived, the timeout it
+	// announced, whether the station is in failsafe state because it stayed away for more
+	// than twice that, and the failsafe consumption limit the station then holds.
+	guardSeen    time.Time
+	guardTimeout time.Duration
+	failsafe     bool
+	failsafeW    float64
 	// limitGen counts limit writes, so an expiry timer can tell whether the limit it was
 	// started for is still the current one. Without it a timer started for an earlier limit
 	// deactivates a newer one that arrived in the meantime -- and, because expiry republishes
@@ -61,6 +70,7 @@ type Device struct {
 }
 
 var _ eebusapi.ServiceReaderInterface = (*Device)(nil)
+var _ spineapi.EventHandlerInterface = (*Device)(nil)
 
 // entityAndDeviceType maps the config's "type" string to SPINE types. Unrecognized or blank
 // falls back to "generic" (an EVSE/charging-station shape) since LPC accepts that entity
@@ -121,7 +131,7 @@ func New(cfg config.SimulatedDevice, dataDir string, logLevel eebusgo.LogLevel, 
 	// The distinct host label below is the belt to this braces.
 	configuration.SetMdnsProviderSelection(mdns.MdnsProviderSelectionTestSetup)
 
-	d := &Device{id: cfg.ID, baselineW: baseline}
+	d := &Device{id: cfg.ID, baselineW: baseline, guardTimeout: defaultGuardTimeout}
 	svc := service.NewService(configuration, d)
 	if err := svc.Setup(); err != nil {
 		return nil, fmt.Errorf("simulator %s: setup: %w", cfg.ID, err)
@@ -182,6 +192,9 @@ func New(cfg config.SimulatedDevice, dataDir string, logLevel eebusgo.LogLevel, 
 	}
 	d.mpc = mpcUC
 
+	if err := svc.LocalDevice().Events().Subscribe(d); err != nil {
+		return nil, fmt.Errorf("simulator %s: subscribing to SPINE events: %w", cfg.ID, err)
+	}
 	if cfg.EV.Enabled {
 		ev, err := newEVSim(cfg.ID, cfg.EV, svc.LocalDevice(), localEntity)
 		if err != nil {
@@ -207,52 +220,108 @@ func (d *Device) Start() error {
 		return err
 	}
 	d.reportPower() // publish the baseline immediately, not just after the first limit write
-	if d.ev != nil {
-		d.evStop = make(chan struct{})
-		go d.runCharging(d.evStop)
-	}
+	d.clockStop = make(chan struct{})
+	go d.run(d.clockStop)
 	return nil
 }
 
-// runCharging advances the vehicle every second: pick up any obligation a CEM has written,
-// let the battery take what it is allowed to, and re-meter the station from what the vehicle
-// actually drew. One second is slow enough to be cheap and fast enough that a limit write
-// visibly takes effect while you watch.
-func (d *Device) runCharging(stop <-chan struct{}) {
+// run is the station's clock: every second it re-evaluates the failsafe state and, with a
+// vehicle plugged in, picks up any obligation a CEM has written, lets the battery take what
+// it is allowed to, and re-meters the station from what the vehicle actually drew. One
+// second is slow enough to be cheap and fast enough that a limit write visibly takes effect
+// while you watch.
+func (d *Device) run(stop <-chan struct{}) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
-	for {
+	for running := true; running; {
 		select {
 		case <-stop:
-			return
+			running = false
 		case <-ticker.C:
-			d.ev.applyWrittenLimits()
-			d.ev.tick(d.stationLimitPerPhaseA())
-			d.reportPower()
+			changed := d.updateFailsafe()
+			if d.ev != nil {
+				d.ev.applyWrittenLimits()
+				d.ev.tick(d.stationLimitPerPhaseA())
+				d.reportPower()
+			} else if changed {
+				d.reportPower()
+			}
 		}
 	}
 }
 
-// stationLimitPerPhaseA turns an active station-level LPC limit (watts for the whole
+// defaultGuardTimeout applies until the energy guard announces its own heartbeat timeout:
+// LPC bounds the guard's timeout by 60 s.
+const defaultGuardTimeout = 60 * time.Second
+
+// updateFailsafe moves the station into failsafe state once the energy guard's heartbeat
+// has stayed away for more than twice the timeout the guard announced -- a controllable
+// system then limits itself to its failsafe consumption limit -- and out again when the
+// heartbeat is back. It reports whether the state changed.
+func (d *Device) updateFailsafe() bool {
+	if d.lpc != nil {
+		if failsafeW, _, err := d.lpc.FailsafeConsumptionActivePowerLimit(); err == nil {
+			d.mu.Lock()
+			d.failsafeW = failsafeW
+			d.mu.Unlock()
+		}
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	failsafe := !d.guardSeen.IsZero() && time.Since(d.guardSeen) > 2*d.guardTimeout
+	changed := failsafe != d.failsafe
+	if changed {
+		d.failsafe = failsafe
+		if failsafe {
+			log.Printf("simulator[%s]: no energy guard heartbeat for more than %s, failsafe state: consumption limited to %.0fW", d.id, 2*d.guardTimeout, d.failsafeW)
+		} else {
+			log.Printf("simulator[%s]: energy guard heartbeat is back, leaving failsafe state", d.id)
+		}
+	}
+	return changed
+}
+
+// guardHeartbeat notes a heartbeat from the energy guard and the timeout it announces.
+func (d *Device) guardHeartbeat(data *spinemodel.DeviceDiagnosisHeartbeatDataType) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.guardSeen = time.Now()
+	if data.HeartbeatTimeout != nil {
+		if timeout, err := data.HeartbeatTimeout.GetTimeDuration(); err == nil && timeout > 0 {
+			d.guardTimeout = timeout
+		}
+	}
+}
+
+// effectiveLimitLocked is the consumption limit the station holds right now: the failsafe
+// limit in failsafe state, otherwise the written limit when active. Called with the mutex
+// held.
+func (d *Device) effectiveLimitLocked() (float64, bool) {
+	limit, active := d.limitW, d.limitActive
+	if d.failsafe {
+		limit, active = d.failsafeW, true
+	}
+	return limit, active
+}
+
+// stationLimitPerPhaseA turns the station-level consumption limit (watts for the whole
 // station) into the per-phase current share the vehicle has to respect -- the path a real
 // installation takes from "the house may draw 4 kW" to "each phase may pull 5.8 A".
 func (d *Device) stationLimitPerPhaseA() float64 {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if !d.limitActive || d.ev == nil {
-		return 0
+	share := 0.0
+	limit, active := d.effectiveLimitLocked()
+	if active && d.ev != nil && d.ev.cfg.Phases > 0 {
+		share = limit / float64(d.ev.cfg.Phases) / evNominalV
 	}
-	phases := float64(d.ev.cfg.Phases)
-	if phases <= 0 {
-		return 0
-	}
-	return d.limitW / phases / evNominalV
+	return share
 }
 
 func (d *Device) Shutdown() {
-	if d.evStop != nil {
-		close(d.evStop)
-		d.evStop = nil
+	if d.clockStop != nil {
+		close(d.clockStop)
+		d.clockStop = nil
 	}
 	d.service.Shutdown()
 }
@@ -269,15 +338,29 @@ func (d *Device) LocalSKI() string {
 func (d *Device) onLPCEvent(ski string, _ spineapi.DeviceRemoteInterface, _ spineapi.EntityRemoteInterface, event eebusapi.EventType) {
 	switch event {
 	case cslpc.LimitWriteApprovalRequired:
-		for msgCounter := range d.lpc.PendingConsumptionLimits() {
-			d.lpc.ApproveOrDenyConsumptionLimit(msgCounter, true, "")
+		d.mu.Lock()
+		noGuard := d.guardSeen.IsZero() || d.failsafe
+		d.mu.Unlock()
+		for msgCounter, limit := range d.lpc.PendingConsumptionLimits() {
+			// A consumption limit is never negative (LPC-003), and a controllable system
+			// evaluates limit writes only once the energy guard's heartbeat is there
+			// (LPC-TS-036): a spec-correct device refuses both.
+			reason := ""
+			switch {
+			case limit.Value < 0:
+				reason = "a negative consumption limit is outside the permitted range"
+			case noGuard:
+				reason = "limit writes are not evaluated before an energy guard heartbeat or in failsafe state"
+			}
+			d.lpc.ApproveOrDenyConsumptionLimit(msgCounter, reason == "", reason)
 		}
 	case cslpc.ConfigurationWriteApprovalRequired:
 		// Failsafe writes go through the device-configuration approval path, separate from
 		// limit approval. Without this branch a written failsafe stays pending forever and
 		// reads keep returning the old value.
-		for msgCounter := range d.lpc.PendingDeviceConfigurations() {
-			d.lpc.ApproveOrDenyDeviceConfiguration(msgCounter, true, "")
+		for msgCounter, pending := range d.lpc.PendingDeviceConfigurations() {
+			reason := failsafeWriteProblem(pending)
+			d.lpc.ApproveOrDenyDeviceConfiguration(msgCounter, reason == "", reason)
 		}
 	case cslpc.DataUpdateLimit:
 		limit, err := d.lpc.ConsumptionLimit()
@@ -299,6 +382,43 @@ func (d *Device) onLPCEvent(ski string, _ spineapi.DeviceRemoteInterface, _ spin
 		d.mu.Unlock()
 		log.Printf("simulator[%s]: limit from ski %s -> %.0fW active=%v duration=%s", d.id, ski, limit.Value, limit.IsActive, limit.Duration)
 		d.reportPower()
+	}
+}
+
+// failsafeWriteProblem says why a failsafe write must be refused: LPC allows a minimum
+// failsafe duration of 2 h to 24 h only, and no negative failsafe consumption limit. Empty
+// when the write is acceptable.
+func failsafeWriteProblem(pending []ucapi.PendingDeviceConfiguration) string {
+	problem := ""
+	for _, p := range pending {
+		if p.Value == nil {
+			continue
+		}
+		switch p.KeyName {
+		case spinemodel.DeviceConfigurationKeyNameTypeFailsafeDurationMinimum:
+			if p.Value.Duration != nil {
+				if d, err := p.Value.Duration.GetTimeDuration(); err == nil && (d < 2*time.Hour || d > 24*time.Hour) {
+					problem = fmt.Sprintf("failsafe duration %s is outside the permitted range of 2 h to 24 h", d)
+				}
+			}
+		case spinemodel.DeviceConfigurationKeyNameTypeFailsafeConsumptionActivePowerLimit:
+			if p.Value.ScaledNumber != nil && p.Value.ScaledNumber.GetValue() < 0 {
+				problem = "a negative failsafe consumption limit is outside the permitted range"
+			}
+		}
+	}
+	return problem
+}
+
+// HandleEvent notes the energy guard's heartbeats for the station's failsafe state and
+// forwards every event to the vehicle, which watches the guard for OPEV.
+func (d *Device) HandleEvent(payload spineapi.EventPayload) {
+	if data, ok := payload.Data.(*spinemodel.DeviceDiagnosisHeartbeatDataType); ok && payload.EventType == spineapi.EventTypeDataChange &&
+		payload.Entity != nil && payload.Entity.EntityType() == spinemodel.EntityTypeTypeCEM {
+		d.guardHeartbeat(data)
+	}
+	if d.ev != nil {
+		d.ev.handleEvent(payload)
 	}
 }
 
@@ -341,8 +461,8 @@ func (d *Device) onMPCEvent(_ string, _ spineapi.DeviceRemoteInterface, _ spinea
 func (d *Device) reportPower() {
 	d.mu.Lock()
 	power := d.baselineW
-	if d.limitActive && d.limitW < power {
-		power = d.limitW
+	if limit, active := d.effectiveLimitLocked(); active && limit < power {
+		power = limit
 	}
 	d.mu.Unlock()
 

@@ -10,12 +10,17 @@ goal: "Proves the device accepts the pause signal; a charging car should drop to
 hint: "Needs a vehicle."
 category: Conformance
 risk: live-control
+spec: {use_case: OPEV, scenario: 1, requirements: [OPEV-001], verification: readback}
 requires:
+  vehicle: true
   capabilities: [opev.write]
   use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: cem-opev/StartHeartbeat}
+  - sleep: 2
   - put:
       path: "/api/v1/opev/{peer.ski}/limits"
       body:
@@ -25,6 +30,7 @@ steps:
   - assert:
       get: "/api/v1/opev/{peer.ski}"
       equals: {limits.0.value_a: 0, limits.0.is_active: true}
+finally:
   - put:
       path: "/api/v1/opev/{peer.ski}/limits"
       body:

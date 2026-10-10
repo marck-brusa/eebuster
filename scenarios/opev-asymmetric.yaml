@@ -12,13 +12,18 @@ goal: "Proves the device limits each phase separately, as a site fuse needs."
 hint: "Needs a vehicle. Skipped on a device with one combined limit for L1-L3."
 category: Conformance
 risk: live-control
+spec: {use_case: OPEV, scenario: 1, requirements: [OPEV-002], verification: readback}
 requires:
+  vehicle: true
   capabilities: [opev.write]
   use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
   opev_phases: [a, b, c]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: cem-opev/StartHeartbeat}
+  - sleep: 2
   - put:
       path: "/api/v1/opev/{peer.ski}/limits"
       body:
@@ -33,6 +38,7 @@ steps:
         limits.0.value_a: 6
         limits.1.value_a: 10
         limits.2.value_a: 16
+finally:
   - put:
       path: "/api/v1/opev/{peer.ski}/limits"
       body:

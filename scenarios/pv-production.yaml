@@ -5,6 +5,7 @@ goal: "Proves an inverter reports what it produces."
 hint: "Skipped unless the device is a PV inverter."
 category: Generation
 risk: read-only
+spec: {use_case: VAPD, scenario: 2, verification: readback}
 requires:
   capabilities: [energy_snapshot]
   use_cases: [visualizationOfAggregatedPhotovoltaicData]
@@ -13,4 +14,5 @@ steps:
   - wait_connected: {timeout: 30s}
   - assert:
       get: "/api/v1/energy/{peer.ski}/snapshot"
-      not_null: [power.pv_w, pv]
+      not_null: [power.pv_w]
+      length_greater_than: {pv: 0}

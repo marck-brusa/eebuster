@@ -1,0 +1,27 @@
+name: lpp-failsafe
+description: >
+  Writes a failsafe production limit of 2 kW with a 2 h minimum duration and reads both back.
+  The failsafe production limit is a magnitude, greater than or equal to zero, unlike the
+  production limit itself. The failsafe duration minimum is one data point shared with LPC.
+covers: "LPP scenario 2: the failsafe production limit and duration, written and read back."
+goal: "Proves a producer stores the fallback it must use when contact is lost."
+hint: "Skipped on a pure consumer. Changes the device's stored failsafe values."
+category: LPP
+risk: live-control
+spec: {use_case: LPP, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPP-TS-011/1, LPP-TS-013/1, LPP-TS-038], verification: readback}
+requires:
+  capabilities: [lpp.write, lpp.read, heartbeat]
+  use_cases: [limitationOfPowerProduction]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - put:
+      path: "/api/v1/lpp/{peer.ski}/failsafe"
+      body: {value_w: 2000, duration: "PT2H"}
+  - expect_event: {event: eg-lpp-DataUpdateFailsafeProductionActivePowerLimit, within: 5s}
+  - assert:
+      get: "/api/v1/lpp/{peer.ski}/failsafe"
+      equals: {value_w: 2000, duration: "PT2H"}

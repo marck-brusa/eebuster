@@ -5,11 +5,12 @@ description: >
   A device announcing a value outside the window — or none at all, leaving the reply carrying
   only key identifiers — cannot pass an energy guard's plausibility check, and its real
   failsafe behaviour after heartbeat loss should then be timed against what it announced
-  (see lpc-heartbeat-loss).
+  (see lpc-failsafe-on-heartbeat-loss).
 covers: "LPC failsafe: the announced minimum failsafe duration."
 goal: "Proves the duration lies in the 2-24 h window the use case requires."
 category: LPC
 risk: read-only
+spec: {use_case: LPC, scenario: 2, verification: readback}
 requires:
   use_cases: [limitationOfPowerConsumption]
 peer: device-under-test

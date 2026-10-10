@@ -1,0 +1,17 @@
+name: evsoc-scenarios-advertised
+description: >
+  Compares the scenarios the device advertises for evStateOfCharge with the scenario
+  implementation table of the use case specification. A scenario the table marks mandatory for
+  the device's actor and that is not advertised fails the test case; recommended and optional
+  scenarios that are not advertised are listed in the detail.
+covers: "EVSOC: the advertised scenarios against the specification's mandatory scenarios."
+goal: "Proves the device announces every scenario of EVSOC it must implement."
+category: EVSOC
+risk: read-only
+spec: {use_case: EVSOC, verification: wire}
+requires:
+  use_cases: [evStateOfCharge]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - scenarios_advertised: {use_case: EVSOC}

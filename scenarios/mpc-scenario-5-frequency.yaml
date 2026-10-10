@@ -1,0 +1,17 @@
+name: mpc-scenario-5-frequency
+description: >
+  Reads the grid frequency. It must be present and between 45 and 65 Hz.
+covers: "MPC scenario 5: the grid frequency, between 45 and 65 Hz."
+goal: "Proves the device reports the grid frequency."
+category: MPC
+risk: read-only
+spec: {use_case: MPC, scenario: 5, test_case: ATC_SCE5_PT_MUFrequency_001, requirements: [MPC-TS-007], verification: readback}
+requires:
+  use_cases: [monitoringOfPowerConsumption]
+  scenarios: [5]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      between: {frequency_hz: [45, 65]}

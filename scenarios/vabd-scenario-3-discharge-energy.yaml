@@ -1,0 +1,22 @@
+name: vabd-scenario-3-discharge-energy
+description: >
+  Reads the cumulated discharge energy from the energy snapshot. The scenario applies the
+  load convention: charging is positive, discharging negative (EEBus UC TS VABD V1.0.0 RC1,
+  section 3.4.3.4), so the discharge energy must be zero or below. A positive value means the
+  sign is inverted.
+covers: "VABD scenario 3: the cumulated discharge energy, negative under the load convention."
+goal: "Proves the battery reports its discharge energy with the sign the use case prescribes."
+category: VABD
+risk: read-only
+spec: {use_case: VABD, scenario: 3, table: Table 8, requirements: [VABD-003a, VABD-005], verification: readback}
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [visualizationOfAggregatedBatteryData]
+  scenarios: [3]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      not_null: [battery.0.energy_discharged_wh]
+      less_or_equal: {battery.0.energy_discharged_wh: 0}

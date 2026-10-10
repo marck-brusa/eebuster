@@ -133,3 +133,84 @@ jobs:
           print(f"{len(glob.glob('scenarios/*.yaml')) - len(bad)} scenario file(s) parsed")
           sys.exit(1 if bad else 0)
           PY
+
+  # Runs the scenario library against the built-in simulator (a station with a vehicle) and
+  # keeps the reports as an artifact. The read-only selection must pass: every read-only test
+  # case either holds against a spec-correct device or skips with a reason. The complete run
+  # is informational -- it writes to the simulated device.
+  simulator-run:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build
+        run: |
+          go build -mod=vendor \
+            -ldflags "-X github.com/marck-brusa/eebuster/internal/httpapi.Version=${GITHUB_REF_NAME}-${GITHUB_SHA::8}" \
+            -o eebus-testbench ./cmd/eebus-testbench
+
+      - name: Start the testbench with a simulated station and vehicle
+        run: |
+          mkdir -p sim/data sim/reports
+          cat > sim/eebus.yaml <<'YAML'
+          api: {bind: 127.0.0.1, port: 8080}
+          network: {mode: static, interface: lo}
+          stacks:
+            eebus-go-remote: {enabled: true, ship_port: 4712}
+          simulator:
+            enabled: true
+            devices:
+              - id: sim-station
+                type: ev
+                ship_port: 4713
+                baseline_w: 11000
+                ev: {enabled: true, name: "Simulated EV", brand: SIMCAR, model: "e-Sim 60", serial: SIM-EV-0001,
+                     battery_kwh: 60, soc_start_percent: 20, max_current_a: 16, min_current_a: 6, phases: 3, charge_speedup: 1}
+          YAML
+          ./eebus-testbench -config sim/eebus.yaml -data-dir sim/data -scenarios scenarios -tracer=false \
+            -tracer-feed-tcp '' -tracer-feed-udp '' > sim/serve.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8080/api/v1/peers | grep -q '"connected":true'; then echo "simulator connected after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the simulator did not connect"; tail -50 sim/serve.log; exit 1
+
+      - name: Read-only selection (must pass)
+        run: |
+          ./eebus-testbench run-all scenarios -base-url http://127.0.0.1:8080 -read-only -tester CI \
+            -notes "read-only selection against the built-in simulator" \
+            -html sim/reports/read-only.html -json sim/reports/read-only.json -junit sim/reports/read-only.junit.xml \
+            -csv sim/reports/read-only.csv -csv-steps sim/reports/read-only-steps.csv -xlsx sim/reports/read-only.xlsx
+
+      - name: Complete library (informational)
+        if: always()
+        run: |
+          ./eebus-testbench run-all scenarios -base-url http://127.0.0.1:8080 -tester CI -include-frames \
+            -notes "complete library against the built-in simulator" \
+            -html sim/reports/complete.html -json sim/reports/complete.json -junit sim/reports/complete.junit.xml \
+            -xlsx sim/reports/complete.xlsx -frames-log sim/reports/complete.frames.log || echo "complete run status is not passed (informational)"
+
+      - name: Re-render a report from its HTML
+        if: always()
+        run: ./eebus-testbench report sim/reports/read-only.html -json sim/reports/read-only.rerendered.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulator-reports
+          path: |
+            sim/reports/
+            sim/serve.log
+
+      # The binary this job tested, for trying a branch without a release.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eebus-testbench-linux-amd64-ci
+          path: eebus-testbench

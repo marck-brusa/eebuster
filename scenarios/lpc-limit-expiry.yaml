@@ -5,12 +5,16 @@ goal: "Proves a timed limit expires on the device, not only in the controller."
 hint: "Changes the device's power for 5 s."
 category: LPC
 risk: live-control
+spec: {use_case: LPC, scenario: 1, test_case: ATC_COM_PT_CSTransition6_001, requirements: [LPC-TS-008], verification: readback}
 requires:
   capabilities: [lpc.write, lpc.read]
   use_cases: [limitationOfPowerConsumption]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"
       body: {value_w: 2000, is_active: true, is_changeable: true, duration: "PT5S"}

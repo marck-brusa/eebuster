@@ -1,0 +1,17 @@
+name: evsecc-scenarios-advertised
+description: >
+  Compares the scenarios the device advertises for evseCommissioningAndConfiguration with the
+  scenario implementation table of the use case specification. A scenario the table marks
+  mandatory for the device's actor and that is not advertised fails the test case; recommended
+  and optional scenarios that are not advertised are listed in the detail.
+covers: "EVSECC: the advertised scenarios against the specification's mandatory scenarios."
+goal: "Proves the device announces every scenario of EVSECC it must implement."
+category: EVSECC
+risk: read-only
+spec: {use_case: EVSECC, verification: wire}
+requires:
+  use_cases: [evseCommissioningAndConfiguration]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - scenarios_advertised: {use_case: EVSECC}

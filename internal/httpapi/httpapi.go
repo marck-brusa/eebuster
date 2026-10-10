@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 	"sync"
 
@@ -16,6 +19,7 @@ import (
 	"github.com/marck-brusa/eebuster/internal/openapi"
 	"github.com/marck-brusa/eebuster/internal/telemetry"
 	"github.com/marck-brusa/eebuster/internal/templates"
+	"github.com/marck-brusa/eebuster/internal/testrun"
 	"github.com/marck-brusa/eebuster/internal/trace"
 	"github.com/marck-brusa/eebuster/internal/truststore"
 	"github.com/marck-brusa/eebuster/internal/webui"
@@ -31,6 +35,7 @@ type Server struct {
 	telemetry    *telemetry.Store
 	logs         *logbuf.Buffer
 	frames       *trace.Store
+	runs         *testrun.Manager
 	mux          *http.ServeMux
 }
 
@@ -45,6 +50,7 @@ func New(cfg *config.Config, configPath, scenariosDir string, logs *logbuf.Buffe
 		cfg: cfg, configPath: configPath, scenariosDir: scenariosDir, stack: stack,
 		telemetry: telemetry.New(), logs: logs, mux: http.NewServeMux(), trust: trust, frames: frames,
 	}
+	s.runs = testrun.NewManager(s.loopbackBaseURL, scenariosDir, "", Version, s.publishRunEvent)
 	s.routes()
 	return s
 }
@@ -91,6 +97,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/peers/visible", s.handlePeersVisible)
 	s.mux.HandleFunc("GET /api/v1/peers/{ski}/usecases", s.handlePeerUseCases)
 	s.mux.HandleFunc("GET /api/v1/peers/{ski}/profile", s.handlePeerProfile)
+	s.mux.HandleFunc("GET /api/v1/peers/{ski}/manufacturer", s.handlePeerManufacturer)
+	s.mux.HandleFunc("GET /api/v1/peers/{ski}/subscriptions", s.handlePeerSubscriptions)
 	s.mux.HandleFunc("GET /api/v1/energy/{ski}/snapshot", s.handleEnergySnapshot)
 	s.mux.HandleFunc("GET /api/v1/energy/{ski}/history", s.handleEnergyHistory)
 	s.mux.HandleFunc("DELETE /api/v1/energy/{ski}/history", s.handleEnergyHistoryClear)
@@ -116,6 +124,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/v1/scenarios/run-all", s.handleScenariosRunAll)
 
 	s.registerUsecaseRoutes()
+	s.registerRunRoutes()
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -138,8 +147,26 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 // released one in a bug report.
 var Version = "dev"
 
+// handleVersion names the build, and -- for test reports -- the stack modules it was built
+// with and the host it runs on.
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"name": "eebus-testbench", "version": Version})
+	out := map[string]any{
+		"name": "eebus-testbench", "version": Version, "go_version": runtime.Version(),
+		"platform": runtime.GOOS + "/" + runtime.GOARCH,
+	}
+	if host, err := os.Hostname(); err == nil {
+		out["host"] = host
+	}
+	if info, ok := debug.ReadBuildInfo(); ok {
+		modules := map[string]string{}
+		for _, dep := range info.Deps {
+			if dep.Path == "github.com/enbility/eebus-go" || dep.Path == "github.com/enbility/ship-go" || dep.Path == "github.com/enbility/spine-go" {
+				modules[dep.Path] = dep.Version
+			}
+		}
+		out["modules"] = modules
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -182,12 +209,13 @@ var capabilities = map[string]bool{
 	"opev.read": true, "opev.write": true, "opev.heartbeat": true, "opev.operating_state": true,
 	"oscev.read": true, "oscev.write": true, "cevc.write": true, "oscev.heartbeat": true, "oscev.operating_state": true,
 	"ohpcf.read": true, "evsecc.read": true,
-	"heartbeat":        true,
-	"approve_deny":     false,
-	"multi_peer":       true,
-	"pairing_approval": true,
-	"device_profile":   true,
-	"energy_snapshot":  true,
+	"peer.subscriptions": true,
+	"heartbeat":          true,
+	"approve_deny":       false,
+	"multi_peer":         true,
+	"pairing_approval":   true,
+	"device_profile":     true,
+	"energy_snapshot":    true,
 }
 
 func (s *Server) stackSummary() stackSummary {

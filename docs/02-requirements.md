@@ -21,7 +21,9 @@ The product must support these end-to-end workflows:
    advertises those use cases.
 6. Apply and release power limits directly from the dashboard, including timed charge
    profiles (sequences of limits with per-step expiry).
-7. Run repeatable use-case scenarios from the dashboard, the CLI, or CI.
+7. Run repeatable use-case test cases from the dashboard, the CLI, or CI, selected by use case,
+   and get a report per run -- HTML (prints to PDF), JSON, JUnit XML, CSV and Excel -- that
+   identifies the device and states each verdict with its evidence (`21-test-report.md`).
 8. Inspect logs, live events, and mDNS visibility.
 9. Inspect every raw SHIP frame both directions, with conformance findings that cite the
    standard, live in the dashboard and via REST — and hand a session to the bundled

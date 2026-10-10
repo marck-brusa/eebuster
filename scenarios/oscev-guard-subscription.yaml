@@ -1,0 +1,24 @@
+name: oscev-guard-subscription
+description: >
+  Checks that the vehicle subscribed to the CEM's DeviceDiagnosis feature, the server feature
+  that carries the CEM's heartbeat (scenario 2) and operating state (scenario 3). The
+  pre-scenario communication of both scenarios requires a subscription to every relevant
+  server feature (EEBus UC TS OSCEV V1.0.1b, sections 3.4.2.1 and 3.4.3.1): without it the
+  vehicle cannot check the CEM's availability [OSCEV-005] or its error state [OSCEV-007]. The
+  use case gives the vehicle's reaction to a missing or failed CEM no bound, so that reaction
+  is not judged. Needs a vehicle associated: the subscription comes from the EV entity.
+covers: "OSCEV scenarios 2 and 3: the vehicle subscribed to our heartbeat and operating state."
+goal: "Proves the vehicle can notice an absent or failed CEM at all."
+hint: "Needs a vehicle."
+category: OSCEV
+risk: read-only
+spec: {use_case: OSCEV, scenario: 2, section: "3.4.2.1, 3.4.3.1", requirements: [OSCEV-005, OSCEV-007], verification: wire}
+requires:
+  vehicle: true
+  use_cases: [optimizationOfSelfConsumptionDuringEvCharging]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/peers/{peer.ski}/subscriptions"
+      contains: {server_feature_subscribers.DeviceDiagnosis: EV}

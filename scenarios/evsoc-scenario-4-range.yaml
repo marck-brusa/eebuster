@@ -1,0 +1,22 @@
+name: evsoc-scenario-4-range
+description: >
+  Reads the vehicle's remaining travel range; a distance with unit m and scope travelRange,
+  not negative, with one of the three value sources the use case allows.
+covers: "EVSOC scenario 4: the travel range in metres."
+goal: "Proves the vehicle reports its remaining range."
+hint: "Needs a vehicle."
+category: EVSOC
+risk: read-only
+spec: {use_case: EVSOC, scenario: 4, table: Tables 7 and 9, requirements: [EVSOC-004], verification: readback}
+requires:
+  use_cases: [evStateOfCharge]
+  scenarios: [4]
+  vehicle: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/evsoc/{peer.ski}"
+      greater_or_equal: {travel_range.value: 0}
+      equals: {travel_range.unit: m, travel_range.measurement_type: distance, travel_range.scope: travelRange}
+      one_of: {travel_range.value_source: [measuredValue, calculatedValue, empiricalValue]}

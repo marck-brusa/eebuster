@@ -40,11 +40,11 @@ lpc.failsafe:
 
 lpp.limit:
   dim_3000w_2h:
-    summary: "Dim production to 3.0 kW for 2 h"
-    value: {value_w: 3000, is_active: true, is_changeable: true, duration: "PT2H"}
+    summary: "Limit production to 3.0 kW for 2 h (negative: the limit follows the passive sign convention)"
+    value: {value_w: -3000, is_active: true, is_changeable: true, duration: "PT2H"}
   release:
     summary: "Release the production limit"
-    value: {value_w: 3000, is_active: false, is_changeable: true}
+    value: {value_w: -3000, is_active: false, is_changeable: true}
 
 raw.jsonrpc:
   local_ski:

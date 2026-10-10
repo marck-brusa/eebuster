@@ -1,0 +1,22 @@
+name: evcem-scenario-1-current
+description: >
+  Reads the vehicle's charging current per phase during a session; each must be present and
+  within 0 to 80 A.
+covers: "EVCEM scenario 1: the charging current per phase, plausible in ampere."
+goal: "Proves the station measures the vehicle's charging current."
+hint: "Needs a charging session."
+category: EVCEM
+risk: read-only
+spec: {use_case: EVCEM, scenario: 1, verification: readback}
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [measurementOfElectricityDuringEvCharging]
+  scenarios: [1]
+  charging: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      length_greater_than: {ev.vehicles.0.current_per_phase_a: 0}
+      each_between: {ev.vehicles.0.current_per_phase_a: [0, 80]}

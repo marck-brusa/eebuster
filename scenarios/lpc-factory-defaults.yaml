@@ -1,0 +1,15 @@
+name: lpc-factory-defaults
+description: >
+  After a factory reset the device must start with its default failsafe values and a
+  deactivated limit. A factory reset is outside EEBUS.
+covers: "LPC: default values after a factory reset."
+goal: "Records that this criterion needs a factory reset."
+category: LPC
+risk: read-only
+spec: {use_case: LPC, test_case: ATC_COM_PT_CSInit_002, requirements: [LPC-TS-009/2, LPC-TS-011, LPC-TS-013], verification: needs-device-probe}
+requires:
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+

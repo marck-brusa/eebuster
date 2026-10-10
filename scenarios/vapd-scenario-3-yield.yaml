@@ -1,0 +1,21 @@
+name: vapd-scenario-3-yield
+description: >
+  Reads the cumulated photovoltaic yield from the energy snapshot. The scenario applies the
+  load convention: production is negative (EEBus UC TS VAPD V1.0.0 RC1, section 3.4.3.4), so
+  a PV system's yield must be zero or below. A positive yield means the sign is inverted.
+covers: "VAPD scenario 3: the cumulated PV yield, negative under the load convention."
+goal: "Proves the device reports its yield with the sign the use case prescribes."
+category: VAPD
+risk: read-only
+spec: {use_case: VAPD, scenario: 3, table: Table 8, requirements: [VAPD-003a, VAPD-004], verification: readback}
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [visualizationOfAggregatedPhotovoltaicData]
+  scenarios: [3]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      not_null: [pv.0.yield_total_wh]
+      less_or_equal: {pv.0.yield_total_wh: 0}

@@ -13,7 +13,11 @@ func (s *Server) handleTraceList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	after, _ := strconv.ParseInt(q.Get("after"), 10, 64)
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	entries, latest := s.frames.Recent(after, limit, q.Get("ski"), q.Get("dir"), q.Get("findings") == "only")
+	recent := s.frames.Recent
+	if q.Get("raw") == "1" {
+		recent = s.frames.RecentRaw
+	}
+	entries, latest := recent(after, limit, q.Get("ski"), q.Get("dir"), q.Get("findings") == "only")
 	writeJSON(w, http.StatusOK, map[string]any{"entries": entries, "latest_seq": latest})
 }
 

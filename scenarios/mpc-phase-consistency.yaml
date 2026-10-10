@@ -3,17 +3,24 @@ description: >
   The per-phase powers must add up to the reported total (MPC scenario 1, EEBus UC TS
   Monitoring of Power Consumption V1.0.0). A device publishing a live total while every phase
   reads a hardcoded 0 W is publishing decoration, not measurements — the HEMS cannot do phase
-  balancing against it. Tolerance 30% covers measurement jitter and rounding.
+  balancing against it. Tolerance 30% covers measurement jitter and rounding. Per-phase
+  values are optional in MPC (MPC-TS-011): a device that publishes none skips this test
+  case instead of failing it.
 covers: "MPC scenario 1: the phase powers against the total."
 goal: "Proves the per-phase values are real measurements, not placeholders."
 hint: "30 % tolerance for jitter and rounding."
-category: Conformance
+category: MPC
 risk: read-only
+spec: {use_case: MPC, scenario: 1, test_case: ATC_SCE1_PT_MUPhaseActivePower_001, requirements: [MPC-TS-002], verification: readback}
 requires:
   use_cases: [monitoringOfPowerConsumption]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  - skip_unless:
+      get: "/api/v1/mpc/{peer.ski}"
+      not_null: [power_per_phase_w]
+      reason: "the device publishes no per-phase power, which MPC leaves optional"
   - assert:
       get: "/api/v1/mpc/{peer.ski}"
       not_null: [power_w, power_per_phase_w]

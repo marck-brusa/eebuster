@@ -1,0 +1,18 @@
+name: mpc-scenario-4-voltage
+description: >
+  Reads the per-phase voltages. Each must be present and between 0 and 1000 V.
+covers: "MPC scenario 4: one voltage per phase, plausible in volt."
+goal: "Proves the device reports its phase voltages."
+category: MPC
+risk: read-only
+spec: {use_case: MPC, scenario: 4, test_case: ATC_SCE4_PT_MUACVoltage_001, requirements: [MPC-TS-006], verification: readback}
+requires:
+  use_cases: [monitoringOfPowerConsumption]
+  scenarios: [4]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      length_greater_than: {voltage_per_phase_v: 0}
+      each_between: {voltage_per_phase_v: [0, 1000]}

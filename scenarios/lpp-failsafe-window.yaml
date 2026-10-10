@@ -1,0 +1,23 @@
+name: lpp-failsafe-window
+description: >
+  The announced failsafe production limit must be present and not negative, and the failsafe
+  duration minimum must lie within the window the use case prescribes, 2 to 24 hours. The
+  duration is one data point shared with LPC.
+covers: "LPP scenario 2: the announced failsafe production limit and minimum failsafe duration."
+goal: "Proves the failsafe values lie in the ranges the use case requires."
+hint: "Skipped on a pure consumer."
+category: LPP
+risk: read-only
+spec: {use_case: LPP, scenario: 2, requirements: [LPP-TS-013, LPP-TS-038], verification: readback}
+requires:
+  capabilities: [lpp.read]
+  use_cases: [limitationOfPowerProduction]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/lpp/{peer.ski}/failsafe"
+      not_null: [value_w, duration]
+      greater_or_equal: {value_w: 0}
+      duration_at_least: {duration: "PT2H"}
+      duration_at_most: {duration: "PT24H"}

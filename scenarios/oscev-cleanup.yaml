@@ -1,0 +1,20 @@
+name: oscev-cleanup
+description: >
+  Leaves self-consumption optimization as a run should find it: the CEM heartbeat running and
+  no failure state announced.
+covers: "OSCEV: heartbeat restarted and the failure state cleared."
+goal: "Returns the device to a neutral state after a run."
+category: OSCEV
+risk: live-control
+cleanup: true
+spec: {use_case: OSCEV, verification: readback}
+requires:
+  capabilities: [oscev.heartbeat, oscev.operating_state]
+  use_cases: [optimizationOfSelfConsumptionDuringEvCharging]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - call: {method: cem-oscev/StartHeartbeat}
+  - put:
+      path: "/api/v1/oscev/operating-state"
+      body: {failure: false}

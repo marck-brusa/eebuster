@@ -1,0 +1,22 @@
+name: evsoc-scenario-3-health
+description: >
+  Reads the vehicle's battery state of health; 0 to 100, described as a percentage with unit
+  pct and scope stateOfHealth, with one of the three value sources the use case allows.
+covers: "EVSOC scenario 3: the battery state of health, 0 to 100 %."
+goal: "Proves the vehicle reports its battery health."
+hint: "Needs a vehicle."
+category: EVSOC
+risk: read-only
+spec: {use_case: EVSOC, scenario: 3, table: Tables 7 and 9, requirements: [EVSOC-003], verification: readback}
+requires:
+  use_cases: [evStateOfCharge]
+  scenarios: [3]
+  vehicle: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/evsoc/{peer.ski}"
+      between: {state_of_health.value: [0, 100]}
+      equals: {state_of_health.unit: pct, state_of_health.measurement_type: percentage, state_of_health.scope: stateOfHealth}
+      one_of: {state_of_health.value_source: [measuredValue, calculatedValue, empiricalValue]}

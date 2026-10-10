@@ -3,16 +3,20 @@ description: >
   Reads the per-phase recommendation state of Optimization of Self-Consumption During EV
   Charging (EEBus UC TS OSCEV V1.0.1b). Recommendations are advisory current setpoints the
   EV may follow to absorb solar excess; a device advertising the use case must at least
-  answer the read.
+  answer the read and declare a phase it takes recommendations on.
 covers: "OSCEV: the recommended currents for solar self-consumption."
 goal: "Proves a device advertising OSCEV answers the read."
 hint: "Needs a vehicle."
-category: EV charging
+category: OSCEV
 risk: read-only
+spec: {use_case: OSCEV, scenario: 1, verification: readback}
 requires:
+  vehicle: true
   use_cases: [optimizationOfSelfConsumptionDuringEvCharging]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
   - assert:
       get: "/api/v1/oscev/{peer.ski}"
+      not_null: [phases]
+      length_at_least: {phases: 1}

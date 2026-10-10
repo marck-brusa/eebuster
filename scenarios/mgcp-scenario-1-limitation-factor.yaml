@@ -1,0 +1,20 @@
+name: mgcp-scenario-1-limitation-factor
+description: >
+  Reads the PV feed-in power limitation factor at the grid connection point, a percentage of
+  the cumulated nominal PV peak power, so it must lie between 0 and 100. Scenarios 2 to 4 are
+  mandatory for the grid connection point; the others are tested when advertised.
+covers: "MGCP scenario 1: the PV feed-in power limitation factor, 0 to 100 %."
+goal: "Proves the grid connection point reports this value."
+category: MGCP
+risk: read-only
+spec: {use_case: MGCP, scenario: 1, test_case: ATC_SCE1_PT_GCPPowerLimitFactor_001, requirements: [MGCP-TS-001], verification: readback}
+requires:
+  use_cases: [monitoringOfGridConnectionPoint]
+  scenarios: [1]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mgcp/{peer.ski}"
+      not_null: [power_limitation_factor]
+      between: {power_limitation_factor: [0, 100]}

@@ -1,0 +1,26 @@
+name: lpc-heartbeat-continuity
+description: >
+  Waits for five consecutive heartbeat notifications from the device; each must arrive within
+  60 s of the previous one. The test specification bounds the interval between two heartbeats
+  of the Controllable System by 60 s. Only notifications count: replies to the testbench's own
+  heartbeat reads do not.
+covers: "LPC scenario 3: five device heartbeats in a row, no gap longer than 60 s."
+goal: "Proves the device keeps its heartbeat going, not only at connection time."
+hint: "Takes up to five minutes."
+category: LPC
+risk: read-only
+long_running: true
+spec: {use_case: LPC, scenario: 3, test_case: ATC_COM_PT_CSHeartbeat_001, requirements: [LPC-TS-007], verification: wire}
+requires:
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - for_each:
+      items: [1, 2, 3, 4, 5]
+      as: sample
+      steps:
+        - expect_event: {event: eg-lpc-DataUpdateHeartbeat, within: 66s}
+        # A plain step between two expectations moves the event window forward, so the next
+        # expectation needs a heartbeat newer than the one just seen.
+        - log: "heartbeat {sample} of 5 observed"

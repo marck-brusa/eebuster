@@ -1,0 +1,57 @@
+name: lpc-failsafe-value-set
+description: >
+  Writes every failsafe power limit of failsafe_w and every failsafe duration minimum of
+  failsafe_durations (within the 2 h to 24 h window the stack enforces before sending), and
+  requires each to be read back. A duration below 2 h belongs to lpc-failsafe-duration-range.
+  For a duration the device is allowed to reject because it exceeds its own maximum, such as
+  24 h, the device must then hold its maximum instead, so the readback must lie between 2 h
+  and the value written. Writes the values the device had before back at the end.
+covers: "LPC scenario 2: every configured failsafe limit and duration, written and read back."
+goal: "Proves the device accepts its failsafe values across the specified range."
+hint: "Restores the failsafe values the device had before."
+category: LPC
+risk: live-control
+spec: {use_case: LPC, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPC-TS-011/1, LPC-TS-013/1, LPC-TS-015, LPC-TS-016, LPC-TS-038], verification: readback}
+requires:
+  capabilities: [lpc.failsafe]
+  use_cases: [limitationOfPowerConsumption]
+  parameters: [failsafe_w, failsafe_durations]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - capture:
+      get: "/api/v1/lpc/{peer.ski}/failsafe"
+      values: {original_w: value_w, original_duration: duration}
+      optional: true
+  - for_each:
+      items: "{params.failsafe_w}"
+      as: failsafe
+      steps:
+        - put:
+            path: "/api/v1/lpc/{peer.ski}/failsafe"
+            body: {value_w: "{failsafe}"}
+        - sleep: 2
+        - assert:
+            get: "/api/v1/lpc/{peer.ski}/failsafe"
+            equals: {value_w: "{failsafe}"}
+  - for_each:
+      items: "{params.failsafe_durations}"
+      as: duration
+      steps:
+        - put:
+            path: "/api/v1/lpc/{peer.ski}/failsafe"
+            body: {duration: "{duration}"}
+        - sleep: 2
+        # Accepted as sent, or rejected above the device's maximum and set to that maximum.
+        - assert:
+            get: "/api/v1/lpc/{peer.ski}/failsafe"
+            duration_at_least: {duration: "PT2H"}
+            duration_at_most: {duration: "{duration}"}
+finally:
+  # Unchecked: the value is restored as the device had it, even outside the 2 h to 24 h window.
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/failsafe?unchecked=true"
+      body: {value_w: "{captured.original_w}", duration: "{captured.original_duration}"}

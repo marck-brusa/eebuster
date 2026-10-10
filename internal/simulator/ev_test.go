@@ -80,7 +80,7 @@ func TestEVFollowsLimits(t *testing.T) {
 	ev := newTestEV(t, config.SimulatedEV{MaxCurrentA: 16, MinCurrentA: 6, Phases: 3})
 
 	ev.mu.Lock()
-	ev.limitOn[0], ev.curtailedA[0] = true, 10 // obligation on L1 only
+	ev.obligations.on[0], ev.obligations.valueA[0] = true, 10 // obligation on L1 only
 	ev.mu.Unlock()
 	got := ev.Currents()
 	if got[0] != 10 || got[1] != 16 {
@@ -88,19 +88,90 @@ func TestEVFollowsLimits(t *testing.T) {
 	}
 
 	ev.mu.Lock()
-	ev.limitOn[0], ev.curtailedA[0] = true, 3 // below the vehicle's minimum
+	ev.obligations.on[0], ev.obligations.valueA[0] = true, 3 // below the vehicle's minimum
 	ev.mu.Unlock()
 	if got := ev.Currents(); got[0] != 0 {
 		t.Errorf("a curtailment under the minimum must pause the phase, got %v", got)
 	}
 
 	ev.mu.Lock()
-	ev.limitOn[0] = false
+	ev.obligations.on[0] = false
 	ev.stationA = 8 // the station's own LPC limit, shared per phase
 	ev.mu.Unlock()
 	for i, a := range ev.Currents() {
 		if a != 8 {
 			t.Errorf("station limit: phase %d got %v, want 8", i, a)
 		}
+	}
+}
+
+// Without a trustworthy Energy Guard the vehicle must not keep drawing what its curtailment
+// allowed: once the guard's heartbeat has stayed away for more than guardTimeout after having
+// been seen, or while the guard announces a failure, the vehicle holds its safe current, its
+// minimum, and follows the limits again once the guard is back (OPEV scenarios 2 and 3).
+func TestEVHoldsSafeCurrentWithoutGuard(t *testing.T) {
+	ev := newTestEV(t, config.SimulatedEV{MaxCurrentA: 16, MinCurrentA: 6, Phases: 3})
+	expect := func(what string, want float64) {
+		t.Helper()
+		for i, a := range ev.Currents() {
+			if a != want {
+				t.Errorf("%s: phase %d got %v A, want %v", what, i, a, want)
+			}
+		}
+	}
+	expect("no guard seen yet", 16)
+
+	ev.mu.Lock()
+	ev.guardSeen = time.Now().Add(-guardTimeout - time.Second)
+	ev.mu.Unlock()
+	expect("heartbeat lost", 6)
+	if reason := ev.guardMissing(); reason != "heartbeat" {
+		t.Errorf("reason = %q, want heartbeat", reason)
+	}
+
+	ev.guardHeartbeat()
+	expect("heartbeat back", 16)
+
+	ev.mu.Lock()
+	ev.guardFailed = true
+	ev.mu.Unlock()
+	expect("guard failed", 6)
+
+	ev.mu.Lock()
+	ev.guardFailed = false
+	ev.obligations.on[0], ev.obligations.valueA[0] = true, 0 // the pause signal outranks the safe current
+	ev.guardSeen = time.Now().Add(-guardTimeout - time.Second)
+	ev.mu.Unlock()
+	if got := ev.Currents(); got[0] != 0 || got[1] != 6 {
+		t.Errorf("pause under heartbeat loss: got %v, want L1 0A and the others 6A", got)
+	}
+}
+
+// The default vehicle charges in real time, so it is still charging after a long test run.
+func TestEVDefaultsChargeInRealTime(t *testing.T) {
+	if cfg := evDefaults(config.SimulatedEV{}); cfg.ChargeSpeedup != 1 {
+		t.Errorf("charge_speedup default = %v, want 1", cfg.ChargeSpeedup)
+	}
+}
+
+// A recommendation is the self-produced current the vehicle should charge with, as long as it
+// trusts the CEM; an obligation still caps it, and a CEM that is gone is not followed.
+func TestEVFollowsRecommendationsWhileTheCEMIsTrusted(t *testing.T) {
+	ev := newTestEV(t, config.SimulatedEV{MaxCurrentA: 16, MinCurrentA: 6, Phases: 3})
+	ev.mu.Lock()
+	ev.recommendations.on[0], ev.recommendations.valueA[0] = true, 9
+	ev.recommendations.on[1], ev.recommendations.valueA[1] = true, 12
+	ev.obligations.on[1], ev.obligations.valueA[1] = true, 10
+	ev.mu.Unlock()
+	if got := ev.Currents(); got[0] != 9 || got[1] != 10 || got[2] != 16 {
+		t.Errorf("recommendations: got %v, want L1 9A, L2 10A (obligation), L3 16A", got)
+	}
+
+	ev.mu.Lock()
+	ev.obligations.on[1] = false
+	ev.guardFailed = true
+	ev.mu.Unlock()
+	if got := ev.Currents(); got[0] != 6 || got[1] != 6 {
+		t.Errorf("failed CEM: got %v, want the safe current of 6A, recommendations ignored", got)
 	}
 }

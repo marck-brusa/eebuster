@@ -16,6 +16,7 @@ tags:
   - name: energy
   - name: events
   - name: scenarios
+  - name: runs
   - name: templates
   - name: discover
 
@@ -142,6 +143,20 @@ paths:
     get:
       tags: [peers]
       summary: Connected state, entity types, and advertised use cases for one peer
+      parameters: [{ $ref: "#/components/parameters/Ski" }]
+      responses: { "200": { description: OK }, "404": { description: not connected } }
+
+  /api/v1/peers/{ski}/manufacturer:
+    get:
+      tags: [peers]
+      summary: Device classification (manufacturer data) of every entity of the peer, read from the device
+      parameters: [{ $ref: "#/components/parameters/Ski" }]
+      responses: { "200": { description: OK }, "404": { description: not connected } }
+
+  /api/v1/peers/{ski}/subscriptions:
+    get:
+      tags: [peers]
+      summary: Subscriptions the peer holds on our features, and per feature type of ours the types of the peer's entities subscribed to it (a vehicle that implements OPEV scenarios 2 and 3 appears under DeviceDiagnosis)
       parameters: [{ $ref: "#/components/parameters/Ski" }]
       responses: { "200": { description: OK }, "404": { description: not connected } }
 
@@ -343,10 +358,17 @@ paths:
       summary: Server-Sent Events live feed (text/event-stream) -- open this in a browser tab, not Swagger's Try-it-out
       responses: { "200": { description: OK } }
 
+  /api/v1/evsoc/{ski}:
+    get:
+      tags: [use-cases]
+      summary: EV state of charge (EVSOC) — state of charge, nominal capacity, state of health and travel range with their measurement descriptions
+      parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
+      responses: { "200": { description: OK } }
+
   /api/v1/opev/{ski}:
     get:
       tags: [use-cases]
-      summary: Per-phase charging-current obligations (OPEV) — active limits, the EV's declared min/max/default constraints, and the phases it declares the limit on
+      summary: Per-phase charging-current obligations (OPEV) — active limits, the EV's declared min/max/default constraints, the phases it declares the limit on, and the limit descriptions with their phase and permitted range
       parameters: [{name: ski, in: path, required: true, schema: {type: string}}, {name: entity, in: query, schema: {type: string}}]
       responses: { "200": { description: OK } }
 
@@ -564,6 +586,98 @@ paths:
       summary: Run every scenario in the directory, smoke/discovery tests first
       responses: { "200": { description: OK } }
 
+  /api/v1/runs:
+    get:
+      tags: [runs]
+      summary: The reports folder as it is right now (one entry per stored run, newest first), the active run, the folder's path as this machine and as Windows see it
+      responses: { "200": { description: OK } }
+    post:
+      tags: [runs]
+      summary: Start a test run against one device — a selection of test cases (use cases, risks, ids, read-only), long-running and unadvertised use cases on request, wire frames embedded on request, tester and notes for the report
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                peer: { type: string, example: device-under-test }
+                selection:
+                  type: object
+                  properties:
+                    read_only: { type: boolean }
+                    use_cases: { type: array, items: { type: string }, example: [OPEV, EVCEM] }
+                    risks: { type: array, items: { type: string } }
+                    ids: { type: array, items: { type: string } }
+                include_long_running: { type: boolean }
+                include_frames: { type: boolean }
+                include_unadvertised: { type: boolean }
+                tester: { type: string }
+                notes: { type: string }
+      responses: { "202": { description: started }, "409": { description: a run is in progress }, "422": { description: nothing selected } }
+
+  /api/v1/runs/{id}:
+    get:
+      tags: [runs]
+      summary: The run record, without its embedded wire frames unless frames=1
+      parameters: [{ $ref: "#/components/parameters/RunId" }, {name: frames, in: query, schema: {type: string, enum: ["1"]}}]
+      responses: { "200": { description: OK }, "404": { description: no such run } }
+
+  /api/v1/runs/{id}/cancel:
+    post:
+      tags: [runs]
+      summary: Stop the run after the current step; cleanup test cases still run
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses: { "202": { description: cancelling }, "404": { description: no such run } }
+
+  /api/v1/runs/{id}/report.html:
+    get:
+      tags: [runs]
+      summary: Self-contained HTML report (download=1 offers it as a file)
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses: { "200": { description: OK }, "404": { description: no such run } }
+
+  /api/v1/runs/{id}/report.json:
+    get:
+      tags: [runs]
+      summary: The run record as a JSON file
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses: { "200": { description: OK }, "404": { description: no such run } }
+
+  /api/v1/runs/{id}/junit.xml:
+    get:
+      tags: [runs]
+      summary: JUnit XML with the run's identification as properties
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses: { "200": { description: OK }, "404": { description: no such run } }
+
+  /api/v1/runs/{id}/report.csv:
+    get:
+      tags: [runs]
+      summary: CSV of the test cases (table=cases, default) or of the steps (table=steps)
+      parameters: [{ $ref: "#/components/parameters/RunId" }, {name: table, in: query, schema: {type: string, enum: [cases, steps]}}]
+      responses: { "200": { description: OK }, "404": { description: no such run } }
+
+  /api/v1/runs/{id}/report.xlsx:
+    get:
+      tags: [runs]
+      summary: Excel workbook (summary, test cases, steps, use cases, checks)
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses: { "200": { description: OK }, "404": { description: no such run } }
+
+  /api/v1/runs/{id}/frames.log:
+    get:
+      tags: [runs]
+      summary: The run's embedded wire frames in EEBus Hub log format, ready for EEBusTracer to import
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses: { "200": { description: OK }, "404": { description: no such run } }
+
+  /api/v1/reports/open:
+    post:
+      tags: [runs]
+      summary: Open the reports folder in the file manager of the machine the testbench runs on (run=<id> selects that report); only from a browser on that machine
+      parameters: [{name: run, in: query, schema: {type: string}}]
+      responses: { "200": { description: opened }, "403": { description: not local, or cross-site }, "404": { description: no reports folder }, "501": { description: no file manager } }
+
   /api/v1/templates:
     get:
       tags: [templates]
@@ -572,6 +686,12 @@ paths:
 
 components:
   parameters:
+    RunId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      description: run id, e.g. 20260109T101500Z-3f9a
     Ski:
       name: ski
       in: path

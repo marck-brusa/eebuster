@@ -1,0 +1,23 @@
+name: evcc-scenario-1-connected
+description: >
+  Requires a vehicle entity in the energy snapshot that reports itself connected. The use case
+  obliges the EV to inform the CEM when it connects; without a vehicle the test is skipped as
+  a precondition, with one the vehicle must show up connected.
+covers: "EVCC scenario 1: a connected vehicle is reported."
+goal: "Proves the device shows a plugged-in car to the HEMS."
+hint: "Needs a vehicle."
+category: EVCC
+risk: read-only
+spec: {use_case: EVCC, scenario: 1, requirements: [EVCC-001], verification: readback}
+requires:
+  capabilities: [energy_snapshot]
+  use_cases: [evCommissioningAndConfiguration]
+  vehicle: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      length_at_least: {ev.vehicles: 1}
+      greater_or_equal: {ev.connected_count: 1}
+      equals: {ev.vehicles.0.connected: true}

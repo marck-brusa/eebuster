@@ -1,0 +1,21 @@
+name: lpp-cleanup
+description: >
+  Releases any production limit the run left active.
+covers: "LPP: the production limit released."
+goal: "Returns the device to a neutral state after a run."
+category: LPP
+risk: live-control
+cleanup: true
+spec: {use_case: LPP, verification: readback}
+requires:
+  capabilities: [lpp.write]
+  use_cases: [limitationOfPowerProduction]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives; LPP shares it with LPC.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - put:
+      path: "/api/v1/lpp/{peer.ski}/limit"
+      template: lpp.limit.release

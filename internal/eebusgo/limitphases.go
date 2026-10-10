@@ -223,14 +223,15 @@ func checkDeclared(in []ucapi.LoadLimitsPhase, slots []limitSlot) error {
 }
 
 // readPhaseLimits builds the shared OPEV/OSCEV read: upstream's per-phase view, falling back
-// to the combined phase when upstream sees nothing, plus the phases the device declares.
+// to the combined phase when upstream sees nothing, plus the phases the device declares and
+// the limit descriptions behind them.
 func readPhaseLimits(localEntity spineapi.EntityLocalInterface, entity spineapi.EntityRemoteInterface,
 	filter spinemodel.LoadControlLimitDescriptionDataType,
 	limits func() ([]ucapi.LoadLimitsPhase, error),
 	constraints func() ([]float64, []float64, []float64, error)) map[string]any {
 	refresh(append(limitDataRead(localEntity, entity), permittedValuesRead(localEntity, entity)...)...)
 	slots := declaredLimitSlots(localEntity, entity, filter)
-	out := map[string]any{"phases": slotPhases(slots)}
+	out := map[string]any{"phases": slotPhases(slots), "descriptions": describeLimits(localEntity, entity, *filter.LimitCategory)}
 	if l, err := limits(); err == nil && len(l) > 0 {
 		out["limits"] = phaseLimitsOut(l)
 	} else if combined := combinedPhaseLimits(localEntity, entity, slots); len(combined) > 0 {

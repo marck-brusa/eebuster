@@ -9,12 +9,18 @@ goal: "Proves the device announces a timeout of at most 60 s, as LPC requires."
 hint: "Fails if the device sends no heartbeat at all."
 category: LPC
 risk: read-only
+spec: {use_case: LPC, scenario: 3, test_case: ATC_COM_PT_CSHeartbeat_001, requirements: [LPC-TS-007], verification: wire}
 requires:
   use_cases: [limitationOfPowerConsumption]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
-  - sleep: 2
+  # The device announces its timeout with its first heartbeat, at the latest 60 s after the
+  # connection.
+  - wait_for:
+      get: "/api/v1/lpc/{peer.ski}/heartbeat"
+      not_null: [heartbeat_timeout_s]
+      timeout: 70s
   - assert:
       get: "/api/v1/lpc/{peer.ski}/heartbeat"
       greater_than: {heartbeat_timeout_s: 0}

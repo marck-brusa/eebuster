@@ -169,17 +169,42 @@ Two behaviours to expect from real devices, neither of which is a fault in the t
 - **All-null MPC values mean the device is not reporting measurements,** normally because no
   charging session is active. The tool reports exactly what the device sent.
 
-## 6. Run the scenario library
+## 6. Run the test cases and get a report
+
+Open **Test runner** in the dashboard. Test cases are grouped by use case; tick single ones or a
+whole use case and press **Run selected**, or use **Run read-only** first: it does not change
+the device. Enter your name for the report. When the run ends, **Open report** shows the HTML
+report; print it to PDF from the browser. The other downloads are JSON, JUnit XML, CSV and
+Excel. Every run is written to `<data-dir>/reports/` as a JSON file and, once finished, an
+HTML report next to it. **Reports** shows where that folder is and lists it as it is; **Open
+folder** and **Show in folder** open it in your file manager. When the testbench runs in WSL
+the folder is shown as the `\\wsl.localhost\<distro>\...` path Windows Explorer opens.
+Copying a file in or deleting one is all the management there is.
+
+The same from a terminal, against the running instance:
 
 ```bash
-curl http://127.0.0.1:8080/api/v1/scenarios                    # list
-curl -X POST http://127.0.0.1:8080/api/v1/scenarios/lpc-basic-limit/run
-curl -X POST http://127.0.0.1:8080/api/v1/scenarios/run-all
+./eebus-testbench run-all scenarios -read-only -tester "Your name" -html report.html -xlsx report.xlsx
+./eebus-testbench run-all scenarios -use-case LPC -html lpc.html
 ```
 
-Scenarios target the peer named `device-under-test` in your configuration. A scenario is
-skipped when the device does not advertise the use case it needs, which is normal and distinct
-from a failure. Results are also available as JUnit XML for CI.
+Test cases target the peer named `device-under-test` in your configuration. A test case is
+skipped when the device does not advertise the use case or optional scenario it needs, when it
+needs a vehicle and none is connected, or when its criterion is internal device state; the
+report gives the reason. A skip is not a failure.
+
+Device-specific values, such as the limits a run writes, go under the peer in `eebus.yaml`:
+
+```yaml
+peers:
+  - name: device-under-test
+    ski: "<40 hex characters>"
+    parameters:
+      limits_w: [11000, 5500, 4200]
+      failsafe_w: [4200, 2000]
+```
+
+Without them they are derived from the maximum power the device announces.
 
 ## 7. Inspect the wire
 

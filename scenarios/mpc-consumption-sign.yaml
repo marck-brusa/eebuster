@@ -1,0 +1,22 @@
+name: mpc-consumption-sign
+description: >
+  Reads the total power while a vehicle charges; it must not be negative. The use case applies
+  the load convention, consumption positive and production negative, and a charging station
+  only consumes, so a negative value during a session is a sign error.
+covers: "MPC scenario 1: consumption reported positive while charging."
+goal: "Proves the device applies the sign convention of the use case."
+hint: "Needs a charging session."
+category: MPC
+risk: read-only
+spec: {use_case: MPC, scenario: 1, test_case: ATC_SCE1_PT_MUTotalActivePower_001, requirements: [MPC-TS-001, MPC-TS-009], verification: readback}
+requires:
+  capabilities: [mpc.read]
+  use_cases: [monitoringOfPowerConsumption]
+  charging: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      not_null: [power_w]
+      greater_or_equal: {power_w: 0}

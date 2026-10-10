@@ -1,0 +1,23 @@
+name: oscev-limit-descriptions
+description: >
+  Reads the load-control limit descriptions the vehicle publishes for Optimization of
+  Self-Consumption (EEBus UC TS OSCEV V1.0.1b) and checks them against the use case's content
+  tables: every recommendation is a maxValueLimit in ampere with scope selfConsumption and
+  links, through its measurement id, to a current measurement that names its phase (Table 6);
+  the phases are a, b and c, each with its own limit, and a combined "abc" limit may exist in
+  addition (Table 8); a published permitted-value-set entry carries a usable current range or
+  values (Table 9). A vehicle that supports asymmetric charging (EVCC scenario 3) must declare
+  a limit on each phase [OSCEV-002]. Needs a vehicle associated.
+covers: "OSCEV scenario 1: the recommendation descriptions, phases and permitted ranges the vehicle declares."
+goal: "Proves a CEM can learn on which phases it may recommend a current, and within which range."
+hint: "Needs a vehicle."
+category: OSCEV
+risk: read-only
+spec: {use_case: OSCEV, scenario: 1, table: "Table 6, Table 8, Table 9", requirements: [OSCEV-002], verification: wire}
+requires:
+  vehicle: true
+  use_cases: [optimizationOfSelfConsumptionDuringEvCharging]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - limit_descriptions: {use_case: OSCEV}

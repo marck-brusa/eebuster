@@ -1,0 +1,29 @@
+name: evsoc-scenario-1-state-of-charge
+description: >
+  Reads the vehicle's state of charge with its measurement description. The value must lie
+  between 0 and 100 and be described as a percentage of electricity with unit pct and scope
+  stateOfCharge; the use case fixes its value source to calculatedValue; and exactly one
+  description and one value exist, since the use case forbids historical values.
+covers: "EVSOC scenario 1: the state of charge, 0 to 100 % with the description the use case prescribes."
+goal: "Proves an energy manager can read the vehicle's state of charge."
+hint: "Needs a vehicle that reports its state of charge."
+category: EVSOC
+risk: read-only
+spec: {use_case: EVSOC, scenario: 1, table: Tables 7 and 9, requirements: [EVSOC-001], verification: readback}
+requires:
+  use_cases: [evStateOfCharge]
+  vehicle: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/evsoc/{peer.ski}"
+      between: {state_of_charge.value: [0, 100]}
+      equals:
+        state_of_charge.unit: pct
+        state_of_charge.measurement_type: percentage
+        state_of_charge.commodity_type: electricity
+        state_of_charge.scope: stateOfCharge
+        state_of_charge.value_source: calculatedValue
+        state_of_charge.descriptions: 1
+        state_of_charge.values: 1

@@ -1,0 +1,35 @@
+name: oscev-scenario-1-recommendation
+description: >
+  Writes a 6 A self-consumption recommendation on every phase the vehicle declares and
+  requires it to be read back, then releases it.
+covers: "OSCEV scenario 1: a 6 A recommendation on every declared phase, then released."
+goal: "Proves the device accepts a recommendation and reports it back."
+hint: "Needs a vehicle."
+category: OSCEV
+risk: live-control
+spec: {use_case: OSCEV, scenario: 1, table: Table 7, requirements: [OSCEV-001, OSCEV-003], verification: readback}
+requires:
+  capabilities: [oscev.write]
+  use_cases: [optimizationOfSelfConsumptionDuringEvCharging]
+  vehicle: true
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # The vehicle may evaluate writes only once the CEM's heartbeat arrives.
+  - call: {method: cem-oscev/StartHeartbeat}
+  - sleep: 2
+  - put:
+      path: "/api/v1/oscev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 6, is_active: true}
+  - sleep: 2
+  - assert:
+      get: "/api/v1/oscev/{peer.ski}"
+      equals: {limits.0.value_a: 6, limits.0.is_active: true}
+finally:
+  - put:
+      path: "/api/v1/oscev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 6, is_active: false}

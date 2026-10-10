@@ -1,0 +1,39 @@
+name: lpc-limit-above-maximum
+description: >
+  Writes an active consumption limit of 1 MW, far above the device's nominal maximum, and
+  requires the device to accept it: a limit may exceed what the device can consume, and the
+  device may store it as sent or alter it to its highest possible value. The limit read back
+  must be active and lie between the announced nominal maximum and the value sent. Releases
+  the limit afterwards.
+covers: "LPC scenario 1: a limit above the device's maximum, accepted as sent or capped."
+goal: "Proves the device does not reject a limit it cannot reach."
+hint: "Changes the device's limit state while it runs."
+category: LPC
+risk: live-control
+spec: {use_case: LPC, scenario: 1, test_case: ATC_COM_PT_CSConnection_006, requirements: [LPC-TS-035/4], verification: readback}
+requires:
+  capabilities: [lpc.write, lpc.read, lpc.nominal_max]
+  use_cases: [limitationOfPowerConsumption]
+  scenarios: [4]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - capture:
+      get: "/api/v1/lpc/{peer.ski}/nominal-max"
+      values: {nominal: value_w}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      body: {value_w: 1000000, is_active: true, is_changeable: true}
+  - expect_event: {event: eg-lpc-DataUpdateLimit, within: 5s}
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      equals: {is_active: true}
+      greater_or_equal: {value_w: "{captured.nominal}"}
+      less_or_equal: {value_w: 1000000}
+finally:
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release

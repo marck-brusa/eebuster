@@ -1,0 +1,26 @@
+name: evsecc-scenario-1-manufacturer
+description: >
+  Reads the charging station's manufacturer information. The use case recommends device name,
+  device code, vendor name, vendor code, brand name and manufacturer label; serial number and
+  software revision are optional. At least one recommended field must be present; the serial
+  number and software revision are recorded as observed.
+covers: "EVSECC scenario 1: at least one recommended manufacturer field of the station."
+goal: "Proves the station identifies itself to the energy manager."
+category: EVSECC
+risk: read-only
+spec: {use_case: EVSECC, scenario: 1, table: Table 6, requirements: [EVSECC-010, EVSECC-011, EVSECC-012, EVSECC-013, EVSECC-014, EVSECC-015], verification: readback}
+requires:
+  capabilities: [evsecc.read]
+  use_cases: [evseCommissioningAndConfiguration]
+  scenarios: [1]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/evsecc/{peer.ski}"
+      any_not_null: [identity.brand_name, identity.vendor_name, identity.device_name, identity.device_code, identity.manufacturer_label]
+  # Optional fields, kept in the report as observed values.
+  - capture:
+      get: "/api/v1/evsecc/{peer.ski}"
+      values: {serial_number: identity.serial_number, software_revision: identity.software_revision}
+      optional: true

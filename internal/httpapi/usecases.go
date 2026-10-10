@@ -33,6 +33,7 @@ func (s *Server) registerUsecaseRoutes() {
 	s.mux.HandleFunc("PUT /api/v1/cevc/{ski}/power-limits", s.handleCEVCWritePowerLimits)
 	s.mux.HandleFunc("GET /api/v1/ohpcf/{ski}", s.handleOHPCFRead)
 	s.mux.HandleFunc("GET /api/v1/evsecc/{ski}", s.handleEVSECCRead)
+	s.mux.HandleFunc("GET /api/v1/evsoc/{ski}", s.handleEVSOCRead)
 	s.mux.HandleFunc("POST /api/v1/opev/heartbeat/start", s.handleOPEVHeartbeatStart)
 	s.mux.HandleFunc("POST /api/v1/opev/heartbeat/stop", s.handleOPEVHeartbeatStop)
 	s.mux.HandleFunc("PUT /api/v1/opev/operating-state", s.handleOPEVOperatingState)
@@ -407,6 +408,22 @@ func (s *Server) handleEVSECCRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+// handleEVSOCRead returns the vehicle's EV State of Charge data per scenario, each value with
+// the description the vehicle published for it.
+func (s *Server) handleEVSOCRead(w http.ResponseWriter, r *http.Request) {
+	hint, err := entityHint(r)
+	if err == nil {
+		var reading eebusgo.EVSOCReading
+		if reading, err = s.stack.EVSOC().Read(r.PathValue("ski"), hint); err == nil {
+			writeJSON(w, http.StatusOK, reading)
+		} else {
+			writeUsecaseError(w, err)
+		}
+	} else {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_entity_hint", "detail": err.Error()})
+	}
 }
 
 // OPEV/OSCEV scenario 2 and 3 controls: our heartbeat towards the EV, and our announced

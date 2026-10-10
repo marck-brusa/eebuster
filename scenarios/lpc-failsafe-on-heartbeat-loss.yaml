@@ -1,0 +1,42 @@
+name: lpc-failsafe-on-heartbeat-loss
+description: >
+  Brings the device into the state "unlimited/controlled" (heartbeat running, limit
+  deactivated), then stops the testbench's heartbeat and waits beyond the 120 s after which a
+  Controllable System without a heartbeat must enter its failsafe state. The power reported
+  over MPC must then be at or below the failsafe limit the device announced before. The
+  failsafe state itself is internal; the power is what the grid sees. Restarts the heartbeat
+  after.
+covers: "LPC scenario 3: no heartbeat for 130 s, then consumption at or below the failsafe limit."
+goal: "Proves the device falls back to its failsafe limit when the energy guard goes silent."
+hint: "Takes over two minutes; a load must draw power for the result to mean much."
+category: LPC
+risk: disruptive
+long_running: true
+spec: {use_case: LPC, scenario: 3, test_case: ATC_COM_PT_CSTransition5_001, requirements: [LPC-TS-028], verification: readback}
+requires:
+  capabilities: [heartbeat, lpc.write, lpc.read]
+  use_cases: [limitationOfPowerConsumption, monitoringOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # Precondition of the test case: heartbeat received and a deactivated limit accepted.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release
+  - sleep: 2
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      equals: {is_active: false}
+  - capture:
+      get: "/api/v1/lpc/{peer.ski}/failsafe"
+      values: {failsafe: value_w}
+  - call: {method: eg-lpc/StopHeartbeat}
+  - sleep: 130
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      not_null: [power_w]
+      less_or_equal: {power_w: "{captured.failsafe}"}
+finally:
+  - call: {method: eg-lpc/StartHeartbeat}

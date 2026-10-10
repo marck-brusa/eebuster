@@ -76,14 +76,17 @@ type EVSOC struct{ uc *evsoc.EVSOC }
 // evRecord is the JSON shape for one EV, matching intelligence_snapshot()'s ev_by_key merge
 // across EVCC/EVCEM/EVSOC/CEVC entries for the same (device, entity) key.
 type evRecord struct {
-	Entity                []uint       `json:"entity"`
-	Device                string       `json:"device,omitempty"`
-	Connected             *bool        `json:"connected,omitempty"`
-	ChargeState           string       `json:"charge_state,omitempty"`
-	CommunicationStandard string       `json:"communication_standard,omitempty"`
-	AsymmetricCharging    *bool        `json:"asymmetric_charging,omitempty"`
-	Identifications       []string     `json:"identifications,omitempty"`
-	ChargingPowerLimitsW  *powerLimits `json:"charging_power_limits_w,omitempty"`
+	Entity                []uint   `json:"entity"`
+	Device                string   `json:"device,omitempty"`
+	Connected             *bool    `json:"connected,omitempty"`
+	ChargeState           string   `json:"charge_state,omitempty"`
+	CommunicationStandard string   `json:"communication_standard,omitempty"`
+	AsymmetricCharging    *bool    `json:"asymmetric_charging,omitempty"`
+	Identifications       []string `json:"identifications,omitempty"`
+	// IdentificationTypes holds the type of each identification, index-aligned with
+	// Identifications: eui48 or eui64 for a MAC address (EVCC Table 8).
+	IdentificationTypes  []string     `json:"identification_types,omitempty"`
+	ChargingPowerLimitsW *powerLimits `json:"charging_power_limits_w,omitempty"`
 	// InSleepMode distinguishes "the vehicle is asleep" from "the vehicle is gone": a sleeping
 	// EV keeps reporting connected while all its measurements read null, which otherwise looks
 	// identical to a fault.
@@ -210,6 +213,7 @@ func (s *Stack) collectEV(ski string) []evRecord {
 		if v, err := s.evcc.uc.Identifications(entity); err == nil {
 			for _, id := range v {
 				rec.Identifications = append(rec.Identifications, id.Value)
+				rec.IdentificationTypes = append(rec.IdentificationTypes, string(id.ValueType))
 			}
 		}
 		if minW, maxW, standbyW, err := s.evcc.uc.ChargingPowerLimits(entity); err == nil {

@@ -1,20 +1,25 @@
 name: lpc-negative-limit
 description: >
-  Writes a negative consumption limit, which LPC does not allow (LPC-003), and requires the
-  device to reject it: the limit read back afterwards must not be the negative value. Test
-  cases ATC_COM_PT_CSConnection_003 and CSTransition1_001 additionally expect the device to
-  switch to unlimited/controlled on such a write. Ends by releasing the limit.
-covers: "LPC scenario 1: a negative consumption limit."
+  Writes a negative consumption limit, which the use case does not allow, and requires the
+  device to reject it: the limit read back afterwards must not be the negative value. Then
+  writes a negative failsafe consumption limit, which the device must reject as well. Test
+  case ATC_COM_PT_CSConnection_003 additionally expects the device to switch to
+  unlimited/controlled on the rejected limit. Ends by releasing the limit.
+covers: "LPC scenario 1: a negative consumption limit and a negative failsafe limit, both rejected."
 goal: "Proves the device rejects an invalid limit instead of applying it."
 hint: "Changes the device's limit state while it runs."
 category: LPC
 risk: live-control
+spec: {use_case: LPC, scenario: 1, test_case: ATC_COM_PT_CSConnection_003, requirements: [LPC-TS-001, LPC-TS-004, LPC-TS-005, LPC-TS-018, LPC-TS-035/1, LPC-TS-038], verification: readback}
 requires:
-  capabilities: [lpc.write]
+  capabilities: [lpc.write, lpc.failsafe]
   use_cases: [limitationOfPowerConsumption]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"
       body: {value_w: -1000, is_active: true}
@@ -22,6 +27,15 @@ steps:
   - assert:
       get: "/api/v1/lpc/{peer.ski}/limit"
       not_equals: {value_w: -1000}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/failsafe"
+      body: {value_w: -1000}
+  - sleep: 2
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/failsafe"
+      not_equals: {value_w: -1000}
+      greater_or_equal: {value_w: 0}
+finally:
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"
       body: {value_w: 0, is_active: false}

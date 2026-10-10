@@ -4,6 +4,7 @@ covers: "LPC: the active consumption limit, read only."
 goal: "Shows the limit state without changing anything."
 category: LPC
 risk: read-only
+spec: {use_case: LPC, scenario: 1, verification: readback}
 requires:
   capabilities: [lpc.read]
   use_cases: [limitationOfPowerConsumption]

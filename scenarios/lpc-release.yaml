@@ -1,15 +1,31 @@
 name: lpc-release
-description: Releases the active consumption limit and verifies the inactive state.
-covers: "LPC: deactivating the consumption limit."
+description: >
+  Activates a consumption limit, then releases it and verifies the inactive state. The test
+  case starts from the state "limited", so a limit is applied first; a release on an already
+  unlimited device would prove nothing.
+covers: "LPC scenario 1: deactivating an active consumption limit."
 goal: "Proves the device returns to full power when a limit is lifted."
+hint: "Changes the device's power while it runs."
 category: LPC
 risk: live-control
+spec: {use_case: LPC, scenario: 1, test_case: ATC_COM_PT_CSTransition6_002, requirements: [LPC-TS-001/2, LPC-TS-026], verification: readback}
 requires:
   capabilities: [lpc.write, lpc.read]
   use_cases: [limitationOfPowerConsumption]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  # Precondition of the test case: a limit is active.
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.dim_4200w_indefinite
+  - sleep: 2
+  - assert:
+      get: "/api/v1/lpc/{peer.ski}/limit"
+      equals: {is_active: true}
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"
       template: lpc.limit.release

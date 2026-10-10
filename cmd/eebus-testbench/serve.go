@@ -416,6 +416,10 @@ func runServe(args []string) {
 	}
 
 	server := httpapi.New(cfg, *configPath, *scenariosDir, logs, stack, trustStore, frames)
+	// Test runs persist next to the identity, never in the scenario directory: a report names
+	// real devices and is site information.
+	server.SetReportsDir(filepath.Join(*dataDir, "reports"))
+	log.Printf("test reports: %s", filepath.Join(*dataDir, "reports"))
 	samplingCtx, stopSampling := context.WithCancel(context.Background())
 	defer stopSampling()
 	server.StartSampling(samplingCtx)

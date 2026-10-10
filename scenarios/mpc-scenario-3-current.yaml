@@ -1,0 +1,19 @@
+name: mpc-scenario-3-current
+description: >
+  Reads the per-phase currents. Each must be present and within +/-1000 A, which also catches
+  milliampere values published as ampere.
+covers: "MPC scenario 3: one current per phase, plausible in ampere."
+goal: "Proves the device reports its phase currents."
+category: MPC
+risk: read-only
+spec: {use_case: MPC, scenario: 3, test_case: ATC_SCE3_PT_MUActiveACCurrent_001, requirements: [MPC-TS-005], verification: readback}
+requires:
+  use_cases: [monitoringOfPowerConsumption]
+  scenarios: [3]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/mpc/{peer.ski}"
+      length_greater_than: {current_per_phase_a: 0}
+      each_between: {current_per_phase_a: [-1000, 1000]}

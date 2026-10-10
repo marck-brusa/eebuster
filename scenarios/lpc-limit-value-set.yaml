@@ -1,0 +1,50 @@
+name: lpc-limit-value-set
+description: >
+  Writes every consumption limit of the device parameter limits_w, active and without a
+  duration, and requires each to be published and read back unchanged (the APCL value
+  variation of the test case). Then writes the first limit with every duration of
+  limit_durations and requires the limit and a duration to come back. Releases the limit
+  afterwards.
+covers: "LPC scenario 1: every configured consumption limit, written and read back, without and with a duration."
+goal: "Proves the device accepts limits across its power range."
+hint: "Changes the device's power while it runs."
+category: LPC
+risk: live-control
+spec: {use_case: LPC, scenario: 1, test_case: ATC_COM_PT_CSConnection_007, requirements: [LPC-TS-001, LPC-TS-001/1, LPC-TS-035], verification: readback}
+requires:
+  capabilities: [lpc.write, lpc.read]
+  use_cases: [limitationOfPowerConsumption]
+  parameters: [limits_w, limit_durations]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - for_each:
+      items: "{params.limits_w}"
+      as: limit
+      steps:
+        - put:
+            path: "/api/v1/lpc/{peer.ski}/limit"
+            body: {value_w: "{limit}", is_active: true, is_changeable: true, delete_duration: true}
+        - expect_event: {event: eg-lpc-DataUpdateLimit, within: 5s}
+        - assert:
+            get: "/api/v1/lpc/{peer.ski}/limit"
+            equals: {value_w: "{limit}", is_active: true}
+  - for_each:
+      items: "{params.limit_durations}"
+      as: duration
+      steps:
+        - put:
+            path: "/api/v1/lpc/{peer.ski}/limit"
+            body: {value_w: "{params.limits_w.0}", is_active: true, is_changeable: true, duration: "{duration}"}
+        - expect_event: {event: eg-lpc-DataUpdateLimit, within: 5s}
+        - assert:
+            get: "/api/v1/lpc/{peer.ski}/limit"
+            equals: {value_w: "{params.limits_w.0}", is_active: true}
+            not_null: [duration]
+finally:
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release

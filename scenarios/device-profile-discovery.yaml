@@ -5,6 +5,7 @@ goal: "Proves the device describes itself, so a controller knows what it can do.
 hint: "If this fails, check pairing first."
 category: Discovery
 risk: read-only
+spec: {document: "SPINE TS ProtocolSpecification 1.3.0 (detailed discovery)", verification: wire}
 requires:
   capabilities: [device_profile]
 peer: device-under-test

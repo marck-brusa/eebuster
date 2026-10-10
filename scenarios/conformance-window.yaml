@@ -1,7 +1,7 @@
 name: conformance-window
 description: >
-  Clears the wire trace, exercises discovery and measurement reads against the device, and
-  then requires the captured window to be free of conformance errors. Catches structurally
+  Exercises discovery and measurement reads against the device, and
+  then requires the frames of this test case to be free of conformance errors. Catches structurally
   broken EEBUS JSON — objects carrying several elements, empty objects, empty array instances
   such as "permittedValueSet":[[]] (SHIP TS 1.0.1 §11.4/§11.5) — and SPINE datagram
   violations (SPINE TS ProtocolSpecification 1.3.0 §5) exactly as they appeared on the wire,
@@ -11,11 +11,11 @@ goal: "Proves the device sends valid EEBUS JSON that strict controllers accept."
 hint: "Open Message trace to see a frame it names."
 category: Conformance
 risk: read-only
+spec: {document: "SHIP TS 1.0.1 §11.4, §11.5; SPINE TS ProtocolSpecification 1.3.0 §5", verification: wire}
 requires:
   capabilities: [energy_snapshot]
 peer: device-under-test
 steps:
-  - delete: {path: "/api/v1/trace"}
   - wait_connected: {timeout: 30s}
   - assert:
       get: "/api/v1/peers/{peer.ski}/profile"
@@ -24,7 +24,4 @@ steps:
       get: "/api/v1/energy/{peer.ski}/snapshot"
       not_null: [ts]
   - sleep: 3
-  - assert:
-      get: "/api/v1/trace/summary"
-      greater_than: {frames: 0}
-      equals: {errors: 0}
+  - conformance: {max_errors: 0}

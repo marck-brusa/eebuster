@@ -1,0 +1,15 @@
+name: lpc-failsafe-persistence
+description: >
+  The failsafe limit and the failsafe duration minimum must be stored persistently. Checking
+  it needs a controlled restart of the device, which EEBUS does not offer.
+covers: "LPC: failsafe limit and duration survive a restart of the device."
+goal: "Records that this criterion needs a device restart."
+category: LPC
+risk: read-only
+spec: {use_case: LPC, test_case: ATC_COM_PT_CSInit_003, requirements: [LPC-TS-011/1, LPC-TS-013/1, LPC-TS-044], verification: needs-device-probe}
+requires:
+  use_cases: [limitationOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+

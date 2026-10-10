@@ -91,6 +91,10 @@ type Peer struct {
 	Port  int    `yaml:"port" json:"port"`
 	Path  string `yaml:"path" json:"path"`
 	Trust string `yaml:"trust" json:"trust"` // "auto" | "manual"
+	// Parameters are the device-specific values test runs instantiate scenarios with, read as
+	// {params.<name>}: limits_w, failsafe_w and the like. Absent values are derived from what the
+	// device announces; see docs/21-test-report.md.
+	Parameters map[string]any `yaml:"parameters" json:"parameters,omitempty"`
 }
 
 func (p Peer) DisplayLabel() string {
@@ -132,7 +136,7 @@ type SimulatedEV struct {
 	Name    string `yaml:"name" json:"name"`
 	Brand   string `yaml:"brand" json:"brand"`
 	Model   string `yaml:"model" json:"model"`
-	// Serial doubles as the vehicle identification the station reports (EVCC scenario 5).
+	// Serial is the vehicle's serial number in its manufacturer data (EVCC scenario 5).
 	Serial string `yaml:"serial" json:"serial"`
 	// BatteryKWh, SoCStartPercent: the battery being filled.
 	BatteryKWh      float64 `yaml:"battery_kwh" json:"battery_kwh"`
@@ -146,9 +150,9 @@ type SimulatedEV struct {
 	// CombinedPhase publishes one current measurement and one limit on the combined phase
 	// "abc" instead of one per phase, as a device that meters all phases together does.
 	CombinedPhase bool `yaml:"combined_phase" json:"combined_phase"`
-	// ChargeSpeedup compresses simulated time so a charge is watchable: at the default 60,
-	// one real second of charging fills the battery as one simulated minute would. Set 1 for
-	// real time.
+	// ChargeSpeedup compresses simulated time: at 60, one real second of charging fills the
+	// battery as one simulated minute would, so a charge is watchable. The default 1 charges in
+	// real time, so the vehicle keeps charging through a long test run.
 	ChargeSpeedup float64 `yaml:"charge_speedup" json:"charge_speedup"`
 }
 

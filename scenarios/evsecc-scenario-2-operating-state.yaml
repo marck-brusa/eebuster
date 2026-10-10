@@ -1,0 +1,18 @@
+name: evsecc-scenario-2-operating-state
+description: >
+  Reads the charging station's operating state; the use case allows normalOperation and
+  failure.
+covers: "EVSECC scenario 2: the station's operating state, normalOperation or failure."
+goal: "Proves the station reports an operating state the energy manager understands."
+category: EVSECC
+risk: read-only
+spec: {use_case: EVSECC, scenario: 2, table: Table 7, requirements: [EVSECC-020], verification: readback}
+requires:
+  capabilities: [evsecc.read]
+  use_cases: [evseCommissioningAndConfiguration]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - assert:
+      get: "/api/v1/evsecc/{peer.ski}"
+      one_of: {operating_state: [normalOperation, failure]}

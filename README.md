@@ -32,9 +32,16 @@ hardware is available.
 - **Phase balance** — per-phase power, current and voltage with asymmetric loading flagged.
 - **Charge profiles** — timed LPC limit sequences with per-step expiry, run live or exported
   as scenario YAML.
-- **Scenario runner** — a library of YAML test cases, runnable from the dashboard, the CLI or
-  CI, with JUnit XML output.
-- **Simulated devices** — LPC-accepting, MPC-reporting devices built into the binary.
+- **Use-case test runs and reports** — 101 YAML test cases grouped by use case, each tied to its
+  EEBUS specification scenario, requirement or High-Level Test Specification test case. A run
+  records the device, its software and vehicles, the conditions and every request and
+  response, and renders a self-contained HTML report (prints to PDF), JSON, JUnit XML, CSV and
+  an Excel workbook. Runnable from the dashboard, the CLI or CI.
+  Reports name real devices: they are stored under the data directory, which is never tracked.
+- **Simulated devices** — LPC-accepting, MPC-reporting stations built into the binary, with a
+  simulated vehicle that charges, obeys OPEV obligations, follows OSCEV recommendations and
+  reacts to a lost or failed Energy Guard, so every test case can be exercised without
+  hardware.
 - **Three languages** — the dashboard is fully localized in English, German, and simplified
   Chinese.
 
@@ -91,7 +98,8 @@ curl http://127.0.0.1:8080/api/v1/mpc/<ski>                   # measurements
 | Peers and trust | `/peers`, `/peers/visible`, `/peers/pending`, `/peers/{ski}/trust`, `/peers/{ski}/profile`, `/peers/{ski}/usecases` |
 | Limits | `/lpc/{ski}/limit`, `/lpc/{ski}/failsafe`, `/lpc/{ski}/nominal-max`, `/lpc/heartbeat/start`, `/lpp/{ski}/…`, `/opev/{ski}/limits`, `/oscev/{ski}/limits` |
 | Measurements | `/mpc/{ski}`, `/mgcp/{ski}`, `/energy/{ski}/snapshot`, `/energy/{ski}/history` |
-| Scenarios | `/scenarios`, `/scenarios/{name}/run`, `/scenarios/run-all` |
+| Scenarios | `/scenarios`, `/scenarios/catalog`, `/scenarios/{name}/run`, `/scenarios/run-all` |
+| Test runs | `/runs`, `/runs/{id}`, `/runs/{id}/cancel`, `/runs/{id}/report.html`, `.json`, `junit.xml`, `report.csv`, `report.xlsx` |
 | Message trace | `/trace`, `/trace/{seq}`, `/trace/summary` — raw wire frames with conformance findings |
 | Diagnostics | `/health`, `/version`, `/config`, `/events/stream`, `/diagnostics/network`, `/stacks/{id}/logs` |
 
@@ -122,13 +130,16 @@ live feed; the bundled build is patched for that (`patches/eebustracer-localhost
 ## Layout
 
 ```
-cmd/eebus-testbench/   serve, run, run-all and firewall subcommands
+cmd/eebus-testbench/   serve, run, run-all, report and firewall subcommands
 internal/eebusgo/      EEBUS stack and use cases (LPC, LPP, MPC, MGCP, EV, PV, battery)
 internal/httpapi/      REST API
 internal/webui/        dashboard
 internal/conformance/  wire-frame checks against SHIP TS §11 / SPINE TS §5
 internal/trace/        bounded raw-frame store behind the Message trace page
 internal/scenario/     YAML scenario runner
+internal/testrun/      recorded test runs: selection, identification, checks, persistence
+internal/report/       run record and its HTML, JUnit, CSV and Excel renderers
+internal/ucspec/       scenario requirement tables of the EEBUS use case specifications
 internal/simulator/    built-in simulated devices
 internal/announce/     mDNS announcement address selection
 internal/netfilter/    filters unroutable addresses out of announcements

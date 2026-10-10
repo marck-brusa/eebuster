@@ -1,0 +1,15 @@
+name: evcc-scenario-8-disconnected
+description: >
+  When the vehicle is unplugged the station must report it disconnected and remove its entity.
+  Exercising it needs the vehicle to be unplugged during the run.
+covers: "EVCC scenario 8: the vehicle disconnects."
+goal: "Records that this criterion needs a physical unplug."
+category: EVCC
+risk: read-only
+spec: {use_case: EVCC, scenario: 8, verification: needs-device-probe}
+requires:
+  use_cases: [evCommissioningAndConfiguration]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+

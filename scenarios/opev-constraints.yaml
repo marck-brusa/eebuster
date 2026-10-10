@@ -3,7 +3,7 @@ description: >
   Reads the per-phase current state of the Overload Protection use case (EEBus UC TS OPEV
   V1.0.1b). Passing means the use case resolves to an entity and answers; the constraints
   block (min/max/default amps per phase) additionally appears once the device has published
-  its permitted-value sets. Needs a vehicle associated on devices that announce the use case
+  its permitted-value sets; their content is judged by opev-limit-descriptions. Needs a vehicle associated on devices that announce the use case
   permanently but only create the EV entity during a session — failing here while idle
   documents exactly that behaviour.
 covers: "OPEV: the vehicle's current range (min/max) and the phases it takes limits on."
@@ -11,10 +11,14 @@ goal: "Proves a controller knows the allowed range before it limits the car."
 hint: "Needs a vehicle: without one it fails with not_found."
 category: Conformance
 risk: read-only
+spec: {use_case: OPEV, scenario: 1, verification: readback}
 requires:
+  vehicle: true
   use_cases: [overloadProtectionByEvChargingCurrentCurtailment]
 peer: device-under-test
 steps:
   - wait_connected: {timeout: 30s}
   - assert:
       get: "/api/v1/opev/{peer.ski}"
+      not_null: [phases]
+      length_at_least: {phases: 1}
