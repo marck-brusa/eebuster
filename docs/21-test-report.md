@@ -245,9 +245,14 @@ peers:
       limits_w: [11000, 5500, 4200, 4237, 0]      # APCL_01..05 of the LPC parameter sheet
       failsafe_w: [4200, 2000, 0]                  # FCAPL
       limit_durations: [PT2H, PT15M, PT1M]         # APCL_DUR
-      failsafe_durations: [PT1H54M, PT2H, PT24H]   # FCAPL_DUR
+      failsafe_durations: [PT2H, PT24H]            # FCAPL_DUR within 2 h to 24 h
       production_nominal_max_w: 0                  # LPP, 0 = not applicable
+      minimum_power_w: 1500                        # lowest power the device controls to while charging
 ```
+
+`minimum_power_w` defaults to 0. A device that cannot control its consumption below a
+minimum while it charges holds that power under a lower limit; the failsafe test then
+accepts the larger of the failsafe limit and this minimum, and the report lists the value.
 
 Scenarios reference them as `{params.limits_w.1}`, resolved by the same lookup as
 `{peer.ski}`. When a value is absent the runner derives it from the device's announced
@@ -427,7 +432,7 @@ Specification-derived test cases:
 | `lpc-heartbeat-timeout` | The device's heartbeat announces a timeout of at most 60 s (UC TS Table 26) | wire |
 | `lpc-heartbeat-continuity` | Five consecutive heartbeat notifications from the device, each within 60 s of the previous one (ATC_COM_PT_CSHeartbeat_001) | wire, long-running |
 | `lpc-release` | From an active limit, a deactivation leaves the limit inactive (ATC_COM_PT_CSTransition6_002) | readback |
-| `lpc-failsafe-on-heartbeat-loss` | From unlimited/controlled (heartbeat running, limit deactivated), after our heartbeat stops the consumption power read over MPC comes down to at or below the failsafe value; read from 100 s until 160 s after the stop, since devices publish measurements periodically and ramp down (ATC_COM_PT_CSTransition5_001) | readback, long-running |
+| `lpc-failsafe-on-heartbeat-loss` | From unlimited/controlled (heartbeat running, limit deactivated), after our heartbeat stops the consumption power read over MPC comes down to at or below the failsafe value, or the device minimum `minimum_power_w` when that is larger; read from 100 s until 160 s after the stop, since devices publish measurements periodically and ramp down (ATC_COM_PT_CSTransition5_001) | readback, long-running |
 | `lpc-no-write-before-heartbeat` | In failsafe state, 130 s without our heartbeat, an active limit write is not evaluated and does not come back; after the heartbeat returns a deactivation is accepted (ATC_COM_PT_CSFS_001) | readback, long-running |
 | `lpc-nominal-max` | Scenario 4, recommended: Power Consumption Nominal Max present and positive (LPC-TS-010/1, 010/2, 038) | readback |
 | `lpc-cleanup` | Limit released, heartbeat running | `cleanup: true` |
@@ -711,9 +716,9 @@ vehicle's measured currents (EVCEM).
 | `opev-constraints` | The use case resolves to an entity with at least one declared phase | readback |
 | `opev-guard-subscription` | The EV entity subscribed to our DeviceDiagnosis feature (pre-scenario communication of scenarios 2 and 3) | wire |
 | `opev-limit-roundtrip`, `opev-asymmetric`, `opev-zero-pause` | Written obligations read back per phase (OPEV-001, 003, 004) | readback |
-| `opev-limit-obeyed` | Measured current per phase at or below a 6 A obligation within 20 s, then 0 A after the pause signal (OPEV-001); needs a charging session | readback |
-| `opev-heartbeat-loss` | 6 s after our heartbeat stops, no phase draws more than the last obligation (OPEV-005); the currents are recorded | readback |
-| `opev-error-state` | 6 s after we announce a failure, no phase draws more than the last obligation (OPEV-007); the currents are recorded | readback |
+| `opev-limit-obeyed` | Measured current per phase at or below a 6 A obligation within 45 s, then 0 A within 45 s after the pause signal (OPEV-001); the window spans three publications of a device that publishes every 15 s; needs a charging session | readback |
+| `opev-heartbeat-loss` | A reading taken under the obligation before the stop, then 20 s after our heartbeat stops (4 s plus one publication period) no phase draws more than the last obligation (OPEV-005); the currents are recorded | readback |
+| `opev-error-state` | A reading taken under the obligation before the announcement, then 20 s after we announce a failure no phase draws more than the last obligation (OPEV-007); the currents are recorded | readback |
 | `opev-cleanup` | All obligations released, heartbeat running, failure cleared | `cleanup: true` |
 
 The safe current setting of scenarios 2 and 3 is the vehicle's choice; the criterion is the

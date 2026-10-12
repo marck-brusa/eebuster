@@ -113,6 +113,12 @@
   from 100 s until 160 s after the heartbeat stops instead of once at 130 s: a device that
   publishes its measurements every 15 s could still show the power from before its failsafe
   state at 130 s.
+- Device parameter `minimum_power_w` (default 0) for a device that holds a minimum power while
+  it charges; `lpc-failsafe-on-heartbeat-loss` accepts the larger of the failsafe limit and
+  it (assertion `less_or_equal_larger_of`). The OPEV current tests wait for a measurement
+  taken after the write and after the event: 45 s for the 6 A and 0 A steps, 20 s after the
+  heartbeat stops or the failure is announced. A charger that publishes every 15 s read
+  stale values in the shorter windows.
 - New assertion `each_matches` (every element matches a regular expression). CI rejects a
   `{name}` in a step argument that the runner cannot resolve.
 

@@ -4,11 +4,11 @@ description: >
   current follows it, then stops our Energy Guard heartbeat (EEBus UC TS OPEV V1.0.1b
   scenario 2, "EV checks Energy Guard availability"). Once the heartbeat has stayed away for
   more than 4 s the vehicle should switch to a safe current setting [OPEV-005]: the test
-  requires that 6 s after the stop no phase draws more than the last obligation, and records
+  requires that 20 s after the stop no phase draws more than the last obligation, and records
   what the vehicle did. The heartbeat is restarted and the obligation released at the end.
 covers: "OPEV scenario 2: our heartbeat towards the car stops; the car stays within the last obligation."
 goal: "Checks the car does not draw more than allowed once the Energy Guard disappears."
-hint: "Needs a charging session. Stops our heartbeat for 6 s."
+hint: "Needs a charging session. Stops our heartbeat for 20 s."
 category: OPEV
 risk: disruptive
 spec: {use_case: OPEV, scenario: 2, requirements: [OPEV-005], verification: readback}
@@ -27,18 +27,22 @@ steps:
       body:
         limits:
           - {phase: each, value_a: 10, is_active: true}
+  # The vehicle's measurements are published periodically: wait for one taken under the
+  # obligation, so the reading before the event is not one from before the write.
+  - sleep: 20
   - wait_for:
       get: "/api/v1/energy/{peer.ski}/snapshot"
-      timeout: 20s
+      timeout: 30s
       length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
       each_less_than: {ev.vehicles.0.current_per_phase_a: 10.5}
   - call: {method: cem-opev/StopHeartbeat}
-  - sleep: 6
+  # 4 s until the vehicle must react, then up to one publication period of the measurements.
+  - sleep: 20
   - assert:
       get: "/api/v1/energy/{peer.ski}/snapshot"
       length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
       each_less_than: {ev.vehicles.0.current_per_phase_a: 10.5}
-  - log: "The currents of the previous step are what the vehicle drew 6 s after the heartbeat stopped; a safe current setting is at or below the last obligation."
+  - log: "The currents of the previous step are what the vehicle drew 20 s after the heartbeat stopped; a safe current setting is at or below the last obligation."
 finally:
   - call: {method: cem-opev/StartHeartbeat}
   - put:

@@ -17,7 +17,7 @@ import (
 // from the device (internal/testrun/params.go).
 var knownParameters = map[string]bool{
 	"nominal_max_w": true, "limits_w": true, "failsafe_w": true, "limit_durations": true, "failsafe_durations": true,
-	"production_nominal_max_w": true, "production_limits_w": true,
+	"production_nominal_max_w": true, "production_limits_w": true, "minimum_power_w": true,
 }
 
 var knownVerbs = map[string]bool{

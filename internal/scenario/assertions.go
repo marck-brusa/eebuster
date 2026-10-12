@@ -17,7 +17,7 @@ var assertionOps = []string{
 	"not_null", "contains", "length_greater_than", "each_less_than", "sum_matches",
 	"duration_at_least", "duration_at_most",
 	"any_not_null", "between", "each_between", "one_of", "each_not_null", "some_not_null", "length_at_least",
-	"each_matches",
+	"each_matches", "less_or_equal_larger_of",
 }
 
 // evaluateAssertions checks every assertion of an assert step against the response object
@@ -103,6 +103,12 @@ func evaluateKey(op, key string, expected any, actual map[string]any) []Comparis
 		})...)
 	case "each_between":
 		out = append(out, eachElement(key, op, expected, v, func(item any) bool { return inRange(item, expected) })...)
+	case "less_or_equal_larger_of":
+		// At or below the larger of the listed bounds, for a limit a device may not be able to
+		// go under: `less_or_equal_larger_of: {power_w: ["{captured.failsafe}", "{params.minimum_power_w}"]}`.
+		bound, ok := largestOf(expected)
+		out = append(out, compared(key, op, expected, v, ok && numericCompare("less_or_equal", v, bound),
+			fmt.Sprintf("expected <= the larger of %v, got %#v", expected, v)))
 	case "each_matches":
 		// Every element is a string matching the regular expression as a whole, as the
 		// specifications state formats: `each_matches: {identifications: "([0-9A-F]{2}-){5}[0-9A-F]{2}"}`.
@@ -358,4 +364,15 @@ func lengthOf(v any) (int, bool) {
 		ok = false
 	}
 	return length, ok
+}
+
+// largestOf is the largest number in a list of bounds; false when the list holds none.
+func largestOf(bounds any) (float64, bool) {
+	largest, found := 0.0, false
+	for _, item := range asSlice(bounds) {
+		if f, ok := toFloat64(item); ok && (!found || f > largest) {
+			largest, found = f, true
+		}
+	}
+	return largest, found
 }

@@ -51,6 +51,29 @@ func TestEvaluateAssertionsReportsPassingAndFailingValues(t *testing.T) {
 	}
 }
 
+// less_or_equal_larger_of passes at or below the larger bound and fails above it or without
+// a number to compare with.
+func TestLessOrEqualLargerOf(t *testing.T) {
+	cases := []struct {
+		power  any
+		bounds any
+		want   bool
+	}{
+		{1400.0, []any{0.0, 1500.0}, true},
+		{1500.0, []any{1500.0, 0.0}, true},
+		{1501.0, []any{0.0, 1500.0}, false},
+		{0.0, []any{0.0}, true},
+		{10.0, []any{"x"}, false},
+		{nil, []any{0.0, 1500.0}, false},
+	}
+	for _, c := range cases {
+		comparisons := evaluateAssertions(map[string]any{"less_or_equal_larger_of": map[string]any{"power_w": c.bounds}}, map[string]any{"power_w": c.power})
+		if len(comparisons) != 1 || comparisons[0].OK != c.want {
+			t.Errorf("power %v bounds %v: %+v, want %v", c.power, c.bounds, comparisons, c.want)
+		}
+	}
+}
+
 // each_matches requires every element to match the whole pattern: the EVCC identification
 // formats, where a lowercase or colon-separated MAC address is not the specified format.
 func TestEachMatchesAppliesTheWholePattern(t *testing.T) {
