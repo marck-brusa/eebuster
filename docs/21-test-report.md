@@ -619,7 +619,7 @@ scenarios 2 and 3 are optional for the EV and skip when not advertised.
 
 | Test case | Criterion | Verification |
 | --- | --- | --- |
-| `evcem-scenario-1-current` | One current per connected phase, plausible | readback |
+| `evcem-scenario-1-current` | One current per connected phase, 0 to 80 A, and more than 0.5 A on L1 within 45 s: a charging vehicle draws current | readback |
 | `evcem-scenario-2-power` | One power per measured phase, 0 to 100 kW (EVCEM-003 in Table 8, EVCEM-004 in Table 10) | readback |
 | `evcem-scenario-3-energy` | Charged energy present and not negative; a second read after 10 s is not lower while charging (EVCEM-005, Table 8) | readback |
 
@@ -716,9 +716,9 @@ vehicle's measured currents (EVCEM).
 | `opev-constraints` | The use case resolves to an entity with at least one declared phase | readback |
 | `opev-guard-subscription` | The EV entity subscribed to our DeviceDiagnosis feature (pre-scenario communication of scenarios 2 and 3) | wire |
 | `opev-limit-roundtrip`, `opev-asymmetric`, `opev-zero-pause` | Written obligations read back per phase (OPEV-001, 003, 004) | readback |
-| `opev-limit-obeyed` | Measured current per phase at or below a 6 A obligation within 45 s, then 0 A within 45 s after the pause signal (OPEV-001); the window spans three publications of a device that publishes every 15 s; needs a charging session | readback |
-| `opev-heartbeat-loss` | A reading taken under the obligation before the stop, then 20 s after our heartbeat stops (4 s plus one publication period) no phase draws more than the last obligation (OPEV-005); the currents are recorded | readback |
-| `opev-error-state` | A reading taken under the obligation before the announcement, then 20 s after we announce a failure no phase draws more than the last obligation (OPEV-007); the currents are recorded | readback |
+| `opev-limit-obeyed` | Measured current per phase at or below a 6 A obligation within 45 s, then 0 A within 45 s after the pause signal (OPEV-001); the window spans three publications of a device that publishes every 15 s; needs a charging session Skipped when the vehicle draws 7 A or less on L1 before the write, since a 6 A obligation would show nothing. | readback |
+| `opev-heartbeat-loss` | A reading taken under the obligation before the stop, then 20 s after our heartbeat stops (4 s plus one publication period) no phase draws more than the last obligation (OPEV-005); the currents are recorded Skipped when the vehicle draws no current on L1. | readback |
+| `opev-error-state` | A reading taken under the obligation before the announcement, then 20 s after we announce a failure no phase draws more than the last obligation (OPEV-007); the currents are recorded Skipped when the vehicle draws no current on L1. | readback |
 | `opev-cleanup` | All obligations released, heartbeat running, failure cleared | `cleanup: true` |
 
 The safe current setting of scenarios 2 and 3 is the vehicle's choice; the criterion is the

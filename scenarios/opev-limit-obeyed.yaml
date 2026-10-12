@@ -25,6 +25,14 @@ steps:
   # The vehicle evaluates writes only once the energy guard's heartbeat arrives.
   - call: {method: cem-opev/StartHeartbeat}
   - sleep: 2
+  # An earlier test case may have curtailed or paused the vehicle: give it time to recover, and
+  # the station time to publish a measurement taken after that.
+  - sleep: 30
+  # Only a vehicle that draws more than the obligation can show that it follows it.
+  - skip_unless:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      greater_than: {ev.vehicles.0.current_per_phase_a.0: 7}
+      reason: "the vehicle draws 7 A or less on L1, so a 6 A obligation would show no reaction"
   - put:
       path: "/api/v1/opev/{peer.ski}/limits"
       body:

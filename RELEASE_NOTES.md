@@ -119,6 +119,9 @@
   taken after the write and after the event: 45 s for the 6 A and 0 A steps, 20 s after the
   heartbeat stops or the failure is announced. A charger that publishes every 15 s read
   stale values in the shorter windows.
+- `evcem-scenario-1-current` requires current on L1 while the vehicle charges, and the OPEV
+  current tests skip when the vehicle draws too little to show a reaction: a station reporting
+  0 A on every phase passed them before.
 - New assertion `each_matches` (every element matches a regular expression). CI rejects a
   `{name}` in a step argument that the runner cannot resolve.
 
