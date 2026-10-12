@@ -11,12 +11,14 @@ measurements every 15 s and cannot control below 2 A per phase.
   stops instead of once at 130 s: a device that publishes every 15 s could still show the
   power from before its failsafe state. The new device parameter `minimum_power_w` (default 0)
   declares a power a device holds under any lower limit while it charges; the test accepts
-  the larger of the failsafe limit and it (assertion `less_or_equal_larger_of`).
+  the larger of the failsafe limit and it (assertion `less_or_equal_larger_of`). At the end it
+  restarts the heartbeat and releases the limit, so the device leaves its failsafe state
+  instead of holding it through the following test cases.
 - **OPEV current tests wait for fresh measurements**: 45 s for the 6 A and 0 A steps of
   `opev-limit-obeyed`; `opev-heartbeat-loss` and `opev-error-state` take a reading under the
   obligation before the event and read 20 s after it. Each waits 30 s for the vehicle to
-  recover from the test case before it, and skips when the vehicle draws too little current
-  to show a reaction.
+  recover from the test case before it, and skips when the vehicle draws too little to show a
+  reaction: 7 A on L1 for the 6 A obligation, 11 A for the 10 A one.
 - **No pass on 0 A.** `evcem-scenario-1-current` requires more than 0.5 A on L1 while the
   vehicle charges. A station reporting 0 A on every phase during a session passed it, and
   the OPEV current tests, before.

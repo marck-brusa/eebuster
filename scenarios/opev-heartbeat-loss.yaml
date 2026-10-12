@@ -25,11 +25,11 @@ steps:
   # An earlier test case may have curtailed or paused the vehicle: give it time to recover, and
   # the station time to publish a measurement taken after that.
   - sleep: 30
-  # Only a vehicle that draws current can show its reaction.
+  # Only a vehicle that draws more than the 10 A obligation can show that it stays within it.
   - skip_unless:
       get: "/api/v1/energy/{peer.ski}/snapshot"
-      greater_than: {ev.vehicles.0.current_per_phase_a.0: 1}
-      reason: "the vehicle draws no current on L1, so its reaction cannot be seen"
+      greater_than: {ev.vehicles.0.current_per_phase_a.0: 11}
+      reason: "the vehicle draws 11 A or less on L1, so staying within a 10 A obligation shows nothing"
   - put:
       path: "/api/v1/opev/{peer.ski}/limits"
       body:

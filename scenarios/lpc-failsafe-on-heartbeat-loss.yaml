@@ -45,4 +45,9 @@ steps:
       not_null: [power_w]
       less_or_equal_larger_of: {power_w: ["{captured.failsafe}", "{params.minimum_power_w}"]}
 finally:
+  # A Controllable System leaves the failsafe state on a heartbeat and a following limit write.
   - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release
