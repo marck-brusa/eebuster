@@ -2,7 +2,9 @@ name: opev-limit-obeyed
 description: >
   Writes a 6 A obligation on every phase the vehicle declares while it charges and requires
   the measured charging current of every phase (EVCEM scenario 1) to fall to 6 A or below
-  within 20 s; then writes the 0 A pause signal and requires every phase to fall to 0 A.
+  within 45 s; then writes the 0 A pause signal and requires every phase to fall to 0 A
+  within 45 s. A device publishes its measurements periodically (every 15 s is common) and
+  ramps its power, so the window spans three publications.
   Releases the obligations at the end. This is Overload Protection end to end (EEBus UC TS
   OPEV V1.0.1b scenario 1): the Energy Guard curtails, the vehicle obeys [OPEV-001]. Needs a
   charging session; without one the measured current cannot show the reaction.
@@ -23,6 +25,14 @@ steps:
   # The vehicle evaluates writes only once the energy guard's heartbeat arrives.
   - call: {method: cem-opev/StartHeartbeat}
   - sleep: 2
+  # An earlier test case may have curtailed or paused the vehicle: give it time to recover, and
+  # the station time to publish a measurement taken after that.
+  - sleep: 30
+  # Only a vehicle that draws more than the obligation can show that it follows it.
+  - skip_unless:
+      get: "/api/v1/energy/{peer.ski}/snapshot"
+      greater_than: {ev.vehicles.0.current_per_phase_a.0: 7}
+      reason: "the vehicle draws 7 A or less on L1, so a 6 A obligation would show no reaction"
   - put:
       path: "/api/v1/opev/{peer.ski}/limits"
       body:
@@ -30,7 +40,7 @@ steps:
           - {phase: each, value_a: 6, is_active: true}
   - wait_for:
       get: "/api/v1/energy/{peer.ski}/snapshot"
-      timeout: 20s
+      timeout: 45s
       length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
       each_less_than: {ev.vehicles.0.current_per_phase_a: 6.5}
   - put:
@@ -40,7 +50,7 @@ steps:
           - {phase: each, value_a: 0, is_active: true}
   - wait_for:
       get: "/api/v1/energy/{peer.ski}/snapshot"
-      timeout: 20s
+      timeout: 45s
       length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
       each_less_than: {ev.vehicles.0.current_per_phase_a: 0.5}
 finally:

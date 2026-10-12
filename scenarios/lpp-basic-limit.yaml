@@ -23,7 +23,8 @@ steps:
   - put:
       path: "/api/v1/lpp/{peer.ski}/limit"
       body: {value_w: -1500, is_active: true, is_changeable: true, duration: "PT1M"}
-  - expect_event: {event: eg-lpp-DataUpdateLimit, within: 5s}
+  # A device answers a write within SPINE's defaultMaxResponseDelay of 10 s (SPINE TS 5.2.5.3).
+  - expect_event: {event: eg-lpp-DataUpdateLimit, within: 10s}
   - assert:
       get: "/api/v1/lpp/{peer.ski}/limit"
       equals: {value_w: -1500, is_active: true}

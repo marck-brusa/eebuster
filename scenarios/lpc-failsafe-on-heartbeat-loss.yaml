@@ -1,12 +1,16 @@
 name: lpc-failsafe-on-heartbeat-loss
 description: >
   Brings the device into the state "unlimited/controlled" (heartbeat running, limit
-  deactivated), then stops the testbench's heartbeat and waits beyond the 120 s after which a
-  Controllable System without a heartbeat must enter its failsafe state. The power reported
-  over MPC must then be at or below the failsafe limit the device announced before. The
-  failsafe state itself is internal; the power is what the grid sees. Restarts the heartbeat
-  after.
-covers: "LPC scenario 3: no heartbeat for 130 s, then consumption at or below the failsafe limit."
+  deactivated), then stops the testbench's heartbeat. A Controllable System without a heartbeat
+  must enter its failsafe state within 120 s; the power reported over MPC must then come down
+  to at or below the failsafe limit the device announced before. The power is read from 100 s
+  on until 160 s after the stop: a device publishes its measurements periodically (every 15 s
+  is common) and ramps down, so a single read at 130 s can still show the power from before
+  the failsafe state. A device that cannot control its consumption below a minimum while it
+  charges holds that minimum instead: the device parameter minimum_power_w, 0 unless
+  configured for the peer. The failsafe state itself is internal; the power is what the grid
+  sees. Restarts the heartbeat after.
+covers: "LPC scenario 3: no heartbeat, then consumption at or below the failsafe limit within 160 s."
 goal: "Proves the device falls back to its failsafe limit when the energy guard goes silent."
 hint: "Takes over two minutes; a load must draw power for the result to mean much."
 category: LPC
@@ -14,6 +18,7 @@ risk: disruptive
 long_running: true
 spec: {use_case: LPC, scenario: 3, test_case: ATC_COM_PT_CSTransition5_001, requirements: [LPC-TS-028], verification: readback}
 requires:
+  parameters: [minimum_power_w]
   capabilities: [heartbeat, lpc.write, lpc.read]
   use_cases: [limitationOfPowerConsumption, monitoringOfPowerConsumption]
 peer: device-under-test
@@ -33,10 +38,11 @@ steps:
       get: "/api/v1/lpc/{peer.ski}/failsafe"
       values: {failsafe: value_w}
   - call: {method: eg-lpc/StopHeartbeat}
-  - sleep: 130
-  - assert:
+  - sleep: 100
+  - wait_for:
       get: "/api/v1/mpc/{peer.ski}"
+      timeout: 60s
       not_null: [power_w]
-      less_or_equal: {power_w: "{captured.failsafe}"}
+      less_or_equal_larger_of: {power_w: ["{captured.failsafe}", "{params.minimum_power_w}"]}
 finally:
   - call: {method: eg-lpc/StartHeartbeat}

@@ -1,5 +1,26 @@
 # Release notes
 
+## 1.0.0-rc15
+
+Found while testing a wireless charger on a rig with a real power stage, which publishes its
+measurements every 15 s and cannot control below 2 A per phase.
+
+- **SPINE's answer time.** LPC and LPP write tests wait up to 10 s for the device's answer,
+  SPINE's defaultMaxResponseDelay (SPINE TS 5.2.5.3), instead of 5 s.
+- **Failsafe on heartbeat loss** reads the power from 100 s until 160 s after the heartbeat
+  stops instead of once at 130 s: a device that publishes every 15 s could still show the
+  power from before its failsafe state. The new device parameter `minimum_power_w` (default 0)
+  declares a power a device holds under any lower limit while it charges; the test accepts
+  the larger of the failsafe limit and it (assertion `less_or_equal_larger_of`).
+- **OPEV current tests wait for fresh measurements**: 45 s for the 6 A and 0 A steps of
+  `opev-limit-obeyed`; `opev-heartbeat-loss` and `opev-error-state` take a reading under the
+  obligation before the event and read 20 s after it. Each waits 30 s for the vehicle to
+  recover from the test case before it, and skips when the vehicle draws too little current
+  to show a reaction.
+- **No pass on 0 A.** `evcem-scenario-1-current` requires more than 0.5 A on L1 while the
+  vehicle charges. A station reporting 0 A on every phase during a session passed it, and
+  the OPEV current tests, before.
+
 ## 1.0.0-rc14
 
 - **Test runs with reports.** A run executes a selection of test cases against one device and
