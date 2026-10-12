@@ -3,6 +3,7 @@ package scenario
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -368,5 +369,59 @@ func TestWaitForRepeatsUntilTheAssertionHolds(t *testing.T) {
 	never := rn.stepWaitFor(map[string]any{"get": "/api/v1/other", "not_null": []any{"heartbeat_timeout_s"}, "timeout": "1s"}, map[string]any{})
 	if never.Status != StatusFailed || !strings.Contains(never.Detail, "still not holding") {
 		t.Errorf("never = %+v", never)
+	}
+}
+
+// skip_unless with a timeout waits for a state the device reaches on its own, and skips only
+// when it is still not there at the end.
+func TestSkipUnlessWaitsUntilTheTimeout(t *testing.T) {
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body := `{"current":2}`
+		if r.URL.Path == "/api/v1/ev" && calls.Add(1) >= 3 {
+			body = `{"current":16}`
+		}
+		_, _ = w.Write([]byte(body))
+	}))
+	defer srv.Close()
+	rn := NewRunner(srv.URL)
+	ready := rn.stepSkipUnless(map[string]any{"get": "/api/v1/ev", "greater_than": map[string]any{"current": 11}, "timeout": "10s", "reason": "too little"}, map[string]any{})
+	if ready.Status != StatusPassed || calls.Load() < 3 {
+		t.Fatalf("ready = %+v after %d calls", ready, calls.Load())
+	}
+	idle := rn.stepSkipUnless(map[string]any{"get": "/api/v1/other", "greater_than": map[string]any{"current": 11}, "timeout": "1s", "reason": "too little"}, map[string]any{})
+	if idle.Status != StatusSkipped || idle.Detail != "too little" {
+		t.Errorf("idle = %+v", idle)
+	}
+}
+
+// device_heartbeats judges the latest heartbeat notifications already on the trace; replies
+// to reads do not count, and too few heartbeats fail after the timeout.
+func TestDeviceHeartbeatsJudgesTheLatestOnTheTrace(t *testing.T) {
+	entries := func(times ...float64) string {
+		var parts []string
+		for _, ts := range times {
+			parts = append(parts, fmt.Sprintf(`{"ts":%g,"function":"deviceDiagnosisHeartbeatData","classifier":"notify"}`, ts))
+		}
+		parts = append(parts, `{"ts":5,"function":"deviceDiagnosisHeartbeatData","classifier":"reply"}`)
+		return `{"entries":[` + strings.Join(parts, ",") + `]}`
+	}
+	cases := []struct {
+		trace  string
+		status string
+	}{
+		{entries(0, 100, 130, 160, 190, 220), StatusPassed}, // the old 100 s gap is not among the latest five
+		{entries(0, 30, 60, 130, 160), StatusFailed},        // a 70 s gap
+		{entries(0, 30, 60), StatusFailed},                  // three heartbeats only
+	}
+	for _, c := range cases {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte(c.trace))
+		}))
+		step := NewRunner(srv.URL).stepDeviceHeartbeats(map[string]any{"count": 5, "max_gap": "66s", "timeout": "1s"}, map[string]any{"peer": map[string]any{"ski": "abc"}})
+		srv.Close()
+		if step.Status != c.status {
+			t.Errorf("%s: %+v", c.trace, step)
+		}
 	}
 }

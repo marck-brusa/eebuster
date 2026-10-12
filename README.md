@@ -32,7 +32,7 @@ hardware is available.
 - **Phase balance** — per-phase power, current and voltage with asymmetric loading flagged.
 - **Charge profiles** — timed LPC limit sequences with per-step expiry, run live or exported
   as scenario YAML.
-- **Use-case test runs and reports** — 101 YAML test cases grouped by use case, each tied to its
+- **Use-case test runs and reports** — 100 YAML test cases grouped by use case, each tied to its
   EEBUS specification scenario, requirement or High-Level Test Specification test case. A run
   records the device, its software and vehicles, the conditions and every request and
   response, and renders a self-contained HTML report (prints to PDF), JSON, JUnit XML, CSV and

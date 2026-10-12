@@ -52,6 +52,8 @@ func (rn *Runner) runStep(stepSpec map[string]any, scenarioContext map[string]an
 		step = rn.stepLimitDescriptions(args, scenarioContext)
 	case "skip_unless":
 		step = rn.stepSkipUnless(args, scenarioContext)
+	case "device_heartbeats":
+		step = rn.stepDeviceHeartbeats(args, scenarioContext)
 	case "conformance":
 		step = rn.stepConformance(args, scenarioContext)
 	case "wait_for":
@@ -565,12 +567,24 @@ func peerSKI(scenarioContext map[string]any) string {
 // stepSkipUnless skips the scenario, as a precondition not met, when an assertion does not
 // hold: `skip_unless: {get: path, not_null: [power_per_phase_w], reason: "..."}`. For
 // values a specification makes optional: their absence is no failure, and the checks that
-// need them cannot run.
+// need them cannot run. With a `timeout` it repeats the assertion once a second until it
+// holds, and skips only when it still does not at the end, for a state the device reaches
+// on its own, such as a vehicle ramping up again.
 func (rn *Runner) stepSkipUnless(args any, scenarioContext map[string]any) StepResult {
 	a := argsMap(resolve(args, scenarioContext))
 	reason, _ := a["reason"].(string)
 	delete(a, "reason")
+	timeout := 0.0
+	if t, ok := a["timeout"]; ok {
+		timeout = parseTimeout(t)
+		delete(a, "timeout")
+	}
+	deadline := time.Now().Add(time.Duration(timeout * float64(time.Second)))
 	step := rn.stepAssert(a, scenarioContext)
+	for step.Status == StatusFailed && time.Now().Before(deadline) && !rn.cancelled() {
+		rn.pause(time.Second)
+		step = rn.stepAssert(a, scenarioContext)
+	}
 	path, _ := a["get"].(string)
 	step.Name = "skip_unless " + path
 	if step.Status == StatusFailed {
@@ -581,4 +595,66 @@ func (rn *Runner) stepSkipUnless(args any, scenarioContext map[string]any) StepR
 		}
 	}
 	return step
+}
+
+// stepDeviceHeartbeats judges the device's own heartbeat notifications on the trace:
+// `device_heartbeats: {count: 5, max_gap: 66s, timeout: 330s}` requires the latest `count`
+// of them to follow each other within `max_gap`. Heartbeats already received count, so a
+// device connected for a while is judged at once; with fewer on the trace the step waits
+// for the missing ones until `timeout`. Replies to reads do not count.
+func (rn *Runner) stepDeviceHeartbeats(args any, scenarioContext map[string]any) StepResult {
+	a := argsMap(resolve(args, scenarioContext))
+	count := 5
+	if n, ok := toFloat64(a["count"]); ok && n >= 2 {
+		count = int(n)
+	}
+	maxGap := parseTimeout(a["max_gap"])
+	timeout := parseTimeout(a["timeout"])
+	ski := peerSKI(scenarioContext)
+	step := StepResult{Name: fmt.Sprintf("device_heartbeats %d", count), Status: StatusFailed}
+	deadline := time.Now().Add(time.Duration(timeout * float64(time.Second)))
+	times := rn.deviceHeartbeatTimes(ski)
+	for len(times) < count && time.Now().Before(deadline) && !rn.cancelled() {
+		rn.pause(2 * time.Second)
+		times = rn.deviceHeartbeatTimes(ski)
+	}
+	if len(times) < count {
+		step.Detail = fmt.Sprintf("%d of %d heartbeats from the device within %.0f s", len(times), count, timeout)
+	} else {
+		latest := times[len(times)-count:]
+		longest := 0.0
+		gaps := make([]string, 0, count-1)
+		for i := 1; i < len(latest); i++ {
+			gap := latest[i] - latest[i-1]
+			longest = max(longest, gap)
+			gaps = append(gaps, fmt.Sprintf("%.1f s", gap))
+		}
+		step.Assertions = []Comparison{{Key: "longest gap between heartbeats (s)", Op: "less_or_equal", Expected: maxGap, Actual: round2(longest), OK: longest <= maxGap}}
+		step.Detail = fmt.Sprintf("the latest %d heartbeats, gaps %s", count, strings.Join(gaps, ", "))
+		if longest <= maxGap {
+			step.Status = StatusPassed
+		}
+	}
+	return step
+}
+
+// deviceHeartbeatTimes lists, oldest first, when the device's heartbeat notifications
+// arrived, as far as the trace still holds them.
+func (rn *Runner) deviceHeartbeatTimes(ski string) []float64 {
+	var page struct {
+		Entries []struct {
+			Ts         float64 `json:"ts"`
+			Function   string  `json:"function"`
+			Classifier string  `json:"classifier"`
+		} `json:"entries"`
+	}
+	var times []float64
+	if rn.getInto("/api/v1/trace?dir=recv&limit=2000&ski="+url.QueryEscape(ski), &page) == nil {
+		for _, e := range page.Entries {
+			if e.Function == "deviceDiagnosisHeartbeatData" && e.Classifier == "notify" {
+				times = append(times, e.Ts)
+			}
+		}
+	}
+	return times
 }

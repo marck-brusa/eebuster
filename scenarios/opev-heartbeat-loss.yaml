@@ -22,12 +22,11 @@ steps:
   - wait_connected: {timeout: 30s}
   - call: {method: cem-opev/StartHeartbeat}
   - sleep: 2
-  # An earlier test case may have curtailed or paused the vehicle: give it time to recover, and
-  # the station time to publish a measurement taken after that.
-  - sleep: 30
+  # An earlier test case may have curtailed or paused the vehicle: it gets 30 s to recover.
   # Only a vehicle that draws more than the 10 A obligation can show that it stays within it.
   - skip_unless:
       get: "/api/v1/energy/{peer.ski}/snapshot"
+      timeout: 30s
       greater_than: {ev.vehicles.0.current_per_phase_a.0: 11}
       reason: "the vehicle draws 11 A or less on L1, so staying within a 10 A obligation shows nothing"
   - put:
@@ -35,12 +34,10 @@ steps:
       body:
         limits:
           - {phase: each, value_a: 10, is_active: true}
-  # The vehicle's measurements are published periodically: wait for one taken under the
-  # obligation, so the reading before the event is not one from before the write.
-  - sleep: 20
+  # The vehicle drew more than the obligation, so a reading within it is one taken after the write.
   - wait_for:
       get: "/api/v1/energy/{peer.ski}/snapshot"
-      timeout: 30s
+      timeout: 45s
       length_at_least: {ev.vehicles.0.current_per_phase_a: 1}
       each_less_than: {ev.vehicles.0.current_per_phase_a: 10.5}
   - call: {method: cem-opev/StopHeartbeat}

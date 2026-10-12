@@ -49,7 +49,7 @@ real vehicle.
 
 ## Scenario library
 
-101 test cases, grouped as the test runner and the report group them. *Sc.* is the
+100 test cases, grouped as the test runner and the report group them. *Sc.* is the
 scenario of the use case the test case checks; *Reference* names the abstract test case of the
 EEBUS High-Level Test Specification (LPC, LPP, MPC, MGCP) or the requirement ids of the use case
 specification. Every use case also has a `<acronym>-scenarios-advertised` test case that fails
@@ -72,7 +72,7 @@ device state; those are skipped as not verifiable on the wire.
 | LPC | `lpc-duration-roundtrip` | 1 | live-control | readback | ATC_COM_PT_CSTransition6_001 | LPC scenario 1: a limit with a duration. |
 | LPC | `lpc-factory-defaults` |  | read-only | needs-device-probe | ATC_COM_PT_CSInit_002 | LPC: default values after a factory reset. |
 | LPC | `lpc-failsafe-duration-range` | 2 | live-control | readback | ATC_COM_PT_CSConnection_008 | LPC failsafe: a failsafe duration below the 2 h minimum. |
-| LPC | `lpc-failsafe-on-heartbeat-loss` | 3 | disruptive | readback | ATC_COM_PT_CSTransition5_001 | LPC scenario 3: no heartbeat for 130 s, then consumption at or below the failsafe limit. |
+| LPC | `lpc-failsafe-on-heartbeat-loss` | 3 | disruptive | readback | ATC_COM_PT_CSTransition5_001 | LPC scenario 3: no heartbeat, then consumption at or below the failsafe limit within 160 s, limits ignored until the heartbeat returns. |
 | LPC | `lpc-failsafe-persistence` |  | read-only | needs-device-probe | ATC_COM_PT_CSInit_003 | LPC: failsafe limit and duration survive a restart of the device. |
 | LPC | `lpc-failsafe-value-set` | 2 | live-control | readback | ATC_COM_PT_CSConnection_008 | LPC scenario 2: every configured failsafe limit and duration, written and read back. |
 | LPC | `lpc-failsafe-window` | 2 | read-only | readback |  | LPC failsafe: the announced minimum failsafe duration. |
@@ -83,7 +83,6 @@ device state; those are skipped as not verifiable on the wire.
 | LPC | `lpc-limit-expiry` | 1 | live-control | readback | ATC_COM_PT_CSTransition6_001 | LPC: a 5 s limit that has to end by itself. |
 | LPC | `lpc-limit-value-set` | 1 | live-control | readback | ATC_COM_PT_CSConnection_007 | LPC scenario 1: every configured consumption limit, written and read back, without and with a duration. |
 | LPC | `lpc-negative-limit` | 1 | live-control | readback | ATC_COM_PT_CSConnection_003 | LPC scenario 1: a negative consumption limit and a negative failsafe limit, both rejected. |
-| LPC | `lpc-no-write-before-heartbeat` |  | disruptive | readback | ATC_COM_PT_CSFS_001 | LPC: a limit written while the energy guard is silent is not evaluated; after the heartbeat returns, a deactivation is accepted. |
 | LPC | `lpc-nominal-max` | 4 | read-only | readback | ATC_COM_PT_CSUnlCntrl_003 | LPC: the device's declared maximum consumption. |
 | LPC | `lpc-read-current` | 1 | read-only | readback |  | LPC: the active consumption limit, read only. |
 | LPC | `lpc-release` | 1 | live-control | readback | ATC_COM_PT_CSTransition6_002 | LPC scenario 1: deactivating an active consumption limit. |
@@ -126,7 +125,7 @@ device state; those are skipped as not verifiable on the wire.
 | EVSECC | `evsecc-scenarios-advertised` |  | read-only | wire |  | EVSECC: the advertised scenarios against the specification's mandatory scenarios. |
 | EVCS | `evcs-scenarios-advertised` |  | read-only | wire |  | EVCS: the advertised scenarios against the specification's mandatory scenarios. |
 | CEVC | `cevc-scenarios-advertised` |  | read-only | wire |  | CEVC: the advertised scenarios against the specification's mandatory scenarios. |
-| EVCEM | `evcem-scenario-1-current` | 1 | read-only | readback |  | EVCEM scenario 1: the charging current per phase, plausible in ampere. |
+| EVCEM | `evcem-scenario-1-current` | 1 | read-only | readback |  | EVCEM scenario 1: the charging current per phase, plausible in ampere and not 0 A while charging. |
 | EVCEM | `evcem-scenario-2-power` | 2 | read-only | readback | EVCEM-003, EVCEM-004 | EVCEM scenario 2: the charging power per phase, plausible in watt. |
 | EVCEM | `evcem-scenario-3-energy` | 3 | read-only | readback | EVCEM-005 | EVCEM scenario 3: the energy charged in the session, never decreasing. |
 | EVCEM | `evcem-scenarios-advertised` |  | read-only | wire |  | EVCEM: the advertised scenarios against the specification's mandatory scenarios. |

@@ -23,7 +23,7 @@ var knownParameters = map[string]bool{
 var knownVerbs = map[string]bool{
 	"wait_connected": true, "sleep": true, "log": true, "call": true, "put": true, "post": true, "delete": true,
 	"assert": true, "expect_event": true, "capture": true, "scenarios_advertised": true, "conformance": true, "for_each": true,
-	"wait_for": true, "limit_descriptions": true, "skip_unless": true,
+	"wait_for": true, "limit_descriptions": true, "skip_unless": true, "device_heartbeats": true,
 }
 
 var paramRef = regexp.MustCompile(`\{params\.([a-z_]+)`)
@@ -155,7 +155,7 @@ func checkStep(t *testing.T, id string, step map[string]any) {
 		}
 	case verb == "assert" || verb == "wait_for" || verb == "skip_unless":
 		for key := range argsMap(step[verb]) {
-			known := key == "get" || (verb == "wait_for" && key == "timeout") || (verb == "skip_unless" && key == "reason")
+			known := key == "get" || (verb != "assert" && key == "timeout") || (verb == "skip_unless" && key == "reason")
 			for _, op := range assertionOps {
 				known = known || key == op
 			}
