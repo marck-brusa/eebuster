@@ -1,14 +1,13 @@
 name: opev-asymmetric
 description: >
   Writes a different current obligation on each phase (6/10/16 A) and requires each to be
-  visible on readback, then releases. Asymmetric curtailment [OPEV-002, EEBus UC TS OPEV
-  V1.0.1b scenario 1] lets an Energy Guard keep a high current on lightly loaded phases —
-  a device that averages or symmetrizes the phases silently defeats the point of the use
-  case. Needs a vehicle associated (the EV entity exists only during a session on some
-  devices). Skipped on a device that declares its limit only on the combined phase "abc":
+  visible on readback, then releases [OPEV-002, EEBus UC TS OPEV V1.0.1b scenario 1]. It
+  checks the limits, not the current per phase: a vehicle without asymmetric charging may
+  apply the lowest limit to every phase. Needs a vehicle associated (the EV entity exists
+  only during a session on some devices). Skipped on a device that declares its limit only on the combined phase "abc":
   there is no per-phase limit to write.
 covers: "OPEV scenario 1: a different current limit per phase (6/10/16 A)."
-goal: "Proves the device limits each phase separately, as a site fuse needs."
+goal: "Proves the device accepts a different current limit per phase and reports each back."
 hint: "Needs a vehicle. Skipped on a device with one combined limit for L1-L3."
 category: Conformance
 risk: live-control
