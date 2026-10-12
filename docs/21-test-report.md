@@ -427,7 +427,7 @@ Specification-derived test cases:
 | `lpc-heartbeat-timeout` | The device's heartbeat announces a timeout of at most 60 s (UC TS Table 26) | wire |
 | `lpc-heartbeat-continuity` | Five consecutive heartbeat notifications from the device, each within 60 s of the previous one (ATC_COM_PT_CSHeartbeat_001) | wire, long-running |
 | `lpc-release` | From an active limit, a deactivation leaves the limit inactive (ATC_COM_PT_CSTransition6_002) | readback |
-| `lpc-failsafe-on-heartbeat-loss` | From unlimited/controlled (heartbeat running, limit deactivated), after our heartbeat stops the device falls to its failsafe power within 120 s plus margin: consumption power read over MPC is at or below the failsafe value (ATC_COM_PT_CSTransition5_001) | readback, long-running |
+| `lpc-failsafe-on-heartbeat-loss` | From unlimited/controlled (heartbeat running, limit deactivated), after our heartbeat stops the consumption power read over MPC comes down to at or below the failsafe value; read from 100 s until 160 s after the stop, since devices publish measurements periodically and ramp down (ATC_COM_PT_CSTransition5_001) | readback, long-running |
 | `lpc-no-write-before-heartbeat` | In failsafe state, 130 s without our heartbeat, an active limit write is not evaluated and does not come back; after the heartbeat returns a deactivation is accepted (ATC_COM_PT_CSFS_001) | readback, long-running |
 | `lpc-nominal-max` | Scenario 4, recommended: Power Consumption Nominal Max present and positive (LPC-TS-010/1, 010/2, 038) | readback |
 | `lpc-cleanup` | Limit released, heartbeat running | `cleanup: true` |

@@ -108,6 +108,11 @@
   CEM's heartbeat and operating state, `oscev-cleanup` restores both. The simulated vehicle
   advertises OSCEV, charges with a recommended current while it trusts the CEM, and publishes
   its identification in the specified format.
+- LPC and LPP write tests wait up to 10 s for the device's answer, SPINE's
+  defaultMaxResponseDelay, instead of 5 s. `lpc-failsafe-on-heartbeat-loss` reads the power
+  from 100 s until 160 s after the heartbeat stops instead of once at 130 s: a device that
+  publishes its measurements every 15 s could still show the power from before its failsafe
+  state at 130 s.
 - New assertion `each_matches` (every element matches a regular expression). CI rejects a
   `{name}` in a step argument that the runner cannot resolve.
 

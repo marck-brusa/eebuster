@@ -26,7 +26,8 @@ steps:
   # Wait for the device to publish the new limit before reading it back. A write is
   # asynchronous -- acceptance, approval and the notify that follows all take time -- so an
   # immediate read can still return the previous limit and blame the device for it.
-  - expect_event: {event: eg-lpc-DataUpdateLimit, within: 5s}
+  # A device answers a write within SPINE's defaultMaxResponseDelay of 10 s (SPINE TS 5.2.5.3).
+  - expect_event: {event: eg-lpc-DataUpdateLimit, within: 10s}
   - assert:
       get: "/api/v1/lpc/{peer.ski}/limit"
       equals: {value_w: 3000, is_active: true}

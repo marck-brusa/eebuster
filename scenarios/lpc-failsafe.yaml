@@ -23,7 +23,8 @@ steps:
   - put:
       path: "/api/v1/lpc/{peer.ski}/failsafe"
       template: lpc.failsafe.typical
-  - expect_event: {event: eg-lpc-DataUpdateFailsafeConsumptionActivePowerLimit, within: 5s}
+  # A device answers a write within SPINE's defaultMaxResponseDelay of 10 s (SPINE TS 5.2.5.3).
+  - expect_event: {event: eg-lpc-DataUpdateFailsafeConsumptionActivePowerLimit, within: 10s}
   - assert:
       get: "/api/v1/lpc/{peer.ski}/failsafe"
       equals: {value_w: 2000, duration: "PT2H"}
