@@ -19,6 +19,9 @@ measurements every 15 s and cannot control below 2 A per phase.
   obligation before the event and read 20 s after it. Each waits 30 s for the vehicle to
   recover from the test case before it, and skips when the vehicle draws too little to show a
   reaction: 7 A on L1 for the 6 A obligation, 11 A for the 10 A one.
+- **Device parameter `paused_current_a`** (default 0.5 A): the current per phase a vehicle may
+  still draw after the OPEV 0 A pause signal, for a device that holds a minimum current
+  instead of pausing.
 - **No pass on 0 A.** `evcem-scenario-1-current` requires more than 0.5 A on L1 while the
   vehicle charges. A station reporting 0 A on every phase during a session passed it, and
   the OPEV current tests, before.

@@ -248,11 +248,15 @@ peers:
       failsafe_durations: [PT2H, PT24H]            # FCAPL_DUR within 2 h to 24 h
       production_nominal_max_w: 0                  # LPP, 0 = not applicable
       minimum_power_w: 1500                        # lowest power the device controls to while charging
+      paused_current_a: 2.5                        # current per phase it still draws when paused
 ```
 
 `minimum_power_w` defaults to 0. A device that cannot control its consumption below a
 minimum while it charges holds that power under a lower limit; the failsafe test then
 accepts the larger of the failsafe limit and this minimum, and the report lists the value.
+`paused_current_a` defaults to 0.5 A, measurement tolerance: the current per phase a vehicle
+may still draw after the OPEV 0 A pause signal. A device that holds a minimum current instead
+of pausing declares it here.
 
 Scenarios reference them as `{params.limits_w.1}`, resolved by the same lookup as
 `{peer.ski}`. When a value is absent the runner derives it from the device's announced
@@ -716,7 +720,7 @@ vehicle's measured currents (EVCEM).
 | `opev-constraints` | The use case resolves to an entity with at least one declared phase | readback |
 | `opev-guard-subscription` | The EV entity subscribed to our DeviceDiagnosis feature (pre-scenario communication of scenarios 2 and 3) | wire |
 | `opev-limit-roundtrip`, `opev-asymmetric`, `opev-zero-pause` | Written obligations read back per phase (OPEV-001, 003, 004) | readback |
-| `opev-limit-obeyed` | Measured current per phase at or below a 6 A obligation within 45 s, then 0 A within 45 s after the pause signal (OPEV-001); the window spans three publications of a device that publishes every 15 s; needs a charging session Skipped when the vehicle draws 7 A or less on L1 before the write, since a 6 A obligation would show nothing. | readback |
+| `opev-limit-obeyed` | Measured current per phase at or below a 6 A obligation within 45 s, then at most `paused_current_a` (0.5 A) within 45 s after the 0 A pause signal (OPEV-001); the window spans three publications of a device that publishes every 15 s; needs a charging session Skipped when the vehicle draws 7 A or less on L1 before the write, since a 6 A obligation would show nothing. | readback |
 | `opev-heartbeat-loss` | A reading taken under the obligation before the stop, then 20 s after our heartbeat stops (4 s plus one publication period) no phase draws more than the last obligation (OPEV-005); the currents are recorded Skipped when the vehicle draws 11 A or less on L1, below which staying within a 10 A obligation shows nothing. | readback |
 | `opev-error-state` | A reading taken under the obligation before the announcement, then 20 s after we announce a failure no phase draws more than the last obligation (OPEV-007); the currents are recorded Skipped when the vehicle draws 11 A or less on L1, below which staying within a 10 A obligation shows nothing. | readback |
 | `opev-cleanup` | All obligations released, heartbeat running, failure cleared | `cleanup: true` |

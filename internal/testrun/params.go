@@ -14,6 +14,9 @@ var defaultParameters = map[string]any{
 	// minimum_power_w is the lowest consumption the device can control to while it charges;
 	// below it the device holds this power. Configure it per peer for a device with such a floor.
 	"minimum_power_w": 0.0,
+	// paused_current_a is the current per phase a vehicle may still draw after the 0 A pause
+	// signal: measurement tolerance by default, the floor of a device that cannot pause.
+	"paused_current_a": 0.5,
 	// LPC limit durations: the 2 h curtailment window and a short one that ends inside a run.
 	"limit_durations": []any{"PT2H", "PT15M"},
 	// LPC failsafe minimum durations the device must accept: the 2 h minimum and the 24 h
