@@ -1,5 +1,55 @@
 # Release notes
 
+## 1.0.0-rc16
+
+Test cases for what a VDE FNN control box (Lastenheft Steuerbox V1.5, Annex A) does and
+relies on: the box that a German grid operator puts behind the smart meter gateway to limit a
+controllable consumer over EEBUS. It is the Energy Guard of LPC and LPP, the role the testbench
+plays.
+
+- **Heartbeat every 60 s.** `lpc-heartbeat-60s-interval` sends the testbench's heartbeat every
+  60 s with a 60 s timeout, as the box does (EEBUS_013), instead of every 2 s, and requires the
+  device to stay out of its failsafe state: failsafe limits written 45 s after a heartbeat,
+  with no limit write before them, must be read back. `PUT /api/v1/heartbeat` sets the
+  interval and the announced timeout; `GET /api/v1/heartbeat` reports them.
+- **Reconnection after a lost connection.** `lpc-reconnect-after-connection-loss` stops the
+  testbench's stack for 125 s, so the device enters its failsafe state, then requires it to
+  reconnect, subscribe to the heartbeat again and accept a limit and failsafe values, the
+  sequence the box sends after every connection setup (ATC_COM_PT_CSTransition9_001;
+  EEBUS_008, EEBUS_023, EEBUS_037). Test cases marked `interrupts_connection` are left out of
+  the run's connection and heartbeat checks.
+- **One instance per use case.** `common-use-case-instances` requires LPC, LPP, MPC and MGCP
+  each on at most one entity: the box marks the values of a use case offered more than once
+  invalid (EEBUS_072, 073, 087, 088). New step verb `use_case_instances`.
+- **Test cases cite the guideline.** A spec block takes `guidelines: {vde-fnn-steuerbox:
+  [EEBUS_013]}`; the catalog holds the section of every requirement id of chapter 10 and
+  Annex A. Nineteen existing LPC, LPP, MPC and MGCP test cases cite the requirements they also
+  check. Reports show the guideline, its sections and the requirement ids; the CSV and the
+  workbook gain a `guideline_requirements` column. `run-all -guideline vde-fnn-steuerbox`
+  and the run selection field `guidelines` run them; the test runner's filter offers *Test
+  cases citing VDE FNN*, and a use case's check box selects only the test cases shown.
+- CI runs the VDE FNN selection, long-running test cases included, against the simulator
+  (informational).
+
+Also in this release, after the rc15 tag:
+
+- **Failsafe on heartbeat loss** reads the power from 125 s instead of 100 s, writes its
+  distinctive limit over 120 s after the last heartbeat, and at the end restarts the heartbeat
+  and releases the limit, so the device leaves its failsafe state instead of holding it
+  through the following test cases.
+- **Device parameter `paused_current_a`** (default 0.5 A): the current per phase a vehicle may
+  still draw after the OPEV 0 A pause signal, for a device that holds a minimum current
+  instead of pausing. `opev-heartbeat-loss` and `opev-error-state` skip unless the vehicle
+  draws 11 A on L1 before the 10 A obligation, 7 A for the 6 A one.
+- **Faster runs.** `lpc-heartbeat-continuity` judges the latest five device heartbeats on the
+  trace with the new verb `device_heartbeats` instead of waiting for five new ones, and is no
+  longer long-running. `lpc-no-write-before-heartbeat` is merged into
+  `lpc-failsafe-on-heartbeat-loss`, so both checks share one heartbeat-free window. The OPEV
+  current tests poll for the vehicle's recovery (`skip_unless` takes a `timeout`) instead of
+  waiting 30 s. A complete run with the long-running test cases on the rig took 12.6 min.
+- **`opev-asymmetric`** checks the per-phase limits read back, not the current per phase: a
+  vehicle without asymmetric charging may apply the lowest limit to every phase.
+
 ## 1.0.0-rc15
 
 Found while testing a wireless charger on a rig with a real power stage, which publishes its
@@ -7,29 +57,16 @@ measurements every 15 s and holds a configured minimum current per phase while i
 
 - **SPINE's answer time.** LPC and LPP write tests wait up to 10 s for the device's answer,
   SPINE's defaultMaxResponseDelay (SPINE TS 5.2.5.3), instead of 5 s.
-- **Failsafe on heartbeat loss** reads the power from 125 s until 160 s after the heartbeat
+- **Failsafe on heartbeat loss** reads the power from 100 s until 160 s after the heartbeat
   stops instead of once at 130 s: a device that publishes every 15 s could still show the
   power from before its failsafe state. The new device parameter `minimum_power_w` (default 0)
   declares a power a device holds under any lower limit while it charges; the test accepts
-  the larger of the failsafe limit and it (assertion `less_or_equal_larger_of`). At the end it
-  restarts the heartbeat and releases the limit, so the device leaves its failsafe state
-  instead of holding it through the following test cases.
+  the larger of the failsafe limit and it (assertion `less_or_equal_larger_of`).
 - **OPEV current tests wait for fresh measurements**: 45 s for the 6 A and 0 A steps of
   `opev-limit-obeyed`; `opev-heartbeat-loss` and `opev-error-state` take a reading under the
-  obligation before the event and read 20 s after it. Each waits up to 30 s for the vehicle to
-  recover from the test case before it, and skips when the vehicle draws too little to show a
-  reaction: 7 A on L1 for the 6 A obligation, 11 A for the 10 A one.
-- **Device parameter `paused_current_a`** (default 0.5 A): the current per phase a vehicle may
-  still draw after the OPEV 0 A pause signal, for a device that holds a minimum current
-  instead of pausing.
-- **Faster runs.** `lpc-heartbeat-continuity` judges the latest five device heartbeats on the
-  trace with the new verb `device_heartbeats` instead of waiting for five new ones, and is no
-  longer long-running. `lpc-no-write-before-heartbeat` is merged into
-  `lpc-failsafe-on-heartbeat-loss`, so both checks share one heartbeat-free window; the
-  limit write still comes over 120 s after the last heartbeat, when the device must be in its
-  failsafe state. The OPEV
-  current tests poll for the vehicle's recovery (`skip_unless` takes a `timeout`) instead of
-  waiting 30 s. A complete run with the long-running test cases on the rig took 12.6 min.
+  obligation before the event and read 20 s after it. Each waits 30 s for the vehicle to
+  recover from the test case before it, and skips when the vehicle draws too little current
+  to show a reaction.
 - **No pass on 0 A.** `evcem-scenario-1-current` requires more than 0.5 A on L1 while the
   vehicle charges. A station reporting 0 A on every phase during a session passed it, and
   the OPEV current tests, before.
