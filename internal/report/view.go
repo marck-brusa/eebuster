@@ -598,6 +598,9 @@ func specLine(spec *scenario.Spec) string {
 		if len(spec.Requirements) > 0 {
 			parts = append(parts, strings.Join(spec.Requirements, ", "))
 		}
+		for _, ref := range spec.References {
+			parts = append(parts, ref.Label+" "+strings.Join(ref.Requirements, ", "))
+		}
 	}
 	return strings.Join(parts, " · ")
 }
@@ -618,8 +621,25 @@ func specFacts(spec *scenario.Spec) []kv {
 			mono("Requirements", strings.Join(spec.Requirements, ", ")), mono("Test case id", spec.TestCase),
 			row("Verification", verificationText(spec.Verification)),
 		)
+		for _, ref := range spec.References {
+			out = append(out, rows(
+				row("Guideline", strings.TrimSpace(strings.Join(nonEmpty(ref.Document, prefixed("section ", strings.Join(ref.Sections, ", "))), ", "))),
+				mono(ref.Label+" requirements", strings.Join(ref.Requirements, ", ")),
+			)...)
+		}
 	}
 	return out
+}
+
+// referenceText is the guideline requirements a test case cites, for the tabular formats.
+func referenceText(spec *scenario.Spec) string {
+	var parts []string
+	if spec != nil {
+		for _, ref := range spec.References {
+			parts = append(parts, ref.Label+" "+strings.Join(ref.Requirements, " "))
+		}
+	}
+	return strings.Join(parts, "; ")
 }
 
 func verificationText(v string) string {

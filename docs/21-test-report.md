@@ -1,7 +1,7 @@
 # Use-case test report
 
 Requirements for running the scenario library as a documented test run and producing a
-report per run. Status: implemented in 1.0.0-rc15; section 13 lists what is not. Read together with
+report per run. Status: implemented in 1.0.0-rc16; section 13 lists what is not. Read together with
 `02-requirements.md` (what the tool is and is not), `03-control-plane.md` (routes and
 dashboard) and `20-use-case-matrix.md` (scenario format and step verbs).
 
@@ -219,8 +219,8 @@ Rules:
 
 ### 6.2 Selection and order
 
-Selection: all, read-only only, by use case acronym, by risk, by explicit id list, with
-`include_long_running` default false. Order within a run is fixed: `smoke-pairing`,
+Selection: all, read-only only, by use case acronym, by risk, by explicit id list, by a cited
+guideline (`guidelines`, id or label), with `include_long_running` default false. Order within a run is fixed: `smoke-pairing`,
 `device-profile-discovery`, then by use case in catalog order, within a use case read-only
 before live-control before disruptive, then by id. Test cases with `cleanup: true` run last,
 always, even after a failure or cancellation, and are reported in their own group. The order
@@ -282,6 +282,10 @@ Computed by the runner over the whole run, reported next to the test cases:
 | Vehicle stability | Same vehicle entities and identifications at start and end, when a vehicle was present |
 | Device heartbeat | For LPC/LPP: the device's heartbeat kept arriving throughout, gaps shorter than its announced timeout |
 
+A test case with `interrupts_connection: true` takes the connection down on purpose. Its time
+is left out of the connection and heartbeat checks: a disconnection inside it does not count,
+and its start and end count as heartbeats.
+
 ### 6.7 Progress and cancellation
 
 Progress is published on the event bus, level `lifecycle`, events `run_started`,
@@ -308,8 +312,10 @@ spec:
   requirements: [LPC-TS-016, LPC-TS-038]  # ids as the specification writes them
   test_case: ATC_COM_PT_CSConnection_008  # only when a High-Level TestSpec defines one
   verification: readback                  # wire | readback | needs-device-probe
+  guidelines: {vde-fnn-steuerbox: [EEBUS_032]}  # requirements of other documents it also checks
 long_running: false
 cleanup: false
+interrupts_connection: false
 ```
 
 - `verification` states how the verdict is reached: `wire` (observed on the trace or events),
@@ -321,6 +327,12 @@ cleanup: false
   `spec.use_case` is a catalog acronym, `spec.scenario` is within that use case's scenario
   count, `verification` is one of the three values, every `{params.*}` reference names a
   parameter the schema in 6.4 defines.
+- `guidelines` cites documents beyond the use-case specifications that a device meets in the
+  field, by guideline id or label: guideline id -> requirement ids. The catalog
+  (`internal/ucspec/guidelines.go`) holds each guideline's title and the section of every
+  requirement; the report shows both, the CSV and workbook carry a `guideline_requirements`
+  column, and the library test rejects an unknown guideline or requirement. A spec without a
+  use case may carry guidelines alone.
 - Copyright: the specifications may not be reproduced. A scenario cites ids and paraphrases
   the criterion in one line; it never pastes a table or a paragraph.
 
@@ -407,6 +419,7 @@ Runs first, independent of use cases.
 | `device-profile-discovery` | Entities, features, advertised use cases | exists |
 | `common-manufacturer-data` | Node management manufacturer data present: at least brand or vendor, serial and software revision non-empty. Feeds the report header | required |
 | `common-use-case-versions` | Every advertised use case states a version; versions the catalog does not know are listed in the detail | required |
+| `common-use-case-instances` | LPC, LPP, MPC and MGCP each advertised by at most one entity, as a VDE FNN control box needs (EEBUS_072, 073, 087, 088) | exists |
 | `conformance-window` | No conformance errors during discovery and reads | exists |
 
 ### 9.2 LPC, Limitation of Power Consumption
@@ -422,7 +435,8 @@ with 53 ATCs, 44 of them Controllable-System side, plus the parameter sheet.
 | 4 Constraints | R | M |
 
 Exposed today: limit, failsafe, nominal maximum, heartbeat start/stop/status,
-`?unchecked=true` on the failsafe write. Twenty-one test cases exist.
+`?unchecked=true` on the failsafe write, the heartbeat interval (`PUT /heartbeat`). Twenty-two
+test cases exist.
 
 Specification-derived test cases:
 
@@ -437,6 +451,8 @@ Specification-derived test cases:
 | `lpc-heartbeat-continuity` | The latest five heartbeat notifications of the device on the trace, each within 60 s (plus 10 % jitter) of the previous one; heartbeats from before the test case count, so it is instant on a device connected for a few minutes (ATC_COM_PT_CSHeartbeat_001) | wire |
 | `lpc-release` | From an active limit, a deactivation leaves the limit inactive (ATC_COM_PT_CSTransition6_002) | readback |
 | `lpc-failsafe-on-heartbeat-loss` | From unlimited/controlled (heartbeat running, limit deactivated), after our heartbeat stops the consumption power read over MPC comes down to at or below the failsafe value, or the device minimum `minimum_power_w` when that is larger; read from 125 s until 160 s after the stop, since devices publish measurements periodically and ramp down; at the end the heartbeat restarts and the limit is released, which takes the device out of failsafe (ATC_COM_PT_CSTransition5_001) Then, still without a heartbeat and over 120 s after the last one, a limit write is not evaluated; after the heartbeat returns a deactivation is accepted (ATC_COM_PT_CSFS_001, merged here so both share one heartbeat-free window) | readback, long-running |
+| `lpc-heartbeat-60s-interval` | From unlimited/controlled, the testbench's heartbeat goes out every 60 s with a 60 s timeout, as a VDE FNN control box sends it (EEBUS_013). 165 s later, 45 s after the last heartbeat and with no limit write before, two different failsafe limits are written; both must be read back, which a device evaluates outside its failsafe state only (LPC-TS-028, LPC-TS-037). The heartbeat returns to every 2 s at the end | readback, long-running |
+| `lpc-reconnect-after-connection-loss` | From limited, the testbench's stack stops for 125 s, so the device enters failsafe (LPC-TS-029). After the restart the device reconnects, subscribes to the heartbeat again (UC TS 3.3.4), and accepts a limit and then failsafe values, read back -- the sequence of a control box after every connection setup (ATC_COM_PT_CSTransition9_001, LPC-TS-032, LPC-TS-037; VDE FNN EEBUS_008, 023, 037). Marked `interrupts_connection` | readback, long-running |
 | `lpc-nominal-max` | Scenario 4, recommended: Power Consumption Nominal Max present and positive (LPC-TS-010/1, 010/2, 038) | readback |
 | `lpc-cleanup` | Limit released, heartbeat running | `cleanup: true` |
 
@@ -811,11 +827,11 @@ attached, and any test case that did not behave as on the simulator is listed.
 | CLI runs | Local scenario files, same run manager | `run-all <dir>` keeps working against a remote instance with files it does not have |
 | Device probe | Interface defined, no implementation | Device specific; the generic tool ships the hook only |
 
-## 13. Implementation status (1.0.0-rc15)
+## 13. Implementation status (1.0.0-rc16)
 
 Implemented: sections 3 to 8 except the items below, the use-case table of section 9 as data
-(`internal/ucspec`), and the scenario library: 100 test cases, one `*-scenarios-advertised`
-check per use case.
+(`internal/ucspec`), the VDE FNN control box guideline as citable requirement ids, and the
+scenario library: 103 test cases, one `*-scenarios-advertised` check per use case.
 
 Not implemented yet:
 

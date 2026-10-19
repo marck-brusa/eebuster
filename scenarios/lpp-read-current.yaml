@@ -5,7 +5,7 @@ goal: "Shows the production limit state without changing anything."
 hint: "Skipped on a pure consumer."
 category: LPP
 risk: read-only
-spec: {use_case: LPP, scenario: 1, verification: readback}
+spec: {use_case: LPP, scenario: 1, verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_084, STB_0421]}}
 requires:
   capabilities: [lpp.read]
   use_cases: [limitationOfPowerProduction]

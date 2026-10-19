@@ -5,7 +5,7 @@ goal: "Proves the device stores the fallback it must use when contact is lost."
 hint: "Writes the failsafe values and restores the ones the device had at the end."
 category: LPC
 risk: live-control
-spec: {use_case: LPC, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPC-TS-011/1, LPC-TS-013/1, LPC-TS-038], verification: readback}
+spec: {use_case: LPC, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPC-TS-011/1, LPC-TS-013/1, LPC-TS-038], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_031, EEBUS_033, EEBUS_037]}}
 requires:
   capabilities: [lpc.failsafe]
   use_cases: [limitationOfPowerConsumption]

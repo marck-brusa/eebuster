@@ -9,7 +9,7 @@ goal: "Proves the device range-checks the failsafe duration it is given."
 hint: "Leaves the device's failsafe duration at 2 h."
 category: LPC
 risk: live-control
-spec: {use_case: LPC, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPC-TS-001, LPC-TS-015/1, LPC-TS-016, LPC-TS-038], verification: readback}
+spec: {use_case: LPC, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPC-TS-001, LPC-TS-015/1, LPC-TS-016, LPC-TS-038], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_032]}}
 requires:
   capabilities: [lpc.failsafe]
   use_cases: [limitationOfPowerConsumption]

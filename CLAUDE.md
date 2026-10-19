@@ -28,7 +28,7 @@ This is a development and integration tool, not an EEBUS certification or confor
 | `internal/scenario/` | YAML scenario runner, a pure REST client |
 | `internal/testrun/` | recorded test runs: selection, identification, run-level checks, persistence; a pure REST client |
 | `internal/report/` | run record and its HTML, JUnit, CSV and XLSX renderers |
-| `internal/ucspec/` | scenario requirement tables (M/R/O) of the EEBUS use case specifications |
+| `internal/ucspec/` | scenario requirement tables (M/R/O) of the EEBUS use case specifications; requirement ids and sections of guidelines such as the VDE FNN control box |
 | `internal/conformance/` | wire-frame checks against SHIP TS §11 / SPINE TS §5, spec ref on every finding |
 | `internal/trace/` | bounded raw-frame store behind the Message trace page and `/api/v1/trace` |
 | `internal/simulator/` | simulated devices |

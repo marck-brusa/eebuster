@@ -10,7 +10,7 @@ hint: "Needs a charging session so the power changes. Takes up to two minutes."
 category: MPC
 risk: read-only
 long_running: true
-spec: {use_case: MPC, scenario: 1, test_case: ATC_COM_PT_MUNotification_001, requirements: [MPC-TS-014], verification: wire}
+spec: {use_case: MPC, scenario: 1, test_case: ATC_COM_PT_MUNotification_001, requirements: [MPC-TS-014], verification: wire, guidelines: {vde-fnn-steuerbox: [EEBUS_041]}}
 requires:
   capabilities: [mpc.read]
   use_cases: [monitoringOfPowerConsumption]

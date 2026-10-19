@@ -380,3 +380,67 @@ func TestHeartbeatCheckToleratesJitterOnShortTimeouts(t *testing.T) {
 		t.Errorf("%s: %s", check.Status, check.Detail)
 	}
 }
+
+// A test case that takes the connection down for 125 s: the device's heartbeats stop with it,
+// and that gap must not fail the run's heartbeat check, while a gap outside it still does.
+func TestHeartbeatCheckLeavesOutPlannedInterruptions(t *testing.T) {
+	start := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	at := func(s float64) float64 { return float64(start.Unix()) + s }
+	timeout := 60.0
+	reconnect := scenario.ScenarioResult{ID: "lpc-reconnect-after-connection-loss", InterruptsConnection: true, StartedAt: at(100), DurationS: 170}
+	r := &report.Run{StartedAt: start, DurationS: 400, ConditionsEnd: &report.Conditions{HeartbeatTimeoutS: &timeout},
+		TestCases: []scenario.ScenarioResult{{ID: "lpc-read", StartedAt: at(0), DurationS: 100}, reconnect}}
+	every30 := []float64{at(10), at(40), at(70), at(100), at(290), at(320), at(350), at(380)}
+	if check := heartbeatCheck(&heartbeatMonitor{active: true, times: every30}, r); check.Status != scenario.StatusPassed {
+		t.Errorf("gap inside the interruption: %s (%s)", check.Status, check.Detail)
+	}
+	// After the interruption the device stays silent for 100 s.
+	silent := []float64{at(10), at(40), at(70), at(100), at(370)}
+	if check := heartbeatCheck(&heartbeatMonitor{active: true, times: silent}, r); check.Status != scenario.StatusFailed {
+		t.Errorf("gap after the interruption: %s (%s)", check.Status, check.Detail)
+	}
+}
+
+func TestCountDisconnectsSeparatesPlannedOnes(t *testing.T) {
+	windows := []interruption{{from: 1000, to: 1170.5}}
+	events := []lifecycleEvent{
+		{Seq: 3, Ts: 900, Event: "remote_disconnected"},  // before the run's first event
+		{Seq: 5, Ts: 1001, Event: "remote_disconnected"}, // the planned outage
+		{Seq: 6, Ts: 1120, Event: "remote_connected"},
+		{Seq: 7, Ts: 1171, Event: "remote_disconnected"}, // within a second of the end
+		{Seq: 9, Ts: 1300, Event: "remote_disconnected"}, // unplanned
+	}
+	unplanned, inPlan := countDisconnects(events, 4, windows)
+	if unplanned != 1 || inPlan != 2 {
+		t.Errorf("unplanned %d, planned %d", unplanned, inPlan)
+	}
+	if unplanned, inPlan := countDisconnects(events, 4, nil); unplanned != 3 || inPlan != 0 {
+		t.Errorf("without interruptions: unplanned %d, planned %d", unplanned, inPlan)
+	}
+}
+
+func TestSelectByGuideline(t *testing.T) {
+	dir := library(t)
+	write(t, dir, "lpc-box.yaml", "name: lpc-box\nspec: {use_case: LPC, scenario: 3, guidelines: {vde-fnn-steuerbox: [EEBUS_013]}}\nrisk: disruptive\nlong_running: true\nsteps: [{log: x}]\n")
+	write(t, dir, "common-box.yaml", "name: common-box\nspec: {guidelines: {VDE FNN: [EEBUS_072]}}\nrisk: read-only\nsteps: [{log: x}]\n")
+	metas, err := scenario.Catalog(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		sel  report.Selection
+		want string
+	}{
+		{report.Selection{Guidelines: []string{"vde-fnn-steuerbox"}}, "common-box"},
+		{report.Selection{Guidelines: []string{" VDE FNN "}, IncludeLongRunning: true}, "common-box lpc-box lpc-cleanup"},
+		{report.Selection{Guidelines: []string{"other"}}, ""},
+	}
+	for _, c := range cases {
+		if got := ids(Select(metas, c.sel)); got != c.want {
+			t.Errorf("%+v: got %q, want %q", c.sel, got, c.want)
+		}
+	}
+	if got := (report.Selection{Guidelines: []string{"vde-fnn-steuerbox"}}).Describe(); !strings.Contains(got, "test cases citing vde-fnn-steuerbox") {
+		t.Errorf("Describe() = %q", got)
+	}
+}

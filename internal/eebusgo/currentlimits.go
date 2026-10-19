@@ -32,7 +32,10 @@ type CurrentConstraints struct {
 	DefaultA []float64 `json:"default_a"`
 }
 
-type OPEV struct{ uc *opev.OPEV }
+type OPEV struct {
+	uc *opev.OPEV
+	hb *Heartbeat
+}
 
 func (o *OPEV) Read(ski string, entityHint []uint) (map[string]any, error) {
 	entity, err := resolveEntity(o.uc.RemoteEntitiesScenarios(), ski, entityHint)
@@ -60,15 +63,18 @@ func (o *OPEV) WriteLimits(ski string, limits []PhaseLimit, entityHint []uint) (
 
 // Heartbeat controls OPEV scenario 2 ("EV checks Energy Guard availability"): the EV must
 // fall to a safe current when our heartbeat stays away for more than 4 s (OPEV-005).
-func (o *OPEV) StartHeartbeat() { o.uc.StartHeartbeat() }
-func (o *OPEV) StopHeartbeat()  { o.uc.StopHeartbeat() }
+func (o *OPEV) StartHeartbeat() { o.hb.Start() }
+func (o *OPEV) StopHeartbeat()  { o.hb.Stop() }
 
 // SetOperatingState drives OPEV scenario 3 ("Energy Guard sends error state"): announcing
 // failure means the EV must stop trusting our curtailment and fall to a safe current
 // (OPEV-007). Announced device-wide, so it also affects other use cases we serve.
 func (o *OPEV) SetOperatingState(failure bool) error { return o.uc.SetOperatingState(failure) }
 
-type OSCEV struct{ uc *oscev.OSCEV }
+type OSCEV struct {
+	uc *oscev.OSCEV
+	hb *Heartbeat
+}
 
 func (o *OSCEV) Read(ski string, entityHint []uint) (map[string]any, error) {
 	entity, err := resolveEntity(o.uc.RemoteEntitiesScenarios(), ski, entityHint)
@@ -140,7 +146,7 @@ func phaseName(s string) (spinemodel.ElectricalConnectionPhaseNameType, error) {
 }
 
 // The OSCEV twin of the scenario 2/3 controls above.
-func (o *OSCEV) StartHeartbeat() { o.uc.StartHeartbeat() }
-func (o *OSCEV) StopHeartbeat()  { o.uc.StopHeartbeat() }
+func (o *OSCEV) StartHeartbeat() { o.hb.Start() }
+func (o *OSCEV) StopHeartbeat()  { o.hb.Stop() }
 
 func (o *OSCEV) SetOperatingState(failure bool) error { return o.uc.SetOperatingState(failure) }

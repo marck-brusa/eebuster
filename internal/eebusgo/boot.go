@@ -122,6 +122,8 @@ type Stack struct {
 	opev  *OPEV
 	oscev *OSCEV
 	ohpcf *OHPCF
+
+	heartbeat *Heartbeat
 }
 
 // New configures and Setup()s (but does not Start) the embedded stack in either static or
@@ -140,7 +142,7 @@ func New(cfg BootConfig) (*Stack, error) {
 		[]shipapi.DeviceCategoryType{shipapi.DeviceCategoryTypeEnergyManagementSystem},
 		spinemodel.DeviceTypeTypeEnergyManagementSystem,
 		[]spinemodel.EntityTypeType{spinemodel.EntityTypeTypeCEM},
-		cfg.ShipPort, cfg.Certificate, 4*time.Second, nil, nil,
+		cfg.ShipPort, cfg.Certificate, DefaultHeartbeatTimeout, nil, nil,
 	)
 	if err != nil {
 		return nil, err
@@ -343,6 +345,11 @@ func New(cfg BootConfig) (*Stack, error) {
 	}
 	stack.vabd = &VABD{uc: vabdUC}
 
+	// One heartbeat for every use case on the CEM entity; see Heartbeat.
+	stack.heartbeat = newHeartbeat(localEntity.HeartbeatManager(),
+		localEntity.FeatureOfTypeAndRole(spinemodel.FeatureTypeTypeDeviceDiagnosis, spinemodel.RoleTypeServer))
+	stack.lpc.hb, stack.opev.hb, stack.oscev.hb = stack.heartbeat, stack.heartbeat, stack.heartbeat
+
 	return stack, nil
 }
 
@@ -356,6 +363,9 @@ func (s *Stack) OSCEV() *OSCEV   { return s.oscev }
 func (s *Stack) CEVC() *CEVC     { return s.cevc }
 func (s *Stack) OHPCF() *OHPCF   { return s.ohpcf }
 
+// Heartbeat is the heartbeat of our CEM entity, shared by every use case.
+func (s *Stack) Heartbeat() *Heartbeat { return s.heartbeat }
+
 // Start (re-)starts the embedded stack. ship-go's mDNS manager clears its injected test
 // provider on every Shutdown (mdns.go: "m.mdnsProvider = nil", to guarantee a clean state for
 // the *next* run) but never re-arms it -- discovered by actually testing the restart path
@@ -363,6 +373,9 @@ func (s *Stack) OHPCF() *OHPCF   { return s.ohpcf }
 // "test provider must be set before starting with MdnsProviderSelectionTestSetup". Re-inject
 // before every Start() rather than only once at boot.
 func (s *Stack) Start() error {
+	if s.service.IsRunning() {
+		return nil
+	}
 	if s.provider != nil { // nil in real mdns mode -- nothing to (re-)inject
 		if err := s.service.SetMdnsProvider(s.provider); err != nil {
 			return err

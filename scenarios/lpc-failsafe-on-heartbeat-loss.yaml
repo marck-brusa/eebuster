@@ -19,7 +19,7 @@ hint: "Takes over two minutes; a load must draw power for the result to mean muc
 category: LPC
 risk: disruptive
 long_running: true
-spec: {use_case: LPC, scenario: 3, test_case: ATC_COM_PT_CSTransition5_001, requirements: [LPC-TS-028, LPC-TS-033, LPC-TS-036, LPC-TS-037], verification: readback}
+spec: {use_case: LPC, scenario: 3, test_case: ATC_COM_PT_CSTransition5_001, requirements: [LPC-TS-028, LPC-TS-033, LPC-TS-036, LPC-TS-037], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_013]}}
 requires:
   parameters: [minimum_power_w]
   capabilities: [heartbeat, lpc.write, lpc.read]

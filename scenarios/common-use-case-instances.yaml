@@ -1,0 +1,15 @@
+name: common-use-case-instances
+description: >
+  Counts the entities of the device that advertise LPC, LPP, MPC and MGCP. A VDE FNN control
+  box marks the limits and measurements of LPC, LPP and MPC invalid when the device offers the
+  use case on more than one entity, and those of MGCP unless exactly one entity offers it. A
+  device a control box limits and reads therefore offers each of them at most once.
+covers: "VDE FNN control box: LPC, LPP, MPC and MGCP each offered by at most one entity."
+goal: "Proves a control box can tell which entity to limit and which to read."
+category: Discovery
+risk: read-only
+spec: {verification: wire, guidelines: {vde-fnn-steuerbox: [EEBUS_072, EEBUS_073, EEBUS_087, EEBUS_088]}}
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  - use_case_instances: {use_cases: [LPC, LPP, MPC, MGCP], at_most: 1}

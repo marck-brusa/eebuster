@@ -9,7 +9,7 @@ goal: "Proves the device announces a timeout of at most 60 s, as LPC requires."
 hint: "Fails if the device sends no heartbeat at all."
 category: LPC
 risk: read-only
-spec: {use_case: LPC, scenario: 3, test_case: ATC_COM_PT_CSHeartbeat_001, requirements: [LPC-TS-007], verification: wire}
+spec: {use_case: LPC, scenario: 3, test_case: ATC_COM_PT_CSHeartbeat_001, requirements: [LPC-TS-007], verification: wire, guidelines: {vde-fnn-steuerbox: [EEBUS_014, EEBUS_015]}}
 requires:
   use_cases: [limitationOfPowerConsumption]
 peer: device-under-test

@@ -178,7 +178,52 @@ func conformanceCheck(conf report.Conformance) report.Check {
 	return check
 }
 
-// connectionCheck counts the disconnections of the device during the run.
+// interruption is the time a test case took the connection down on purpose, in Unix seconds.
+type interruption struct{ from, to float64 }
+
+// interruptions are the windows of the test cases marked interrupts_connection.
+func interruptions(r *report.Run) []interruption {
+	var out []interruption
+	for _, tc := range r.TestCases {
+		if tc.InterruptsConnection && tc.StartedAt > 0 {
+			out = append(out, interruption{from: tc.StartedAt, to: tc.StartedAt + tc.DurationS})
+		}
+	}
+	return out
+}
+
+// planned reports whether an event at ts (whole seconds) falls into an interruption.
+func planned(windows []interruption, ts float64) bool {
+	inside := false
+	for _, w := range windows {
+		inside = inside || (ts >= w.from-1 && ts <= w.to+1)
+	}
+	return inside
+}
+
+type lifecycleEvent struct {
+	Seq   int64  `json:"seq"`
+	Ts    int64  `json:"ts"`
+	Event string `json:"event"`
+}
+
+// countDisconnects counts the device's disconnections after the event sequence number from,
+// split into those outside and inside the planned interruptions.
+func countDisconnects(events []lifecycleEvent, from int64, windows []interruption) (unplanned, inPlan int) {
+	for _, e := range events {
+		if e.Seq > from && e.Event == "remote_disconnected" {
+			if planned(windows, float64(e.Ts)) {
+				inPlan++
+			} else {
+				unplanned++
+			}
+		}
+	}
+	return unplanned, inPlan
+}
+
+// connectionCheck counts the disconnections of the device during the run. Those inside a test
+// case that takes the connection down on purpose do not count.
 func connectionCheck(c *collector, r *report.Run) report.Check {
 	check := report.Check{ID: "connection", Title: "Connection stability", Status: scenario.StatusPassed,
 		Detail: "The device stayed connected from the first to the last test case."}
@@ -186,18 +231,14 @@ func connectionCheck(c *collector, r *report.Run) report.Check {
 	if r.ConditionsStart != nil {
 		from = r.ConditionsStart.EventSeq
 	}
-	var events []struct {
-		Seq   int64  `json:"seq"`
-		Event string `json:"event"`
-	}
+	var events []lifecycleEvent
 	query := url.Values{"level": {"lifecycle"}, "ski": {r.Device.SKI}, "limit": {"2000"}}
-	disconnects := 0
+	disconnects, inPlan := 0, 0
 	if r.Device.SKI != "" && c.get("/api/v1/events/recent?"+query.Encode(), &events) == nil {
-		for _, e := range events {
-			if e.Seq > from && e.Event == "remote_disconnected" {
-				disconnects++
-			}
-		}
+		disconnects, inPlan = countDisconnects(events, from, interruptions(r))
+	}
+	if inPlan > 0 {
+		check.Detail = fmt.Sprintf("The device stayed connected from the first to the last test case, apart from %d disconnection(s) inside test cases that take the connection down on purpose.", inPlan)
 	}
 	connectedAtEnd := r.ConditionsEnd != nil && r.ConditionsEnd.Connected
 	switch {
@@ -205,7 +246,7 @@ func connectionCheck(c *collector, r *report.Run) report.Check {
 		check.Status, check.Detail = scenario.StatusFailed, "No device was resolved for the run."
 	case disconnects > 0 || !connectedAtEnd:
 		check.Status = scenario.StatusFailed
-		check.Detail = fmt.Sprintf("The device disconnected %d time(s) during the run; connected at the end: %s.", disconnects, yesNo(connectedAtEnd))
+		check.Detail = fmt.Sprintf("The device disconnected %d time(s) during the run outside test cases that take the connection down on purpose; connected at the end: %s.", disconnects, yesNo(connectedAtEnd))
 	}
 	return check
 }
@@ -264,6 +305,8 @@ func orNone(list []string) string {
 // heartbeatCheck requires the device's heartbeats to follow each other, and the run's start
 // and end, within the timeout the device announces (60 s when it announces none). Frames carry
 // transmission and processing jitter, so the timeout is allowed 10 %, at least 2 s, on top.
+// The time of a test case that takes the connection down on purpose is left out: its start
+// and end count like heartbeats.
 func heartbeatCheck(h *heartbeatMonitor, r *report.Run) report.Check {
 	timeout := 60.0
 	for _, c := range []*report.Conditions{r.ConditionsStart, r.ConditionsEnd} {
@@ -286,10 +329,16 @@ func heartbeatCheck(h *heartbeatMonitor, r *report.Run) report.Check {
 	times, overrun := append([]float64{}, h.times...), h.overrun
 	h.mu.Unlock()
 	points := append(append([]float64{start}, times...), end)
+	windows := interruptions(r)
+	for _, w := range windows {
+		points = append(points, min(max(w.from, start), end), min(max(w.to, start), end))
+	}
 	sort.Float64s(points)
 	longest := 0.0
 	for i := 1; i < len(points); i++ {
-		longest = max(longest, points[i]-points[i-1])
+		if !withinInterruption(windows, points[i-1], points[i]) {
+			longest = max(longest, points[i]-points[i-1])
+		}
 	}
 	allowed := timeout + max(2, timeout*0.1)
 	check := report.Check{ID: "device-heartbeat", Title: "Device heartbeat (LPC)", Status: scenario.StatusPassed,
@@ -308,6 +357,15 @@ func heartbeatCheck(h *heartbeatMonitor, r *report.Run) report.Check {
 			len(times), end-start, longest, timeout, allowed-timeout)
 	}
 	return check
+}
+
+// withinInterruption reports whether the gap from a to b lies inside one interruption.
+func withinInterruption(windows []interruption, a, b float64) bool {
+	inside := false
+	for _, w := range windows {
+		inside = inside || (a >= w.from && b <= w.to)
+	}
+	return inside
 }
 
 func unixSeconds(t time.Time) float64 {

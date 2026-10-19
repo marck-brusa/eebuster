@@ -35,7 +35,10 @@ type FailsafeLimit struct {
 
 // LPC wraps eebus-go's eg/lpc use case with SKI-based entity resolution, matching what
 // JsonRpcAdapter's lpc_* methods did over the old RPC wire -- see docs/10-eebus-go.md.
-type LPC struct{ uc *lpc.LPC }
+type LPC struct {
+	uc *lpc.LPC
+	hb *Heartbeat
+}
 
 func (l *LPC) ReadLimit(ski string, entityHint []uint) (LoadLimit, error) {
 	entity, err := resolveEntity(l.uc.RemoteEntitiesScenarios(), ski, entityHint)
@@ -135,8 +138,8 @@ func (l *LPC) NominalMax(ski string, entityHint []uint) (float64, error) {
 	return l.uc.ConsumptionNominalMax(entity)
 }
 
-func (l *LPC) StartHeartbeat() { l.uc.StartHeartbeat() }
-func (l *LPC) StopHeartbeat()  { l.uc.StopHeartbeat() }
+func (l *LPC) StartHeartbeat() { l.hb.Start() }
+func (l *LPC) StopHeartbeat()  { l.hb.Stop() }
 
 func (l *LPC) HeartbeatStatus(ski string, entityHint []uint) (bool, error) {
 	entity, err := resolveEntity(l.uc.RemoteEntitiesScenarios(), ski, entityHint)

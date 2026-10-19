@@ -48,6 +48,8 @@ func (rn *Runner) runStep(stepSpec map[string]any, scenarioContext map[string]an
 		step = rn.stepCapture(args, scenarioContext)
 	case "scenarios_advertised":
 		step = rn.stepScenariosAdvertised(args, scenarioContext)
+	case "use_case_instances":
+		step = rn.stepUseCaseInstances(args, scenarioContext)
 	case "limit_descriptions":
 		step = rn.stepLimitDescriptions(args, scenarioContext)
 	case "skip_unless":

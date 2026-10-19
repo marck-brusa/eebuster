@@ -1535,6 +1535,7 @@ const I18N = {
     "tests.selectGroup": "Select every test case of this use case",
     "tests.search": "Search test cases",
     "tests.filterAll": "All use cases",
+    "tests.filterGuideline": "Test cases citing {g}",
     "tests.notesPlaceholder": "Notes for the report",
     "tests.testerPlaceholder": "Tester name for the report",
     "tests.includeLong": "Include long-running test cases",
@@ -2027,6 +2028,7 @@ const I18N = {
     "tests.selectGroup": "Alle Testfälle dieses Anwendungsfalls auswählen",
     "tests.search": "Testfälle suchen",
     "tests.filterAll": "Alle Anwendungsfälle",
+    "tests.filterGuideline": "Testfälle mit Bezug auf {g}",
     "tests.notesPlaceholder": "Notizen für den Bericht",
     "tests.testerPlaceholder": "Name des Testers für den Bericht",
     "tests.includeLong": "Lang laufende Testfälle einschließen",
@@ -2519,6 +2521,7 @@ const I18N = {
     "tests.selectGroup": "选择此用例的全部测试用例",
     "tests.search": "搜索测试用例",
     "tests.filterAll": "全部用例",
+    "tests.filterGuideline": "引用 {g} 的测试用例",
     "tests.notesPlaceholder": "报告备注",
     "tests.testerPlaceholder": "报告中的测试人员姓名",
     "tests.includeLong": "包含长时间运行的测试用例",
@@ -3659,6 +3662,8 @@ const CATEGORY_TONE = {
 };
 const RISK_TONE = {"read-only": "ok", "live-control": "warn", "disruptive": "err"};
 const COMMON_GROUP = "Common";
+// The test filter's value prefix for "test cases citing a guideline".
+const GUIDELINE_FILTER = "guideline:";
 
 function loadTestSelection() {
   try { return new Set(JSON.parse(localStorage.getItem("eebus-test-selection") || "[]")); }
@@ -3726,22 +3731,35 @@ function specLine(spec) {
   if (spec.use_case && spec.scenario) parts.push(`${spec.use_case} ${tf("tests.scenarioN", {n: spec.scenario})}${spec.device_level ? ` (${spec.device_level})` : ""}`);
   if (spec.test_case) parts.push(spec.test_case);
   if (spec.requirements?.length) parts.push(spec.requirements.join(", "));
+  for (const ref of spec.references || []) parts.push(`${ref.label} ${(ref.requirements || []).join(", ")}`);
   return parts.join(" · ");
 }
+
+// The guidelines the library cites, for the filter: id -> label, in first-seen order.
+function citedGuidelines() {
+  const out = new Map();
+  for (const test of state.tests) for (const ref of test.spec?.references || []) if (!out.has(ref.guideline)) out.set(ref.guideline, ref.label);
+  return out;
+}
+
 
 function renderTests() {
   const filter = document.getElementById("test-filter");
   const groups = testGroups();
   const previous = filter.value;
+  const guidelines = citedGuidelines();
   filter.innerHTML = `<option value="">${esc(t("tests.filterAll"))}</option>` +
-    groups.map(g => `<option value="${esc(g.key)}">${esc(g.key)}</option>`).join("");
-  filter.value = groups.some(g => g.key === previous) ? previous : "";
+    groups.map(g => `<option value="${esc(g.key)}">${esc(g.key)}</option>`).join("") +
+    [...guidelines].map(([id, label]) => `<option value="${esc(GUIDELINE_FILTER + id)}">${esc(tf("tests.filterGuideline", {g: label}))}</option>`).join("");
+  filter.value = groups.some(g => g.key === previous) || guidelines.has(previous.slice(GUIDELINE_FILTER.length)) ? previous : "";
+  const guideline = filter.value.startsWith(GUIDELINE_FILTER) ? filter.value.slice(GUIDELINE_FILTER.length) : "";
   const search = document.getElementById("test-search").value.trim().toLowerCase();
   document.getElementById("tests-total").textContent = tf("js.testsCount", {n: state.tests.length});
   const host = document.getElementById("test-list");
-  const visibleGroups = groups.filter(g => !filter.value || g.key === filter.value);
+  const visibleGroups = groups.filter(g => !filter.value || guideline || g.key === filter.value);
   host.innerHTML = visibleGroups.length ? visibleGroups.map(group => {
-    const tests = group.tests.filter(test => !search || [test.id, test.name, test.covers, specLine(test.spec)].join(" ").toLowerCase().includes(search));
+    const tests = group.tests.filter(test => (!guideline || (test.spec?.references || []).some(ref => ref.guideline === guideline)) &&
+      (!search || [test.id, test.name, test.covers, specLine(test.spec)].join(" ").toLowerCase().includes(search)));
     if (!tests.length) return "";
     const advertised = group.key === COMMON_GROUP ? undefined : advertisedFor(group.key);
     const allSelected = tests.every(test => state.testSelection.has(test.id));
@@ -4751,9 +4769,11 @@ document.getElementById("test-list").addEventListener("change", event => {
     if (test.checked) state.testSelection.add(test.dataset.selectTest); else state.testSelection.delete(test.dataset.selectTest);
   }
   if (group) {
-    const groupTests = state.tests.filter(item => groupOf(item) === group.dataset.selectGroup);
-    groupTests.forEach(item => { if (group.checked) state.testSelection.add(item.id); else state.testSelection.delete(item.id); });
-    document.querySelectorAll(`[data-test-group="${CSS.escape(group.dataset.selectGroup)}"] [data-select-test]`).forEach(box => { box.checked = group.checked; });
+    // The test cases the group shows: a search or a guideline filter narrows what it selects.
+    document.querySelectorAll(`[data-test-group="${CSS.escape(group.dataset.selectGroup)}"] [data-select-test]`).forEach(box => {
+      box.checked = group.checked;
+      if (group.checked) state.testSelection.add(box.dataset.selectTest); else state.testSelection.delete(box.dataset.selectTest);
+    });
   }
   if (test || group) { saveTestSelection(); updateTestSummary(); }
 });

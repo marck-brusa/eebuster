@@ -8,7 +8,7 @@ goal: "Proves a producer stores the fallback it must use when contact is lost."
 hint: "Skipped on a pure consumer. Changes the device's stored failsafe values."
 category: LPP
 risk: live-control
-spec: {use_case: LPP, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPP-TS-011/1, LPP-TS-013/1, LPP-TS-038], verification: readback}
+spec: {use_case: LPP, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPP-TS-011/1, LPP-TS-013/1, LPP-TS-038], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_031, EEBUS_033]}}
 requires:
   capabilities: [lpp.write, lpp.read, heartbeat]
   use_cases: [limitationOfPowerProduction]

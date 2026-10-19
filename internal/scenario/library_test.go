@@ -24,6 +24,7 @@ var knownVerbs = map[string]bool{
 	"wait_connected": true, "sleep": true, "log": true, "call": true, "put": true, "post": true, "delete": true,
 	"assert": true, "expect_event": true, "capture": true, "scenarios_advertised": true, "conformance": true, "for_each": true,
 	"wait_for": true, "limit_descriptions": true, "skip_unless": true, "device_heartbeats": true,
+	"use_case_instances": true,
 }
 
 var paramRef = regexp.MustCompile(`\{params\.([a-z_]+)`)
@@ -110,13 +111,35 @@ func checkSpec(t *testing.T, id string, f fileSpec) {
 		t.Errorf("%s: spec.verification %q is not wire, readback or needs-device-probe", id, spec.Verification)
 	}
 	uc, known := ucspec.Lookup(spec.UseCase)
+	checkGuidelines(t, id, spec.Guidelines)
 	switch {
-	case spec.UseCase == "" && spec.Document == "":
-		t.Errorf("%s: a spec without use_case needs a document", id)
+	case spec.UseCase == "" && spec.Document == "" && len(spec.Guidelines) == 0:
+		t.Errorf("%s: a spec without use_case needs a document or guidelines", id)
 	case spec.UseCase != "" && !known:
 		t.Errorf("%s: unknown use case %q", id, spec.UseCase)
 	case known:
 		checkUseCaseSpec(t, id, uc, f)
+	}
+}
+
+// checkGuidelines requires every cited guideline and requirement to be in the catalog, so a
+// report never shows a requirement without its section.
+func checkGuidelines(t *testing.T, id string, cited map[string][]string) {
+	t.Helper()
+	for key, requirements := range cited {
+		g, ok := ucspec.LookupGuideline(key)
+		if !ok {
+			t.Errorf("%s: unknown guideline %q", id, key)
+			continue
+		}
+		if len(requirements) == 0 {
+			t.Errorf("%s: cites %s without requirements", id, g.Label)
+		}
+		for _, requirement := range requirements {
+			if _, ok := g.Section(requirement); !ok {
+				t.Errorf("%s: %s has no requirement %s", id, g.Label, requirement)
+			}
+		}
 	}
 }
 

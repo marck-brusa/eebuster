@@ -128,20 +128,22 @@ type ScenarioResult struct {
 	Risk        string         `json:"risk"`
 	Requires    map[string]any `json:"requires"`
 
-	ID            string       `json:"id,omitempty"`
-	Reason        string       `json:"reason,omitempty"`
-	Covers        string       `json:"covers,omitempty"`
-	Goal          string       `json:"goal,omitempty"`
-	Hint          string       `json:"hint,omitempty"`
-	Spec          *Spec        `json:"spec,omitempty"`
-	UseCase       string       `json:"use_case,omitempty"`
-	LongRunning   bool         `json:"long_running,omitempty"`
-	Cleanup       bool         `json:"cleanup,omitempty"`
-	StartedAt     float64      `json:"started_at,omitempty"`
-	Trace         *SeqRange    `json:"trace,omitempty"`
-	Findings      []FindingRef `json:"findings,omitempty"`
-	FindingsTotal int          `json:"findings_total,omitempty"`
-	RunID         string       `json:"run_id,omitempty"`
+	ID          string `json:"id,omitempty"`
+	Reason      string `json:"reason,omitempty"`
+	Covers      string `json:"covers,omitempty"`
+	Goal        string `json:"goal,omitempty"`
+	Hint        string `json:"hint,omitempty"`
+	Spec        *Spec  `json:"spec,omitempty"`
+	UseCase     string `json:"use_case,omitempty"`
+	LongRunning bool   `json:"long_running,omitempty"`
+	Cleanup     bool   `json:"cleanup,omitempty"`
+	// InterruptsConnection: the test case takes the connection down on purpose.
+	InterruptsConnection bool         `json:"interrupts_connection,omitempty"`
+	StartedAt            float64      `json:"started_at,omitempty"`
+	Trace                *SeqRange    `json:"trace,omitempty"`
+	Findings             []FindingRef `json:"findings,omitempty"`
+	FindingsTotal        int          `json:"findings_total,omitempty"`
+	RunID                string       `json:"run_id,omitempty"`
 }
 
 type SuiteResult struct {

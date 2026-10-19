@@ -10,7 +10,7 @@ goal: "Proves the device accepts limits across its power range."
 hint: "Changes the device's power while it runs."
 category: LPC
 risk: live-control
-spec: {use_case: LPC, scenario: 1, test_case: ATC_COM_PT_CSConnection_007, requirements: [LPC-TS-001, LPC-TS-001/1, LPC-TS-035], verification: readback}
+spec: {use_case: LPC, scenario: 1, test_case: ATC_COM_PT_CSConnection_007, requirements: [LPC-TS-001, LPC-TS-001/1, LPC-TS-035], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_021, STB_0420]}}
 requires:
   capabilities: [lpc.write, lpc.read]
   use_cases: [limitationOfPowerConsumption]

@@ -23,8 +23,8 @@ type table struct {
 func caseTable(r *Run) table {
 	t := table{Name: "Test cases", Header: []string{
 		"run_id", "order", "id", "name", "use_case", "scenario", "test_case", "requirements", "verification", "risk",
-		"status", "reason", "duration_s", "started_at", "detail", "covers",
-	}, Widths: []float64{22, 7, 30, 30, 9, 9, 28, 24, 13, 12, 9, 22, 11, 22, 60, 60}}
+		"status", "reason", "duration_s", "started_at", "detail", "covers", "guideline_requirements",
+	}, Widths: []float64{22, 7, 30, 30, 9, 9, 28, 24, 13, 12, 9, 22, 11, 22, 60, 60, 30}}
 	for i, tc := range r.TestCases {
 		scenarioNumber, testCase, requirements, verification := "", "", "", ""
 		if tc.Spec != nil {
@@ -35,7 +35,7 @@ func caseTable(r *Run) table {
 		}
 		t.Rows = append(t.Rows, []any{
 			r.ID, float64(i + 1), tc.ID, tc.Name, GroupOf(tc), scenarioNumber, testCase, requirements, verification, tc.Risk,
-			tc.Status, tc.Reason, tc.DurationS, formatUnix(tc.StartedAt), FirstFailure(tc), tc.Covers,
+			tc.Status, tc.Reason, tc.DurationS, formatUnix(tc.StartedAt), FirstFailure(tc), tc.Covers, referenceText(tc.Spec),
 		})
 	}
 	return t

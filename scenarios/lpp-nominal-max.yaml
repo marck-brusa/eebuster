@@ -7,7 +7,7 @@ goal: "Proves a controller knows the producer's range before limiting it."
 hint: "Skipped on a pure consumer."
 category: LPP
 risk: read-only
-spec: {use_case: LPP, scenario: 4, test_case: ATC_COM_PT_CSUnlCntrl_003, requirements: [LPP-TS-010/1, LPP-TS-010/2, LPP-TS-038], verification: readback}
+spec: {use_case: LPP, scenario: 4, test_case: ATC_COM_PT_CSUnlCntrl_003, requirements: [LPP-TS-010/1, LPP-TS-010/2, LPP-TS-038], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_085]}}
 requires:
   scenarios: [4]
   capabilities: [lpp.read]

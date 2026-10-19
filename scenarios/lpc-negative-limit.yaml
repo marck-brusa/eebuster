@@ -10,7 +10,7 @@ goal: "Proves the device rejects an invalid limit instead of applying it."
 hint: "Changes the device's limit state while it runs."
 category: LPC
 risk: live-control
-spec: {use_case: LPC, scenario: 1, test_case: ATC_COM_PT_CSConnection_003, requirements: [LPC-TS-001, LPC-TS-004, LPC-TS-005, LPC-TS-018, LPC-TS-035/1, LPC-TS-038], verification: readback}
+spec: {use_case: LPC, scenario: 1, test_case: ATC_COM_PT_CSConnection_003, requirements: [LPC-TS-001, LPC-TS-004, LPC-TS-005, LPC-TS-018, LPC-TS-035/1, LPC-TS-038], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_022]}}
 requires:
   capabilities: [lpc.write, lpc.failsafe]
   use_cases: [limitationOfPowerConsumption]

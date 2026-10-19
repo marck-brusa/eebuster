@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/marck-brusa/eebuster/internal/eebusgo"
 )
@@ -18,6 +19,8 @@ func (s *Server) registerUsecaseRoutes() {
 	s.mux.HandleFunc("POST /api/v1/lpc/heartbeat/start", s.handleLPCHeartbeatStart)
 	s.mux.HandleFunc("POST /api/v1/lpc/heartbeat/stop", s.handleLPCHeartbeatStop)
 	s.mux.HandleFunc("GET /api/v1/lpc/{ski}/heartbeat", s.handleLPCHeartbeatStatus)
+	s.mux.HandleFunc("GET /api/v1/heartbeat", s.handleHeartbeatState)
+	s.mux.HandleFunc("PUT /api/v1/heartbeat", s.handleHeartbeatCadence)
 
 	s.mux.HandleFunc("GET /api/v1/lpp/{ski}/limit", s.handleLPPReadLimit)
 	s.mux.HandleFunc("PUT /api/v1/lpp/{ski}/limit", s.handleLPPWriteLimit)
@@ -170,6 +173,34 @@ func (s *Server) handleLPCNominalMax(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]float64{"value_w": value})
+}
+
+// heartbeatCadenceBody sets our heartbeat's cadence. interval_s may be left out: the
+// heartbeat then goes out 2 s before each timeout, as the stack sends it.
+type heartbeatCadenceBody struct {
+	TimeoutS  float64 `json:"timeout_s"`
+	IntervalS float64 `json:"interval_s"`
+}
+
+func (s *Server) handleHeartbeatState(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.stack.Heartbeat().State())
+}
+
+// handleHeartbeatCadence changes how often our heartbeat goes out and the timeout it
+// announces, e.g. {"timeout_s": 60, "interval_s": 60} as a VDE FNN control box sends it, and
+// {"timeout_s": 4} back to the stack's default.
+func (s *Server) handleHeartbeatCadence(w http.ResponseWriter, r *http.Request) {
+	var body heartbeatCadenceBody
+	if err := decodeBody(r, &body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request", "detail": err.Error()})
+		return
+	}
+	seconds := func(v float64) time.Duration { return time.Duration(v * float64(time.Second)) }
+	if err := s.stack.Heartbeat().SetCadence(seconds(body.IntervalS), seconds(body.TimeoutS)); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_cadence", "detail": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, s.stack.Heartbeat().State())
 }
 
 func (s *Server) handleLPCHeartbeatStart(w http.ResponseWriter, r *http.Request) {

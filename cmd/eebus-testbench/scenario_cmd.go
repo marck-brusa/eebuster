@@ -24,7 +24,7 @@ func defaultBaseURL() string {
 
 var scenarioValueFlags = map[string]bool{
 	"junit": true, "base-url": true, "html": true, "json": true, "csv": true, "csv-steps": true, "xlsx": true, "frames-log": true,
-	"peer": true, "tester": true, "notes": true, "use-case": true, "ids": true,
+	"peer": true, "tester": true, "notes": true, "use-case": true, "ids": true, "guideline": true,
 }
 
 // outputs are the report files a run command writes.
@@ -138,6 +138,7 @@ func runAllScenariosCmd(args []string) {
 	notes := fs.String("notes", "", "free text for the report")
 	useCases := fs.String("use-case", "", "only these use cases, comma-separated acronyms (LPC,MPC); Common selects the use-case independent checks")
 	ids := fs.String("ids", "", "only these test cases, comma-separated ids")
+	guidelines := fs.String("guideline", "", "only test cases citing these guidelines, comma-separated ids or labels (vde-fnn-steuerbox)")
 	readOnly := fs.Bool("read-only", false, "only test cases that do not change the device")
 	long := fs.Bool("include-long-running", false, "also run test cases that wait on specification timers (minutes each)")
 	frames := fs.Bool("include-frames", false, "embed the raw wire frames of the run in the report")
@@ -149,7 +150,7 @@ func runAllScenariosCmd(args []string) {
 	}
 	run, err := runLocal(*baseURL, dir, testrun.Request{
 		Peer: *peer, Tester: *tester, Notes: *notes, IncludeLongRunning: *long, IncludeFrames: *frames, IncludeUnadvertised: *unadvertised,
-		Selection: report.Selection{ReadOnly: *readOnly, UseCases: splitList(*useCases), IDs: splitList(*ids)},
+		Selection: report.Selection{ReadOnly: *readOnly, UseCases: splitList(*useCases), IDs: splitList(*ids), Guidelines: splitList(*guidelines)},
 	})
 	if errors.Is(err, testrun.ErrNothingSelected) {
 		fmt.Println("no test case matches the selection")

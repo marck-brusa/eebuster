@@ -196,6 +196,15 @@ jobs:
             -html sim/reports/complete.html -json sim/reports/complete.json -junit sim/reports/complete.junit.xml \
             -xlsx sim/reports/complete.xlsx -frames-log sim/reports/complete.frames.log || echo "complete run status is not passed (informational)"
 
+      # The test cases a VDE FNN control box relies on, long-running ones included: a heartbeat
+      # every 60 s and a connection lost for 125 s. Informational, like the complete run.
+      - name: VDE FNN control box selection (informational)
+        if: always()
+        run: |
+          ./eebus-testbench run-all scenarios -base-url http://127.0.0.1:8080 -tester CI -guideline vde-fnn-steuerbox -include-long-running \
+            -notes "test cases citing the VDE FNN control box guideline, against the built-in simulator" \
+            -html sim/reports/vde-fnn.html -json sim/reports/vde-fnn.json -junit sim/reports/vde-fnn.junit.xml || echo "VDE FNN run status is not passed (informational)"
+
       - name: Re-render a report from its HTML
         if: always()
         run: ./eebus-testbench report sim/reports/read-only.html -json sim/reports/read-only.rerendered.json

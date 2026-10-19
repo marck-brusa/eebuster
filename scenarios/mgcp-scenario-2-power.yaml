@@ -9,7 +9,7 @@ goal: "Proves a grid meter reports what the house exchanges with the grid."
 hint: "Skipped unless the device is a grid meter."
 category: MGCP
 risk: read-only
-spec: {use_case: MGCP, scenario: 2, test_case: ATC_SCE2_PT_GCPTotalActivePower_001, requirements: [MGCP-TS-002, MGCP-TS-010], verification: readback}
+spec: {use_case: MGCP, scenario: 2, test_case: ATC_SCE2_PT_GCPTotalActivePower_001, requirements: [MGCP-TS-002, MGCP-TS-010], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_047, EEBUS_048]}}
 requires:
   capabilities: [mgcp.read]
   use_cases: [monitoringOfGridConnectionPoint]

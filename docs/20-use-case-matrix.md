@@ -49,10 +49,11 @@ real vehicle.
 
 ## Scenario library
 
-100 test cases, grouped as the test runner and the report group them. *Sc.* is the
+103 test cases, grouped as the test runner and the report group them. *Sc.* is the
 scenario of the use case the test case checks; *Reference* names the abstract test case of the
 EEBUS High-Level Test Specification (LPC, LPP, MPC, MGCP) or the requirement ids of the use case
-specification. Every use case also has a `<acronym>-scenarios-advertised` test case that fails
+specification. Test cases that also check what a VDE FNN control box relies on cite its
+requirement ids; see [VDE FNN control box](#vde-fnn-control-box). Every use case also has a `<acronym>-scenarios-advertised` test case that fails
 when the device advertises the use case without a scenario the specification makes mandatory
 for it.
 
@@ -63,6 +64,7 @@ device state; those are skipped as not verifiable on the wire.
 | Use case | Test case | Sc. | Risk | Verification | Reference | Criterion |
 |---|---|---|---|---|---|---|
 | Common | `common-manufacturer-data` |  | read-only | readback |  | Device classification: brand or vendor, and a serial number. |
+| Common | `common-use-case-instances` |  | read-only | wire | VDE FNN EEBUS_072, 073, 087, 088 | VDE FNN control box: LPC, LPP, MPC and MGCP each offered by at most one entity. |
 | Common | `common-use-case-versions` |  | read-only | wire |  | Use-case discovery: every advertised use case states an actor and a version. |
 | Common | `conformance-window` |  | read-only | wire |  | Wire format of everything sent during discovery and reads (SHIP TS §11, SPINE TS §5). |
 | Common | `device-profile-discovery` |  | read-only | wire |  | Discovery: entities, features and advertised use cases. |
@@ -77,6 +79,7 @@ device state; those are skipped as not verifiable on the wire.
 | LPC | `lpc-failsafe-value-set` | 2 | live-control | readback | ATC_COM_PT_CSConnection_008 | LPC scenario 2: every configured failsafe limit and duration, written and read back. |
 | LPC | `lpc-failsafe-window` | 2 | read-only | readback |  | LPC failsafe: the announced minimum failsafe duration. |
 | LPC | `lpc-failsafe` | 2 | live-control | readback | ATC_COM_PT_CSConnection_008 | LPC failsafe: the failsafe power and duration, written and read back. |
+| LPC | `lpc-heartbeat-60s-interval` | 3 | disruptive | readback | LPC-TS-028, LPC-TS-037; VDE FNN EEBUS_013 | LPC scenario 3: a heartbeat every 60 s keeps the device out of its failsafe state. |
 | LPC | `lpc-heartbeat-continuity` | 3 | read-only | wire | ATC_COM_PT_CSHeartbeat_001 | LPC scenario 3: five device heartbeats in a row, no gap longer than 60 s. |
 | LPC | `lpc-heartbeat-timeout` | 3 | read-only | wire | ATC_COM_PT_CSHeartbeat_001 | LPC scenario 3: the heartbeat timeout the device announces. |
 | LPC | `lpc-limit-above-maximum` | 1 | live-control | readback | ATC_COM_PT_CSConnection_006 | LPC scenario 1: a limit above the device's maximum, accepted as sent or capped. |
@@ -85,6 +88,7 @@ device state; those are skipped as not verifiable on the wire.
 | LPC | `lpc-negative-limit` | 1 | live-control | readback | ATC_COM_PT_CSConnection_003 | LPC scenario 1: a negative consumption limit and a negative failsafe limit, both rejected. |
 | LPC | `lpc-nominal-max` | 4 | read-only | readback | ATC_COM_PT_CSUnlCntrl_003 | LPC: the device's declared maximum consumption. |
 | LPC | `lpc-read-current` | 1 | read-only | readback |  | LPC: the active consumption limit, read only. |
+| LPC | `lpc-reconnect-after-connection-loss` | 3 | disruptive | readback | ATC_COM_PT_CSTransition9_001 | LPC scenario 3: after 125 s without a connection, the device reconnects and accepts a limit and failsafe values. |
 | LPC | `lpc-release` | 1 | live-control | readback | ATC_COM_PT_CSTransition6_002 | LPC scenario 1: deactivating an active consumption limit. |
 | LPC | `lpc-scenarios-advertised` |  | read-only | wire |  | LPC: the advertised scenarios against the specification's mandatory scenarios. |
 | LPP | `lpp-basic-limit` | 1 | live-control | readback | ATC_COM_PT_CSConnection_007 | LPP scenario 1: a -1500 W production limit, written and read back. |
@@ -165,6 +169,37 @@ device state; those are skipped as not verifiable on the wire.
 
 Scenarios run through the REST API, the same path the dashboard uses.
 
+## VDE FNN control box
+
+In Germany a grid operator may limit a controllable consumer (§14a EnWG), such as a private
+charging point above 4.2 kW, through a control box (Steuerbox) behind the smart meter gateway. The VDE FNN
+Lastenheft Steuerbox V1.5 (Control Box Guideline) specifies that box; its Annex A is the
+EEBUS interface. There the box is the Energy Guard of LPC and LPP and the Monitoring Appliance
+of MPC and MGCP: the role this testbench plays. Its requirements bind the box, not the device,
+but they fix what a device meets in the field and what the box relies on:
+
+| What the box does or relies on | VDE FNN | Test cases |
+|---|---|---|
+| Heartbeat every 60 s; the device enters failsafe only after 120 s without one | EEBUS_013, STB_0415 | `lpc-heartbeat-60s-interval`, `lpc-failsafe-on-heartbeat-loss` |
+| The device's own heartbeat; no heartbeat for 120 s is a communication fault | EEBUS_014, EEBUS_015 | `lpc-heartbeat-timeout`, `lpc-heartbeat-continuity` |
+| After every connection setup: limit within 60 s, then the failsafe values; reconnection after a fault | EEBUS_008, EEBUS_023, EEBUS_037 | `lpc-reconnect-after-connection-loss` |
+| Every exchange within 10 s, else the link is faulty | STB_0425 | `lpc-basic-limit`, `lpc-reconnect-after-connection-loss` (writes wait 10 s for the answer) |
+| Limits in W, at least 1 % resolution, consumption at or above 0 W, production at or below 0 W | EEBUS_021, EEBUS_022, EEBUS_076, EEBUS_077, STB_0420 | `lpc-basic-limit`, `lpc-limit-value-set`, `lpc-negative-limit`, `lpp-basic-limit` |
+| A limit at the maximum is sent as "limit not active" | EEBUS_090 | `lpc-release` |
+| Reads the active limits, nominal maximums and failsafe values | EEBUS_029, EEBUS_030, EEBUS_033, EEBUS_084, EEBUS_085, STB_0421 | `lpc-read-current`, `lpc-nominal-max`, `lpc-failsafe`, `lpp-read-current`, `lpp-nominal-max`, `lpp-failsafe` |
+| Writes failsafe values with a duration of 2 h to 24 h | EEBUS_031, EEBUS_032, EEBUS_037 | `lpc-failsafe-value-set`, `lpc-failsafe-duration-range` |
+| Subscribes to and reads the total power | EEBUS_041, EEBUS_042, EEBUS_047, EEBUS_048 | `mpc-live-power`, `mpc-notification`, `mgcp-scenario-2-power` |
+| Marks values invalid when the device offers LPC, LPP or MPC more than once, MGCP other than once | EEBUS_072, EEBUS_073, EEBUS_087, EEBUS_088 | `common-use-case-instances` |
+
+Run them together with `run-all -guideline vde-fnn-steuerbox` (add `-include-long-running`
+for the two that take minutes), or pick *Test cases citing VDE FNN* in the test runner's filter.
+
+Not covered: the box's SHIP specifics -- TCP client role, TLS probing, brainpool curves, a new
+certificate over the SHIP "key material state" message (EEBUS_060, EEBUS_061, EEBUS_063) --
+which the vendored SHIP stack does not implement, and the box's mDNS identity (`cat=1`,
+`type=FNN control box`, `register=false`): the testbench announces itself as an energy
+management system.
+
 ## YAML format
 
 ```yaml
@@ -205,8 +240,11 @@ spec:                                   # what the test case checks, by identifi
   test_case: ATC_COM_PT_CSConnection_008
   requirements: [LPC-TS-016]
   verification: readback                # wire | readback | needs-device-probe
+  guidelines:                           # requirements of other documents it also checks
+    vde-fnn-steuerbox: [EEBUS_032]      # guideline id (internal/ucspec/guidelines.go): ids
 long_running: true                      # waits on specification timers; runs only when asked
 cleanup: true                           # runs last, also after a cancellation
+interrupts_connection: true             # takes the connection down; run checks leave it out
 requires:
   scenarios: [2]                        # skips when this optional/recommended scenario is not advertised
   vehicle: true                         # skips without a connected vehicle
@@ -315,6 +353,9 @@ before it counts.
     get: "/api/v1/mpc/{peer.ski}"
     values: {consumed: energy_consumed_wh}
 - scenarios_advertised: {use_case: OPEV}  # advertised scenarios against the specification table
+- use_case_instances:                   # at most this many entities advertise each use case
+    use_cases: [LPC, LPP, MPC, MGCP]
+    at_most: 1
 - conformance: {max_errors: 0}          # no conformance error in this test case's frames
 - wait_for:                             # repeat an assertion once a second until it holds
     get: "/api/v1/lpc/{peer.ski}/heartbeat"

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -23,28 +24,57 @@ type Spec struct {
 	Requirements []string `yaml:"requirements" json:"requirements,omitempty"`
 	TestCase     string   `yaml:"test_case" json:"test_case,omitempty"`
 	Verification string   `yaml:"verification" json:"verification,omitempty"`
+	// Guidelines cites the requirements of guidelines (ucspec.Guidelines) the test case also
+	// checks: guideline id -> requirement ids.
+	Guidelines map[string][]string `yaml:"guidelines" json:"-"`
 
 	// Filled from the use-case catalog, never from the file.
 	UseCaseTitle  string `yaml:"-" json:"use_case_title,omitempty"`
 	ScenarioTitle string `yaml:"-" json:"scenario_title,omitempty"`
 	DeviceLevel   string `yaml:"-" json:"device_level,omitempty"`
+	// References is Guidelines resolved against the guideline catalog, in catalog order.
+	References []Reference `yaml:"-" json:"references,omitempty"`
+}
+
+// Reference is the requirements of one guideline a test case cites.
+type Reference struct {
+	Guideline    string   `json:"guideline"`
+	Label        string   `json:"label"`
+	Document     string   `json:"document"`
+	Requirements []string `json:"requirements"`
+	// Sections are the distinct sections that state the requirements, in their order.
+	Sections []string `json:"sections"`
+}
+
+// Cites reports whether the spec cites the guideline, by id or label.
+func (s *Spec) Cites(guideline string) bool {
+	cites := false
+	if s != nil {
+		for _, ref := range s.References {
+			cites = cites || strings.EqualFold(ref.Guideline, guideline) || strings.EqualFold(ref.Label, guideline)
+		}
+	}
+	return cites
 }
 
 // fileSpec is the raw YAML shape of a scenario file.
 type fileSpec struct {
-	Name        string           `yaml:"name"`
-	Description string           `yaml:"description"`
-	Covers      string           `yaml:"covers"`
-	Goal        string           `yaml:"goal"`
-	Hint        string           `yaml:"hint"`
-	Category    string           `yaml:"category"`
-	Risk        string           `yaml:"risk"`
-	Spec        *Spec            `yaml:"spec"`
-	LongRunning bool             `yaml:"long_running"`
-	Cleanup     bool             `yaml:"cleanup"`
-	Requires    requirementsSpec `yaml:"requires"`
-	Peer        string           `yaml:"peer"`
-	Steps       []map[string]any `yaml:"steps"`
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+	Covers      string `yaml:"covers"`
+	Goal        string `yaml:"goal"`
+	Hint        string `yaml:"hint"`
+	Category    string `yaml:"category"`
+	Risk        string `yaml:"risk"`
+	Spec        *Spec  `yaml:"spec"`
+	LongRunning bool   `yaml:"long_running"`
+	Cleanup     bool   `yaml:"cleanup"`
+	// InterruptsConnection marks a test case that takes the connection down on purpose; the
+	// run's connection and heartbeat checks leave its time out.
+	InterruptsConnection bool             `yaml:"interrupts_connection"`
+	Requires             requirementsSpec `yaml:"requires"`
+	Peer                 string           `yaml:"peer"`
+	Steps                []map[string]any `yaml:"steps"`
 	// Finally runs after the steps whenever they started, also after a failure or a
 	// cancellation, to leave the device as the test found it.
 	Finally []map[string]any `yaml:"finally"`
@@ -101,10 +131,11 @@ type Meta struct {
 	Spec        *Spec          `json:"spec,omitempty"`
 	// UseCase is the acronym the test case is grouped under: spec.use_case, else the first
 	// required use case, else empty for the common group.
-	UseCase     string `json:"use_case,omitempty"`
-	LongRunning bool   `json:"long_running"`
-	Cleanup     bool   `json:"cleanup"`
-	Path        string `json:"-"`
+	UseCase              string `json:"use_case,omitempty"`
+	LongRunning          bool   `json:"long_running"`
+	Cleanup              bool   `json:"cleanup"`
+	InterruptsConnection bool   `json:"interrupts_connection,omitempty"`
+	Path                 string `json:"-"`
 }
 
 func (m Meta) newResult() ScenarioResult {
@@ -112,7 +143,7 @@ func (m Meta) newResult() ScenarioResult {
 		Name: m.Name, ID: m.ID, Status: StatusPassed, Steps: []StepResult{},
 		Description: m.Description, Category: m.Category, Risk: m.Risk, Requires: m.Requires,
 		Covers: m.Covers, Goal: m.Goal, Hint: m.Hint, Spec: m.Spec, UseCase: m.UseCase,
-		LongRunning: m.LongRunning, Cleanup: m.Cleanup,
+		LongRunning: m.LongRunning, Cleanup: m.Cleanup, InterruptsConnection: m.InterruptsConnection,
 	}
 }
 
@@ -150,7 +181,7 @@ func buildMeta(path string, f fileSpec) Meta {
 		ID: id, Name: name, Description: f.Description, Covers: f.Covers, Goal: f.Goal, Hint: f.Hint,
 		Category: f.Category, Risk: f.Risk, Requires: f.Requires.asMap(), StepCount: len(f.Steps),
 		Spec: spec, UseCase: groupOf(spec, f.Requires), LongRunning: f.LongRunning, Cleanup: f.Cleanup,
-		Path: path,
+		InterruptsConnection: f.InterruptsConnection, Path: path,
 	}
 }
 
@@ -171,7 +202,35 @@ func normalizeSpec(in *Spec) *Spec {
 				spec.DeviceLevel = string(s.Device)
 			}
 		}
+		spec.References = references(spec.Guidelines)
 		out = &spec
+	}
+	return out
+}
+
+// references resolves cited guidelines in catalog order. An unknown guideline or requirement
+// is kept as written, without a section; the library test rejects both.
+func references(cited map[string][]string) []Reference {
+	var out []Reference
+	resolved := map[string]bool{}
+	for _, g := range ucspec.Guidelines() {
+		for _, key := range sortedKeys(cited) {
+			if strings.EqualFold(key, g.ID) || strings.EqualFold(key, g.Label) {
+				resolved[key] = true
+				ref := Reference{Guideline: g.ID, Label: g.Label, Document: g.Title, Requirements: cited[key], Sections: []string{}}
+				for _, requirement := range cited[key] {
+					if section, ok := g.Section(requirement); ok && !slices.Contains(ref.Sections, section) {
+						ref.Sections = append(ref.Sections, section)
+					}
+				}
+				out = append(out, ref)
+			}
+		}
+	}
+	for _, key := range sortedKeys(cited) {
+		if !resolved[key] {
+			out = append(out, Reference{Guideline: key, Label: key, Document: key, Requirements: cited[key], Sections: []string{}})
+		}
 	}
 	return out
 }

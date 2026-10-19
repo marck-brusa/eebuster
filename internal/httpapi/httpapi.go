@@ -211,6 +211,7 @@ var capabilities = map[string]bool{
 	"ohpcf.read": true, "evsecc.read": true,
 	"peer.subscriptions": true,
 	"heartbeat":          true,
+	"heartbeat.cadence":  true,
 	"approve_deny":       false,
 	"multi_peer":         true,
 	"pairing_approval":   true,

@@ -87,3 +87,27 @@ func TestOrderPutsUnknownLast(t *testing.T) {
 		t.Errorf("Order(unknown) = %d, want %d", Order("unknown"), len(All()))
 	}
 }
+
+func TestGuidelineLookupAndSections(t *testing.T) {
+	for _, key := range []string{"vde-fnn-steuerbox", "VDE FNN", "vde fnn"} {
+		g, ok := LookupGuideline(key)
+		if !ok || g.ID != "vde-fnn-steuerbox" {
+			t.Errorf("LookupGuideline(%q) = %+v, %v", key, g, ok)
+		}
+	}
+	if _, ok := LookupGuideline("nonexistent"); ok {
+		t.Error("LookupGuideline(nonexistent) found something")
+	}
+	g, _ := LookupGuideline("VDE FNN")
+	if section, ok := g.Section("EEBUS_013"); !ok || section != "A.5.1.2" {
+		t.Errorf("EEBUS_013 is in section %q, %v", section, ok)
+	}
+	if _, ok := g.Section("EEBUS_005"); ok {
+		t.Error("EEBUS_005 has no text in V1.5 and must not be citable")
+	}
+	for _, guideline := range Guidelines() {
+		if guideline.ID == "" || guideline.Label == "" || guideline.Title == "" || len(guideline.Sections) == 0 {
+			t.Errorf("guideline incomplete: %+v", guideline)
+		}
+	}
+}

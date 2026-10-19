@@ -68,10 +68,12 @@ type Run struct {
 
 // Selection is which test cases a run was asked to execute. Empty lists mean no restriction.
 type Selection struct {
-	ReadOnly           bool     `json:"read_only,omitempty"`
-	UseCases           []string `json:"use_cases,omitempty"`
-	Risks              []string `json:"risks,omitempty"`
-	IDs                []string `json:"ids,omitempty"`
+	ReadOnly bool     `json:"read_only,omitempty"`
+	UseCases []string `json:"use_cases,omitempty"`
+	Risks    []string `json:"risks,omitempty"`
+	IDs      []string `json:"ids,omitempty"`
+	// Guidelines keeps the test cases that cite one of these guidelines, by id or label.
+	Guidelines         []string `json:"guidelines,omitempty"`
 	IncludeLongRunning bool     `json:"include_long_running,omitempty"`
 	IncludeFrames      bool     `json:"include_frames,omitempty"`
 	// IncludeUnadvertised keeps the test cases of use cases the device does not advertise.
@@ -93,6 +95,9 @@ func (s Selection) Describe() string {
 	}
 	if len(s.Risks) > 0 {
 		parts = append(parts, "risk "+strings.Join(s.Risks, ", "))
+	}
+	if len(s.Guidelines) > 0 {
+		parts = append(parts, "test cases citing "+strings.Join(s.Guidelines, ", "))
 	}
 	text := "complete library"
 	if len(parts) > 0 {

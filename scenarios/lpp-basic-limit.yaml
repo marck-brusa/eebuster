@@ -10,7 +10,7 @@ goal: "Proves a producer accepts a feed-in limit."
 hint: "Skipped on a pure consumer. Changes the device's feed-in while it runs."
 category: LPP
 risk: live-control
-spec: {use_case: LPP, scenario: 1, test_case: ATC_COM_PT_CSConnection_007, requirements: [LPP-TS-001, LPP-TS-035], verification: readback}
+spec: {use_case: LPP, scenario: 1, test_case: ATC_COM_PT_CSConnection_007, requirements: [LPP-TS-001, LPP-TS-035], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_076, EEBUS_077]}}
 requires:
   capabilities: [lpp.write, lpp.read, heartbeat]
   use_cases: [limitationOfPowerProduction]

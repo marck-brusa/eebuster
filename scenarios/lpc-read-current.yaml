@@ -4,7 +4,7 @@ covers: "LPC: the active consumption limit, read only."
 goal: "Shows the limit state without changing anything."
 category: LPC
 risk: read-only
-spec: {use_case: LPC, scenario: 1, verification: readback}
+spec: {use_case: LPC, scenario: 1, verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_029, STB_0421]}}
 requires:
   capabilities: [lpc.read]
   use_cases: [limitationOfPowerConsumption]

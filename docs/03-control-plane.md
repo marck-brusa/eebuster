@@ -161,6 +161,8 @@ All endpoints are under `/api/v1`.
 | POST | `/lpc/heartbeat/start` | Start heartbeat |
 | POST | `/lpc/heartbeat/stop` | Stop heartbeat |
 | GET | `/lpc/{ski}/heartbeat` | Heartbeat state and the device's announced `heartbeat_timeout_s` |
+| GET | `/heartbeat` | Our heartbeat, shared by every use case: `running`, `interval_s`, `timeout_s`, `paced`, `last_sent` |
+| PUT | `/heartbeat` | Heartbeat cadence: `{"timeout_s": 60, "interval_s": 60}` as a VDE FNN control box sends it, `{"timeout_s": 4}` back to the default (sent 2 s before each timeout when `interval_s` is left out). `400 bad_cadence` outside 1 s to 1 h |
 | GET/PUT | `/lpp/{ski}/limit` | Production limit |
 | GET/PUT | `/lpp/{ski}/failsafe` | Production failsafe value and duration |
 | GET | `/lpp/{ski}/nominal-max` | Declared maximum production |
@@ -205,7 +207,7 @@ needed.
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/runs` | Start a run. Body: `peer`, `selection` (`read_only`, `use_cases`, `risks`, `ids`), `include_long_running`, `include_frames`, `tester`, `notes`. `202` with `run_id`; `409 run_in_progress`; `422 nothing_selected` |
+| POST | `/runs` | Start a run. Body: `peer`, `selection` (`read_only`, `use_cases`, `risks`, `ids`, `guidelines`), `include_long_running`, `include_frames`, `tester`, `notes`. `202` with `run_id`; `409 run_in_progress`; `422 nothing_selected` |
 | GET | `/runs` | The run files in the reports folder, newest first, the active run id and the folder |
 | GET | `/runs/{id}` | The run record; partial while it runs |
 | POST | `/runs/{id}/cancel` | Stop after the current step; cleanup still runs |

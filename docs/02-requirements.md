@@ -37,7 +37,8 @@ The primary adapter provides typed operations for:
   - active limit read/write/release;
   - failsafe value and minimum duration read/write;
   - nominal maximum;
-  - heartbeat start/stop/state.
+  - heartbeat start/stop/state, and its interval and announced timeout (a VDE FNN control
+    box sends every 60 s).
 - Limitation of Power Production (LPP)
   - active limit read/write/release.
 - Monitoring of Power Consumption (MPC)
@@ -122,6 +123,9 @@ The implemented step verbs are:
   a refusal
 - `assert`
 - `expect_event`
+- `capture`, `for_each`, `wait_for`, `skip_unless`, `scenarios_advertised`,
+  `use_case_instances`, `limit_descriptions`, `device_heartbeats`, `conformance` -- see
+  `20-use-case-matrix.md`
 
 Assertions support nested fields (numeric path segments index arrays, e.g.
 `ev.vehicles.0.power_w`) and:

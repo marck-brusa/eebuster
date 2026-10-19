@@ -181,6 +181,9 @@ func Select(metas []scenario.Meta, sel report.Selection) []scenario.Meta {
 		if len(risks) > 0 {
 			include = include && risks[meta.Risk]
 		}
+		if len(sel.Guidelines) > 0 {
+			include = include && citesAny(meta.Spec, sel.Guidelines)
+		}
 		if include {
 			chosen = append(chosen, meta)
 			changesDevice = changesDevice || meta.Risk != "read-only"
@@ -193,6 +196,14 @@ func Select(metas []scenario.Meta, sel report.Selection) []scenario.Meta {
 	}
 	scenario.Order(chosen)
 	return chosen
+}
+
+func citesAny(spec *scenario.Spec, guidelines []string) bool {
+	cites := false
+	for _, g := range guidelines {
+		cites = cites || spec.Cites(strings.TrimSpace(g))
+	}
+	return cites
 }
 
 func groupKey(meta scenario.Meta) string {

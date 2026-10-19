@@ -11,7 +11,7 @@ goal: "Proves the device accepts its failsafe values across the specified range.
 hint: "Restores the failsafe values the device had before."
 category: LPC
 risk: live-control
-spec: {use_case: LPC, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPC-TS-011/1, LPC-TS-013/1, LPC-TS-015, LPC-TS-016, LPC-TS-038], verification: readback}
+spec: {use_case: LPC, scenario: 2, test_case: ATC_COM_PT_CSConnection_008, requirements: [LPC-TS-011/1, LPC-TS-013/1, LPC-TS-015, LPC-TS-016, LPC-TS-038], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_031, EEBUS_032, EEBUS_033, EEBUS_037]}}
 requires:
   capabilities: [lpc.failsafe]
   use_cases: [limitationOfPowerConsumption]

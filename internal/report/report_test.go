@@ -279,3 +279,31 @@ func TestSpliceLastReplacesTheLastOccurrence(t *testing.T) {
 		t.Errorf("decode after notes with placeholder names: %v %v", err, decoded)
 	}
 }
+
+func TestGuidelineReferencesInEveryFormat(t *testing.T) {
+	r := fixtureRun()
+	r.TestCases[0].Spec.References = []scenario.Reference{{
+		Guideline: "vde-fnn-steuerbox", Label: "VDE FNN", Document: "VDE FNN Lastenheft Steuerbox V1.5",
+		Requirements: []string{"EEBUS_021", "EEBUS_029"}, Sections: []string{"A.5.1.3"},
+	}}
+	if line := specLine(r.TestCases[0].Spec); !strings.HasSuffix(line, " · VDE FNN EEBUS_021, EEBUS_029") {
+		t.Errorf("spec line %q", line)
+	}
+	facts := map[string]string{}
+	for _, f := range specFacts(r.TestCases[0].Spec) {
+		facts[f.Key] = f.Value
+	}
+	if facts["Guideline"] != "VDE FNN Lastenheft Steuerbox V1.5, section A.5.1.3" || facts["VDE FNN requirements"] != "EEBUS_021, EEBUS_029" {
+		t.Errorf("facts %v", facts)
+	}
+	page, _ := HTML(r)
+	out, _ := CSV(r, "cases")
+	for name, text := range map[string]string{"HTML": string(page), "CSV": string(out)} {
+		if !strings.Contains(text, "VDE FNN EEBUS_021") {
+			t.Errorf("%s lacks the guideline requirements", name)
+		}
+	}
+	if referenceText(nil) != "" || referenceText(r.TestCases[1].Spec) != "" {
+		t.Error("a test case without references has guideline text")
+	}
+}
