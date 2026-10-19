@@ -13,9 +13,9 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           # Must match the toolchain line in go.mod. Vendored builds are strict about this.
           go-version-file: go.mod
@@ -142,9 +142,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: false
@@ -209,7 +209,7 @@ jobs:
         if: always()
         run: ./eebus-testbench report sim/reports/read-only.html -json sim/reports/read-only.rerendered.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: simulator-reports
@@ -218,7 +218,7 @@ jobs:
             sim/serve.log
 
       # The binary this job tested, for trying a branch without a release.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: eebus-testbench-linux-amd64-ci
