@@ -71,6 +71,8 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
+          # Its go.mod may ask for a newer Go than ours; setup-go sets GOTOOLCHAIN=local.
+          GOTOOLCHAIN: auto
           EEBUSTRACER_REPO: https://github.com/uhl/EEBusTracer.git
           EEBUSTRACER_COMMIT: e7cdb4a # v0.7.0
         run: |
