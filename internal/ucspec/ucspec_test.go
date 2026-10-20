@@ -111,3 +111,13 @@ func TestGuidelineLookupAndSections(t *testing.T) {
 		}
 	}
 }
+
+func TestBk6GuidelineCitesAnlage1Clauses(t *testing.T) {
+	g, ok := LookupGuideline("bk6-22-300")
+	if !ok || g.Label != "BNetzA BK6-22-300" {
+		t.Fatalf("LookupGuideline(bk6-22-300) = %+v, %v", g, ok)
+	}
+	if section, ok := g.Section("4.6"); !ok || section != "4.6" {
+		t.Errorf("clause 4.6 is in section %q, %v", section, ok)
+	}
+}

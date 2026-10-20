@@ -49,7 +49,7 @@ real vehicle.
 
 ## Scenario library
 
-103 test cases, grouped as the test runner and the report group them. *Sc.* is the
+106 test cases, grouped as the test runner and the report group them. *Sc.* is the
 scenario of the use case the test case checks; *Reference* names the abstract test case of the
 EEBUS High-Level Test Specification (LPC, LPP, MPC, MGCP) or the requirement ids of the use case
 specification. Test cases that also check what a VDE FNN control box relies on cite its
@@ -84,9 +84,12 @@ device state; those are skipped as not verifiable on the wire.
 | LPC | `lpc-heartbeat-timeout` | 3 | read-only | wire | ATC_COM_PT_CSHeartbeat_001 | LPC scenario 3: the heartbeat timeout the device announces. |
 | LPC | `lpc-limit-above-maximum` | 1 | live-control | readback | ATC_COM_PT_CSConnection_006 | LPC scenario 1: a limit above the device's maximum, accepted as sent or capped. |
 | LPC | `lpc-limit-expiry` | 1 | live-control | readback | ATC_COM_PT_CSTransition6_001 | LPC: a 5 s limit that has to end by itself. |
+| LPC | `lpc-limit-below-device-minimum` | 1 | disruptive | readback | LPC-TS-035/3; BNetzA BK6-22-300 4.6 | LPC scenario 1: a limit below the device's minimum control power leads to the next lower value, a pause. |
+| LPC | `lpc-limit-obeyed` | 1 | live-control | readback | LPC-TS-035, LPC-TS-035/3; BNetzA BK6-22-300 4.2, 4.5.1 | LPC scenario 1: the measured consumption follows a 4.2 kW limit. |
 | LPC | `lpc-limit-value-set` | 1 | live-control | readback | ATC_COM_PT_CSConnection_007 | LPC scenario 1: every configured consumption limit, written and read back, without and with a duration. |
 | LPC | `lpc-negative-limit` | 1 | live-control | readback | ATC_COM_PT_CSConnection_003 | LPC scenario 1: a negative consumption limit and a negative failsafe limit, both rejected. |
 | LPC | `lpc-nominal-max` | 4 | read-only | readback | ATC_COM_PT_CSUnlCntrl_003 | LPC: the device's declared maximum consumption. |
+| LPC | `lpc-precedence-over-opev` | 1 | live-control | readback | LPC-TS-035; BNetzA BK6-22-300 4.6 | LPC scenario 1 with OPEV: a 4.2 kW limit holds against a looser OPEV obligation. |
 | LPC | `lpc-read-current` | 1 | read-only | readback |  | LPC: the active consumption limit, read only. |
 | LPC | `lpc-reconnect-after-connection-loss` | 3 | disruptive | readback | ATC_COM_PT_CSTransition9_001 | LPC scenario 3: after 125 s without a connection, the device reconnects and accepts a limit and failsafe values. |
 | LPC | `lpc-release` | 1 | live-control | readback | ATC_COM_PT_CSTransition6_002 | LPC scenario 1: deactivating an active consumption limit. |

@@ -1,0 +1,40 @@
+name: lpc-limit-below-device-minimum
+description: >
+  While a vehicle charges, writes a consumption limit of 1 kW, below the power a charging device
+  holds while it charges. LPC lets a device that does not apply a limit only reject it, for
+  self-protection, safety or regulation; BK6-22-300 asks a device that cannot reduce its power to
+  the value it is given for the next lower value it can, which for a charger is a pause. The power
+  reported over MPC must come down to 1 kW, with 5 % for the measurement, within 60 s. The device
+  parameter minimum_power_w is deliberately not applied.
+covers: "LPC scenario 1: a limit below the device's minimum control power leads to the next lower value, a pause."
+goal: "Proves a limit the device cannot meet exactly is met by going lower, not by holding a higher minimum."
+hint: "Needs a vehicle charging; the vehicle pauses for up to a minute."
+category: LPC
+risk: disruptive
+spec: {use_case: LPC, scenario: 1, requirements: [LPC-TS-035/3], verification: readback, guidelines: {bk6-22-300: ["4.6"]}}
+requires:
+  charging: true
+  capabilities: [lpc.write, mpc.read]
+  use_cases: [limitationOfPowerConsumption, monitoringOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - skip_unless:
+      get: "/api/v1/mpc/{peer.ski}"
+      timeout: 30s
+      greater_than: {power_w: 2000}
+      reason: "the device draws 2 kW or less, so a 1 kW limit would show no reaction"
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      body: {value_w: 1000, is_active: true, is_changeable: true}
+  - wait_for:
+      get: "/api/v1/mpc/{peer.ski}"
+      timeout: 60s
+      less_or_equal: {power_w: 1050}
+finally:
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release

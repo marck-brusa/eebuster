@@ -1,0 +1,49 @@
+name: lpc-precedence-over-opev
+description: >
+  While a vehicle charges above 5 kW, an OPEV obligation of 16 A per phase and a consumption limit
+  of 4.2 kW are in force together. A grid operator's limit takes precedence over other control
+  where it is lower (BK6-22-300), so the power reported over MPC must come down to 4.2 kW, with 5 %
+  for the measurement, within 60 s although the OPEV obligation allows more.
+covers: "LPC scenario 1 with OPEV: a 4.2 kW limit holds against a looser OPEV obligation."
+goal: "Proves another energy manager's obligation cannot lift a grid operator's limit."
+hint: "Needs a vehicle charging above 5 kW that takes OPEV obligations."
+category: LPC
+risk: live-control
+spec: {use_case: LPC, scenario: 1, requirements: [LPC-TS-035], verification: readback, guidelines: {bk6-22-300: ["4.6"]}}
+requires:
+  vehicle: true
+  charging: true
+  capabilities: [lpc.write, opev.write, mpc.read]
+  use_cases: [limitationOfPowerConsumption, monitoringOfPowerConsumption, overloadProtectionByEvChargingCurrentCurtailment]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # One heartbeat serves LPC and OPEV; the device evaluates writes only once it arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  - skip_unless:
+      get: "/api/v1/mpc/{peer.ski}"
+      timeout: 30s
+      greater_than: {power_w: 5000}
+      reason: "the device draws 5 kW or less, so a 4.2 kW limit would show no reaction"
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 16, is_active: true}
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      body: {value_w: 4200, is_active: true, is_changeable: true}
+  - wait_for:
+      get: "/api/v1/mpc/{peer.ski}"
+      timeout: 60s
+      less_or_equal: {power_w: 4410}
+finally:
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release
+  - put:
+      path: "/api/v1/opev/{peer.ski}/limits"
+      body:
+        limits:
+          - {phase: each, value_a: 16, is_active: false}

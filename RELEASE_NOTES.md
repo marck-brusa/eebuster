@@ -1,5 +1,20 @@
 # Release notes
 
+## 1.0.0-rc17
+
+Three new LPC test cases measure what a device does with a limit, not only that it stores it.
+Their source is the § 14a EnWG decision of the Bundesnetzagentur, BK6-22-300 Anlage 1, now a
+citable guideline (`guidelines: {bk6-22-300: [...]}`, `-guideline bk6-22-300`).
+
+- **`lpc-limit-obeyed`** (new): while a vehicle charges above 5 kW, a 4.2 kW limit must bring the
+  power read over MPC down to it, within 5 %, in 60 s, and the vehicle keeps charging. The step
+  duration records how long the device took (LPC-TS-035; BK6-22-300 4.2, 4.5.1).
+- **`lpc-limit-below-device-minimum`** (new): a 1 kW limit, below the power a charger holds while
+  charging, must bring the power down to 1 kW: the next lower value a device can reach is a
+  pause (LPC-TS-035/3; BK6-22-300 4.6). The device parameter `minimum_power_w` is not applied.
+- **`lpc-precedence-over-opev`** (new): a 16 A OPEV obligation and a 4.2 kW limit together must
+  bring the power down to 4.2 kW (LPC-TS-035; BK6-22-300 4.6).
+
 ## 1.0.0-rc16
 
 Test cases for what a VDE FNN control box (Lastenheft Steuerbox V1.5, Annex A) does and

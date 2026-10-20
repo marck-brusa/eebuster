@@ -57,6 +57,12 @@ var guidelines = []Guideline{
 			"EEBUS_068": "A.7.4", "EEBUS_069": "A.7.4",
 		},
 	},
+	{
+		ID: "bk6-22-300", Label: "BNetzA BK6-22-300",
+		Title: "BNetzA BK6-22-300, Anlage 1: Festlegung zur netzorientierten Steuerung nach § 14a EnWG (27.11.2023)",
+		// The clauses of Anlage 1 a controllable consumer meets; the clause number is the requirement id.
+		Sections: map[string]string{"4.2": "4.2", "4.4": "4.4", "4.5.1": "4.5.1", "4.6": "4.6"},
+	},
 }
 
 // Guidelines returns every guideline in catalog order.

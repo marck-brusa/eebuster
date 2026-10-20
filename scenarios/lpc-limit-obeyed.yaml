@@ -1,0 +1,44 @@
+name: lpc-limit-obeyed
+description: >
+  While a vehicle charges above 5 kW, writes a consumption limit of 4.2 kW, the least a grid
+  operator leaves a directly controlled charging point under § 14a EnWG, and requires the power
+  the device reports over MPC to come down to it, with 5 % for the measurement, while the
+  vehicle keeps charging. The other LPC test cases read the limit back; this one measures it. LPC
+  sets no time to reach a limit and BK6-22-300 asks for it without undue delay, so the test
+  allows 60 s for a device that publishes its measurements periodically; the step's duration in
+  the report is the time the device took.
+covers: "LPC scenario 1: the measured consumption follows a 4.2 kW limit."
+goal: "Proves the device reduces its power to a grid operator's limit, not only stores the limit."
+hint: "Needs a vehicle charging above 5 kW."
+category: LPC
+risk: live-control
+spec: {use_case: LPC, scenario: 1, requirements: [LPC-TS-035, LPC-TS-035/3], verification: readback, guidelines: {bk6-22-300: ["4.2", "4.5.1"]}}
+requires:
+  charging: true
+  capabilities: [lpc.write, mpc.read]
+  use_cases: [limitationOfPowerConsumption, monitoringOfPowerConsumption]
+peer: device-under-test
+steps:
+  - wait_connected: {timeout: 30s}
+  # The device evaluates writes only once the energy guard's heartbeat arrives.
+  - call: {method: eg-lpc/StartHeartbeat}
+  - sleep: 2
+  # Only a device that draws more than the limit can show that it follows it.
+  - skip_unless:
+      get: "/api/v1/mpc/{peer.ski}"
+      timeout: 30s
+      greater_than: {power_w: 5000}
+      reason: "the device draws 5 kW or less, so a 4.2 kW limit would show no reaction"
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      body: {value_w: 4200, is_active: true, is_changeable: true}
+  - expect_event: {event: eg-lpc-DataUpdateLimit, within: 10s}
+  - wait_for:
+      get: "/api/v1/mpc/{peer.ski}"
+      timeout: 60s
+      less_or_equal: {power_w: 4410}
+      greater_than: {power_w: 0}
+finally:
+  - put:
+      path: "/api/v1/lpc/{peer.ski}/limit"
+      template: lpc.limit.release
