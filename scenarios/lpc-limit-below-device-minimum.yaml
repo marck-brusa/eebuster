@@ -27,9 +27,10 @@ steps:
       timeout: 30s
       greater_than: {power_w: 2000}
       reason: "the device draws 2 kW or less, so a 1 kW limit would show no reaction"
+  # Without delete_duration the device keeps the duration it holds, possibly an expired one.
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"
-      body: {value_w: 1000, is_active: true, is_changeable: true}
+      body: {value_w: 1000, is_active: true, is_changeable: true, delete_duration: true}
   - wait_for:
       get: "/api/v1/mpc/{peer.ski}"
       timeout: 60s

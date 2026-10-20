@@ -31,9 +31,10 @@ steps:
       body:
         limits:
           - {phase: each, value_a: 16, is_active: true}
+  # Without delete_duration the device keeps the duration it holds, possibly an expired one.
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"
-      body: {value_w: 4200, is_active: true, is_changeable: true}
+      body: {value_w: 4200, is_active: true, is_changeable: true, delete_duration: true}
   - wait_for:
       get: "/api/v1/mpc/{peer.ski}"
       timeout: 60s

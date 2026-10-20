@@ -1,5 +1,12 @@
 # Release notes
 
+## 1.0.0-rc18
+
+- **The new LPC test cases write a limit without a duration.** A write that leaves the
+  duration out keeps the one the device holds, and after `lpc-limit-expiry` that is an expired
+  one: `lpc-limit-obeyed` sent a limit the device dropped at once. `lpc-limit-obeyed`,
+  `lpc-limit-below-device-minimum` and `lpc-precedence-over-opev` now send `delete_duration`.
+
 ## 1.0.0-rc17
 
 Three new LPC test cases measure what a device does with a limit, not only that it stores it.
