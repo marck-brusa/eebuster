@@ -3,17 +3,18 @@ description: >
   While a vehicle charges, writes a consumption limit of 1 kW, below the power a charging device
   holds while it charges. LPC lets a device that does not apply a limit only reject it, for
   self-protection, safety or regulation; BK6-22-300 asks a device that cannot reduce its power to
-  the value it is given for the next lower value it can, which for a charger is a pause. The power
-  reported over MPC must come down to 1 kW, with 5 % for the measurement, within 60 s. The device
-  parameter minimum_power_w is deliberately not applied.
-covers: "LPC scenario 1: a limit below the device's minimum control power leads to the next lower value, a pause."
-goal: "Proves a limit the device cannot meet exactly is met by going lower, not by holding a higher minimum."
-hint: "Needs a vehicle charging; the vehicle pauses for up to a minute."
+  the value it is given for the next lower value it can. The power reported over MPC must come
+  down within 60 s to 1 kW, with 5 % for the measurement, or to the lowest consumption the device
+  holds while it charges: the device parameter minimum_power_w, 0 unless configured for the peer.
+covers: "LPC scenario 1: a limit below the device's minimum control power leads to the lowest value it can hold."
+goal: "Proves a limit the device cannot meet exactly brings it down to the lowest consumption it can hold."
+hint: "Needs a vehicle charging; set minimum_power_w for a device that holds a minimum consumption while it charges."
 category: LPC
 risk: disruptive
 spec: {use_case: LPC, scenario: 1, requirements: [LPC-TS-035/3], verification: readback, guidelines: {bk6-22-300: ["4.6"]}}
 requires:
   charging: true
+  parameters: [minimum_power_w]
   capabilities: [lpc.write, mpc.read]
   use_cases: [limitationOfPowerConsumption, monitoringOfPowerConsumption]
 peer: device-under-test
@@ -34,7 +35,7 @@ steps:
   - wait_for:
       get: "/api/v1/mpc/{peer.ski}"
       timeout: 60s
-      less_or_equal: {power_w: 1050}
+      less_or_equal_larger_of: {power_w: [1050, "{params.minimum_power_w}"]}
 finally:
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"

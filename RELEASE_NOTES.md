@@ -1,5 +1,12 @@
 # Release notes
 
+## 1.0.0-rc19
+
+- **`lpc-limit-below-device-minimum` accepts the device's lowest consumption while charging.**
+  The power must come down to the limit or to `minimum_power_w`, whichever is larger, as in
+  `lpc-failsafe-on-heartbeat-loss`. It expected a pause before, which a device whose vehicle
+  cannot be paused by the charging station never reaches.
+
 ## 1.0.0-rc18
 
 - **The new LPC test cases write a limit without a duration.** A write that leaves the
