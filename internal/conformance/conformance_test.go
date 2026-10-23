@@ -157,6 +157,25 @@ func TestSessionCorrelatesUnitsAcrossMessages(t *testing.T) {
 	}
 }
 
+// Measurement ids are per feature: an EVSE's total power in W and an EV's phase current in A
+// may both be measurement 1, and 10450 W is not 10450 A.
+func TestSessionKeepsUnitsPerFeature(t *testing.T) {
+	session := NewSession()
+	onFeature := func(cmd string, feature, counter int) []byte {
+		frame := strings.Replace(string(wrap(cmd)), `{"feature":6}`, fmt.Sprintf(`{"feature":%d}`, feature), 1)
+		return []byte(strings.Replace(frame, `{"msgCounter":42}`, fmt.Sprintf(`{"msgCounter":%d}`, counter), 1))
+	}
+	session.Check("recv", onFeature(`{"measurementDescriptionListData":[{"measurementDescriptionData":[[{"measurementId":1},{"unit":"W"}]]}]}`, 6, 50))
+	session.Check("recv", onFeature(`{"measurementDescriptionListData":[{"measurementDescriptionData":[[{"measurementId":1},{"unit":"A"}]]}]}`, 7, 51))
+	total := `{"measurementListData":[{"measurementData":[[{"measurementId":1},{"value":[{"number":10450},{"scale":0}]}]]}]}`
+	if f := session.Check("recv", onFeature(total, 6, 52)); len(f) != 0 {
+		t.Fatalf("10450 W on the power feature reported findings: %v", rules(f))
+	}
+	if f := session.Check("recv", onFeature(total, 7, 53)); !hasRule(f, "value-magnitude") {
+		t.Fatalf("expected value-magnitude for 10450 A, got %v", rules(f))
+	}
+}
+
 func TestSessionMsgCounterDuplicates(t *testing.T) {
 	session := NewSession()
 	withCounter := func(n int) []byte {

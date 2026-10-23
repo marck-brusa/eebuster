@@ -10,9 +10,10 @@ import (
 // only become visible across messages:
 //
 //   - value plausibility: a measurement value is only interpretable against the unit the
-//     device itself declared in measurementDescriptionListData. Correlating the two catches
-//     the classic scale fault where a milli-unit is encoded with scale 0, so a 16 A phase
-//     current leaves the device as 16000 A.
+//     device itself declared in measurementDescriptionListData, on the same feature: ids are
+//     per feature, so an EVSE's measurement 1 in W and an EV's measurement 1 in A are two
+//     measurements. Correlating the two catches the classic scale fault where a milli-unit is
+//     encoded with scale 0, so a 16 A phase current leaves the device as 16000 A.
 //   - msgCounter uniqueness per direction. Strict monotonicity would be wrong: senders
 //     allocate the counter when they build a message, and heavy replies (detailed discovery)
 //     legitimately leave later than messages numbered after them. Reuse of a counter is the
@@ -21,12 +22,18 @@ import (
 // A Session is per peer (SKI). It is safe for concurrent use.
 type Session struct {
 	mu       sync.Mutex
-	units    map[float64]string        // measurementId -> unit, as declared by the peer
+	units    map[unitKey]string        // measurement -> unit, as declared by the peer
 	counters map[string]*counterWindow // direction -> recently seen msgCounters
 }
 
+// unitKey names one measurement: the feature that declared it and its measurementId there.
+type unitKey struct {
+	feature string
+	id      float64
+}
+
 func NewSession() *Session {
-	return &Session{units: map[float64]string{}, counters: map[string]*counterWindow{}}
+	return &Session{units: map[unitKey]string{}, counters: map[string]*counterWindow{}}
 }
 
 // counterWindow remembers the last counterWindowSize msgCounters per direction, enough to
@@ -109,28 +116,30 @@ func (s *Session) Check(dir string, payload []byte) []Finding {
 		}
 	}
 
+	source := fmt.Sprint(dig(datagram, "header", "addressSource"))
 	cmd := dig(datagram, "payload", "cmd")
 	for _, one := range elementList(cmd) {
-		s.learnUnits(one)
-		findings = append(findings, s.checkMeasurements(one)...)
+		s.learnUnits(one, source)
+		findings = append(findings, s.checkMeasurements(one, source)...)
 	}
 	return findings
 }
 
-// learnUnits remembers the unit each measurementId was declared with. The declaration and the
-// values usually arrive in separate messages (description read vs. data notifications).
-func (s *Session) learnUnits(cmd map[string]any) {
+// learnUnits remembers the unit each measurementId of the feature at source was declared with.
+// The declaration and the values usually arrive in separate messages (description read vs. data
+// notifications).
+func (s *Session) learnUnits(cmd map[string]any, source string) {
 	descriptions := dig(cmd, "measurementDescriptionListData", "measurementDescriptionData")
 	for _, entry := range elementList(descriptions) {
 		id, okID := entry["measurementId"].(float64)
 		unit, okUnit := entry["unit"].(string)
 		if okID && okUnit {
-			s.units[id] = unit
+			s.units[unitKey{feature: source, id: id}] = unit
 		}
 	}
 }
 
-func (s *Session) checkMeasurements(cmd map[string]any) []Finding {
+func (s *Session) checkMeasurements(cmd map[string]any, source string) []Finding {
 	var findings []Finding
 	data := dig(cmd, "measurementListData", "measurementData")
 	for _, entry := range elementList(data) {
@@ -139,7 +148,7 @@ func (s *Session) checkMeasurements(cmd map[string]any) []Finding {
 		if !okID || !okValue {
 			continue
 		}
-		unit, declared := s.units[id]
+		unit, declared := s.units[unitKey{feature: source, id: id}]
 		if !declared {
 			continue
 		}
