@@ -6,6 +6,10 @@
   The power must come down to the limit or to `minimum_power_w`, whichever is larger, as in
   `lpc-failsafe-on-heartbeat-loss`. It expected a pause before, which a device whose vehicle
   cannot be paused by the charging station never reaches.
+- **The value-magnitude check keeps declared units per feature.** A `measurementId` is unique
+  within its feature, not within the device: a station's EVSE reporting its total power as
+  measurement 1 in W and its EV entity a phase current as measurement 1 in A had every MPC
+  notification flagged as 10450 A. Units are now looked up for the feature that declared them.
 
 ## 1.0.0-rc18
 
