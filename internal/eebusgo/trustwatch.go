@@ -42,6 +42,16 @@ var dialFailureRe = regexp.MustCompile(`connection to ([0-9a-fA-F]{40}) at (\S+)
 // every reconnect was rejected until this process was restarted.
 var identifierConflictRe = regexp.MustCompile(`identifier conflict.*?([0-9a-fA-F]{40})`)
 
+// dialCertificateMismatchRe matches the same re-issued certificate on the dialling side, where
+// ship-go refuses the TLS handshake against the cached fingerprint, e.g.
+//
+//	connection to <40-hex> at <address> failed:peer certificate rejected during TLS handshake:
+//	  fingerprint mismatch: expected 0154..., got 2B47...
+//
+// A device that writes a new self-signed certificate over its key at every boot, as an
+// unprovisioned development board does, is refused on every dial until the cache is cleared.
+var dialCertificateMismatchRe = regexp.MustCompile(`connection to ([0-9a-fA-F]{40}) at \S+ failed:.*fingerprint mismatch`)
+
 // conflictRecoveryCooldown bounds how often a single SKI may be re-registered. The rejection
 // repeats on every reconnect attempt (seconds apart), so without a cooldown one rotated
 // certificate would produce an unregister/register storm.
@@ -68,6 +78,12 @@ func (s *Stack) observeLogLine(msg string) {
 	}
 	s.pairing.dialErrors[ski] = detail
 	s.pairing.mu.Unlock()
+
+	// Recovering unregisters the service, which the dialling goroutine that logged this line
+	// may still be using; it runs on its own.
+	if dialCertificateMismatchRe.MatchString(msg) {
+		go s.recoverFromIdentifierConflict(ski)
+	}
 }
 
 // recoverFromIdentifierConflict clears the cached certificate for a SKI and re-registers it,

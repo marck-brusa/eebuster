@@ -1,5 +1,13 @@
 # Release notes
 
+## 1.0.0-rc21
+
+- **A device that re-issues its certificate is reconnected when we dial it, too.** A device that
+  writes a new certificate over its unchanged key, as an unprovisioned development board does at
+  every boot, was refused on every dial with `fingerprint mismatch` until the testbench was
+  restarted. The cached certificate is now cleared and the peer re-registered, as was already
+  done for a conflict on an incoming connection; a configured address pin is applied again.
+
 ## 1.0.0-rc20
 
 - **Device parameter `measurement_tolerance_percent`** (default 5): how far the power read over
