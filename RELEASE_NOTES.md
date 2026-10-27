@@ -1,5 +1,15 @@
 # Release notes
 
+## 1.0.0-rc20
+
+- **Device parameter `measurement_tolerance_percent`** (default 5): how far the power read over
+  MPC may lie above a limit the device follows. `lpc-failsafe-on-heartbeat-loss` compared the
+  power with the failsafe limit exactly, so a device that turns a power limit into a current at
+  nominal voltage failed by a few watts whenever the grid ran above 230 V. It now applies the
+  tolerance, and `lpc-limit-obeyed`, `lpc-limit-below-device-minimum` and
+  `lpc-precedence-over-opev` take theirs from the parameter instead of a fixed 5 %.
+  `less_or_equal_larger_of` accepts `{bounds: [...], tolerance_percent: ...}` besides a list.
+
 ## 1.0.0-rc19
 
 - **`lpc-limit-below-device-minimum` accepts the device's lowest consumption while charging.**

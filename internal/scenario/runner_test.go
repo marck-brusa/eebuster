@@ -66,6 +66,12 @@ func TestLessOrEqualLargerOf(t *testing.T) {
 		{0.0, []any{0.0}, true},
 		{10.0, []any{"x"}, false},
 		{nil, []any{0.0, 1500.0}, false},
+		// The map form adds tolerance_percent above the larger bound.
+		{11074.0, map[string]any{"bounds": []any{11050.0, 1520.0}, "tolerance_percent": 5.0}, true},
+		{1050.0, map[string]any{"bounds": []any{1000, 0.0}, "tolerance_percent": 5}, true},
+		{1051.0, map[string]any{"bounds": []any{1000.0}, "tolerance_percent": 5.0}, false},
+		{11074.0, map[string]any{"bounds": []any{11050.0}}, false},
+		{10.0, map[string]any{"tolerance_percent": 5.0}, false},
 	}
 	for _, c := range cases {
 		comparisons := evaluateAssertions(map[string]any{"less_or_equal_larger_of": map[string]any{"power_w": c.bounds}}, map[string]any{"power_w": c.power})

@@ -106,9 +106,16 @@ func evaluateKey(op, key string, expected any, actual map[string]any) []Comparis
 	case "less_or_equal_larger_of":
 		// At or below the larger of the listed bounds, for a limit a device may not be able to
 		// go under: `less_or_equal_larger_of: {power_w: ["{captured.failsafe}", "{params.minimum_power_w}"]}`.
-		bound, ok := largestOf(expected)
-		out = append(out, compared(key, op, expected, v, ok && numericCompare("less_or_equal", v, bound),
-			fmt.Sprintf("expected <= the larger of %v, got %#v", expected, v)))
+		// The map form allows a measurement tolerance above that bound:
+		// `{power_w: {bounds: [4200], tolerance_percent: "{params.measurement_tolerance_percent}"}}`.
+		bounds, tolerance := boundsAndTolerance(expected)
+		bound, ok := largestOf(bounds)
+		allowed := bound * (1 + tolerance/100)
+		message := fmt.Sprintf("expected <= the larger of %v, got %#v", bounds, v)
+		if tolerance != 0 {
+			message = fmt.Sprintf("expected <= the larger of %v plus %g %% (%g), got %#v", bounds, tolerance, allowed, v)
+		}
+		out = append(out, compared(key, op, expected, v, ok && numericCompare("less_or_equal", v, allowed), message))
 	case "each_matches":
 		// Every element is a string matching the regular expression as a whole, as the
 		// specifications state formats: `each_matches: {identifications: "([0-9A-F]{2}-){5}[0-9A-F]{2}"}`.
@@ -367,6 +374,17 @@ func lengthOf(v any) (int, bool) {
 }
 
 // largestOf is the largest number in a list of bounds; false when the list holds none.
+// boundsAndTolerance reads less_or_equal_larger_of's expected value: a list of bounds, or a map
+// of `bounds` and `tolerance_percent`.
+func boundsAndTolerance(expected any) (any, float64) {
+	bounds, tolerance := expected, 0.0
+	if spec := asMap(expected); spec != nil {
+		bounds = spec["bounds"]
+		tolerance, _ = toFloat64(spec["tolerance_percent"])
+	}
+	return bounds, tolerance
+}
+
 func largestOf(bounds any) (float64, bool) {
 	largest, found := 0.0, false
 	for _, item := range asSlice(bounds) {

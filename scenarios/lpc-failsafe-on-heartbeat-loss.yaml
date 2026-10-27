@@ -3,7 +3,8 @@ description: >
   Brings the device into the state "unlimited/controlled" (heartbeat running, limit
   deactivated), then stops the testbench's heartbeat. A Controllable System without a heartbeat
   must enter its failsafe state within 120 s; the power reported over MPC must then come down
-  to at or below the failsafe limit the device announced before (ATC_COM_PT_CSTransition5_001).
+  to at or below the failsafe limit the device announced before (ATC_COM_PT_CSTransition5_001),
+  with measurement_tolerance_percent (5 % unless configured for the peer) for the measurement.
   The power is read from 125 s on until 160 s after the stop: a device publishes its
   measurements periodically (every 15 s is common) and ramps down, so a single read at 130 s
   can still show the power from before the failsafe state. A device configured to hold a
@@ -21,7 +22,7 @@ risk: disruptive
 long_running: true
 spec: {use_case: LPC, scenario: 3, test_case: ATC_COM_PT_CSTransition5_001, requirements: [LPC-TS-028, LPC-TS-033, LPC-TS-036, LPC-TS-037], verification: readback, guidelines: {vde-fnn-steuerbox: [EEBUS_013]}}
 requires:
-  parameters: [minimum_power_w]
+  parameters: [minimum_power_w, measurement_tolerance_percent]
   capabilities: [heartbeat, lpc.write, lpc.read]
   use_cases: [limitationOfPowerConsumption, monitoringOfPowerConsumption]
 peer: device-under-test
@@ -46,7 +47,10 @@ steps:
       get: "/api/v1/mpc/{peer.ski}"
       timeout: 35s
       not_null: [power_w]
-      less_or_equal_larger_of: {power_w: ["{captured.failsafe}", "{params.minimum_power_w}"]}
+      less_or_equal_larger_of:
+        power_w:
+          bounds: ["{captured.failsafe}", "{params.minimum_power_w}"]
+          tolerance_percent: "{params.measurement_tolerance_percent}"
   # Still without a heartbeat, over 120 s after the last one: the write must not be evaluated.
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"

@@ -17,6 +17,10 @@ var defaultParameters = map[string]any{
 	// paused_current_a is the current per phase a vehicle may still draw after the 0 A pause
 	// signal: measurement tolerance by default, the floor of a device that cannot pause.
 	"paused_current_a": 0.5,
+	// measurement_tolerance_percent is how far measured power may lie above a limit the device
+	// follows: meter accuracy, and the gap between a power limit and the current a device
+	// derives from it at nominal voltage when the grid runs above it.
+	"measurement_tolerance_percent": 5.0,
 	// LPC limit durations: the 2 h curtailment window and a short one that ends inside a run.
 	"limit_durations": []any{"PT2H", "PT15M"},
 	// LPC failsafe minimum durations the device must accept: the 2 h minimum and the 24 h

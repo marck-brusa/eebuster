@@ -87,6 +87,7 @@ peers: []
 #      nominal_max_w: 11000
 #      limits_w: [11000, 5500, 4200]
 #      failsafe_w: [4200, 2000]
+#      measurement_tolerance_percent: 5   # measured power allowed above a limit
 
 stacks:
   eebus-go-remote:

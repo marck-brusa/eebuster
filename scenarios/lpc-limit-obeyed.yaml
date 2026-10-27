@@ -2,7 +2,8 @@ name: lpc-limit-obeyed
 description: >
   While a vehicle charges above 5 kW, writes a consumption limit of 4.2 kW, the least a grid
   operator leaves a directly controlled charging point under § 14a EnWG, and requires the power
-  the device reports over MPC to come down to it, with 5 % for the measurement, while the
+  the device reports over MPC to come down to it, with measurement_tolerance_percent (5 % unless
+  configured for the peer) for the measurement, while the
   vehicle keeps charging. The other LPC test cases read the limit back; this one measures it. LPC
   sets no time to reach a limit and BK6-22-300 asks for it without undue delay, so the test
   allows 60 s for a device that publishes its measurements periodically; the step's duration in
@@ -15,6 +16,7 @@ risk: live-control
 spec: {use_case: LPC, scenario: 1, requirements: [LPC-TS-035, LPC-TS-035/3], verification: readback, guidelines: {bk6-22-300: ["4.2", "4.5.1"]}}
 requires:
   charging: true
+  parameters: [measurement_tolerance_percent]
   capabilities: [lpc.write, mpc.read]
   use_cases: [limitationOfPowerConsumption, monitoringOfPowerConsumption]
 peer: device-under-test
@@ -37,7 +39,8 @@ steps:
   - wait_for:
       get: "/api/v1/mpc/{peer.ski}"
       timeout: 60s
-      less_or_equal: {power_w: 4410}
+      less_or_equal_larger_of:
+        power_w: {bounds: [4200], tolerance_percent: "{params.measurement_tolerance_percent}"}
       greater_than: {power_w: 0}
 finally:
   - put:

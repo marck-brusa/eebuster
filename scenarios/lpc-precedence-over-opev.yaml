@@ -2,8 +2,9 @@ name: lpc-precedence-over-opev
 description: >
   While a vehicle charges above 5 kW, an OPEV obligation of 16 A per phase and a consumption limit
   of 4.2 kW are in force together. A grid operator's limit takes precedence over other control
-  where it is lower (BK6-22-300), so the power reported over MPC must come down to 4.2 kW, with 5 %
-  for the measurement, within 60 s although the OPEV obligation allows more.
+  where it is lower (BK6-22-300), so the power reported over MPC must come down to 4.2 kW, with
+  measurement_tolerance_percent (5 % unless configured for the peer) for the measurement, within
+  60 s although the OPEV obligation allows more.
 covers: "LPC scenario 1 with OPEV: a 4.2 kW limit holds against a looser OPEV obligation."
 goal: "Proves another energy manager's obligation cannot lift a grid operator's limit."
 hint: "Needs a vehicle charging above 5 kW that takes OPEV obligations."
@@ -13,6 +14,7 @@ spec: {use_case: LPC, scenario: 1, requirements: [LPC-TS-035], verification: rea
 requires:
   vehicle: true
   charging: true
+  parameters: [measurement_tolerance_percent]
   capabilities: [lpc.write, opev.write, mpc.read]
   use_cases: [limitationOfPowerConsumption, monitoringOfPowerConsumption, overloadProtectionByEvChargingCurrentCurtailment]
 peer: device-under-test
@@ -38,7 +40,8 @@ steps:
   - wait_for:
       get: "/api/v1/mpc/{peer.ski}"
       timeout: 60s
-      less_or_equal: {power_w: 4410}
+      less_or_equal_larger_of:
+        power_w: {bounds: [4200], tolerance_percent: "{params.measurement_tolerance_percent}"}
 finally:
   - put:
       path: "/api/v1/lpc/{peer.ski}/limit"

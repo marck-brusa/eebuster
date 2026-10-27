@@ -249,6 +249,7 @@ peers:
       production_nominal_max_w: 0                  # LPP, 0 = not applicable
       minimum_power_w: 1500                        # lowest power the device controls to while charging
       paused_current_a: 2.5                        # current per phase it still draws when paused
+      measurement_tolerance_percent: 5             # measured power allowed above a limit
 ```
 
 `minimum_power_w` defaults to 0. A device that cannot control its consumption below a
@@ -257,6 +258,10 @@ accepts the larger of the failsafe limit and this minimum, and the report lists 
 `paused_current_a` defaults to 0.5 A, measurement tolerance: the current per phase a vehicle
 may still draw after the OPEV 0 A pause signal. A device that holds a minimum current instead
 of pausing declares it here.
+`measurement_tolerance_percent` defaults to 5: how far the power read over MPC may lie above a
+limit the device follows, for meter accuracy and for a device that turns a power limit into a
+current at nominal voltage while the grid runs above it. The LPC test cases that measure a limit
+apply it.
 
 Scenarios reference them as `{params.limits_w.1}`, resolved by the same lookup as
 `{peer.ski}`. When a value is absent the runner derives it from the device's announced
@@ -450,12 +455,12 @@ Specification-derived test cases:
 | `lpc-heartbeat-timeout` | The device's heartbeat announces a timeout of at most 60 s (UC TS Table 26) | wire |
 | `lpc-heartbeat-continuity` | The latest five heartbeat notifications of the device on the trace, each within 60 s (plus 10 % jitter) of the previous one; heartbeats from before the test case count, so it is instant on a device connected for a few minutes (ATC_COM_PT_CSHeartbeat_001) | wire |
 | `lpc-release` | From an active limit, a deactivation leaves the limit inactive (ATC_COM_PT_CSTransition6_002) | readback |
-| `lpc-failsafe-on-heartbeat-loss` | From unlimited/controlled (heartbeat running, limit deactivated), after our heartbeat stops the consumption power read over MPC comes down to at or below the failsafe value, or the device minimum `minimum_power_w` when that is larger; read from 125 s until 160 s after the stop, since devices publish measurements periodically and ramp down; at the end the heartbeat restarts and the limit is released, which takes the device out of failsafe (ATC_COM_PT_CSTransition5_001) Then, still without a heartbeat and over 120 s after the last one, a limit write is not evaluated; after the heartbeat returns a deactivation is accepted (ATC_COM_PT_CSFS_001, merged here so both share one heartbeat-free window) | readback, long-running |
+| `lpc-failsafe-on-heartbeat-loss` | From unlimited/controlled (heartbeat running, limit deactivated), after our heartbeat stops the consumption power read over MPC comes down to at or below the failsafe value, or the device minimum `minimum_power_w` when that is larger, plus `measurement_tolerance_percent`; read from 125 s until 160 s after the stop, since devices publish measurements periodically and ramp down; at the end the heartbeat restarts and the limit is released, which takes the device out of failsafe (ATC_COM_PT_CSTransition5_001) Then, still without a heartbeat and over 120 s after the last one, a limit write is not evaluated; after the heartbeat returns a deactivation is accepted (ATC_COM_PT_CSFS_001, merged here so both share one heartbeat-free window) | readback, long-running |
 | `lpc-heartbeat-60s-interval` | From unlimited/controlled, the testbench's heartbeat goes out every 60 s with a 60 s timeout, as a VDE FNN control box sends it (EEBUS_013). 165 s later, 45 s after the last heartbeat and with no limit write before, two different failsafe limits are written; both must be read back, which a device evaluates outside its failsafe state only (LPC-TS-028, LPC-TS-037). The heartbeat returns to every 2 s at the end | readback, long-running |
 | `lpc-reconnect-after-connection-loss` | From limited, the testbench's stack stops for 125 s, so the device enters failsafe (LPC-TS-029). After the restart the device reconnects, subscribes to the heartbeat again (UC TS 3.3.4), and accepts a limit and then failsafe values, read back -- the sequence of a control box after every connection setup (ATC_COM_PT_CSTransition9_001, LPC-TS-032, LPC-TS-037; VDE FNN EEBUS_008, 023, 037). Marked `interrupts_connection` | readback, long-running |
-| `lpc-limit-obeyed` | While charging above 5 kW, a 4.2 kW limit; the consumption read over MPC comes down to it (5 % allowed) within 60 s and the vehicle keeps charging. LPC sets no time to reach a limit; the step duration records it (LPC-TS-035, LPC-TS-035/3; BNetzA BK6-22-300 Anlage 1, 4.2 and 4.5.1) | readback |
-| `lpc-limit-below-device-minimum` | While charging, a 1 kW limit, below the power a charger holds; the consumption comes down to it within 60 s, i.e. the next lower value is a pause (LPC-TS-035/3; BNetzA BK6-22-300 Anlage 1, 4.6). `minimum_power_w` is not applied | readback |
-| `lpc-precedence-over-opev` | While charging above 5 kW, a 16 A OPEV obligation and a 4.2 kW limit together; the consumption comes down to 4.2 kW within 60 s (LPC-TS-035; BNetzA BK6-22-300 Anlage 1, 4.6) | readback |
+| `lpc-limit-obeyed` | While charging above 5 kW, a 4.2 kW limit; the consumption read over MPC comes down to it (plus `measurement_tolerance_percent`, 5 % by default) within 60 s and the vehicle keeps charging. LPC sets no time to reach a limit; the step duration records it (LPC-TS-035, LPC-TS-035/3; BNetzA BK6-22-300 Anlage 1, 4.2 and 4.5.1) | readback |
+| `lpc-limit-below-device-minimum` | While charging, a 1 kW limit, below the power a charger holds; the consumption comes down within 60 s to it or to the device minimum `minimum_power_w`, whichever is larger, plus `measurement_tolerance_percent` (LPC-TS-035/3; BNetzA BK6-22-300 Anlage 1, 4.6) | readback |
+| `lpc-precedence-over-opev` | While charging above 5 kW, a 16 A OPEV obligation and a 4.2 kW limit together; the consumption comes down to 4.2 kW, plus `measurement_tolerance_percent`, within 60 s (LPC-TS-035; BNetzA BK6-22-300 Anlage 1, 4.6) | readback |
 | `lpc-nominal-max` | Scenario 4, recommended: Power Consumption Nominal Max present and positive (LPC-TS-010/1, 010/2, 038) | readback |
 | `lpc-cleanup` | Limit released, heartbeat running | `cleanup: true` |
 

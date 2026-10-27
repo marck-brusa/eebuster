@@ -202,6 +202,7 @@ peers:
     parameters:
       limits_w: [11000, 5500, 4200]
       failsafe_w: [4200, 2000]
+      measurement_tolerance_percent: 5   # measured power allowed above a limit; 5 by default
 ```
 
 Without them they are derived from the maximum power the device announces.
