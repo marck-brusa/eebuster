@@ -66,8 +66,9 @@ Or build from source (Go 1.24+):
 go build -mod=vendor -o eebus-testbench ./cmd/eebus-testbench
 ```
 
-> Always build with `-mod=vendor`. The committed `vendor/` tree carries a required patch to
-> `eebus-go`; use `scripts/vendor.sh` instead of `go mod vendor` when updating dependencies.
+> Always build with `-mod=vendor`. The committed `vendor/` tree carries required patches to
+> `eebus-go` and `ship-go`; use `scripts/vendor.sh` instead of `go mod vendor` when updating
+> dependencies.
 
 ## Run
 

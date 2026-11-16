@@ -12,7 +12,13 @@ artefacts of that boundary — argument-arity mismatches, a reflection panic tha
 counterparty on an unknown method name, and duplicated state. Linking the library removes the
 class of problem entirely.
 
-## The one local patch
+## Local patches
+
+The vendor tree carries two modifications. `go mod vendor` reverts both silently, so use
+`scripts/vendor.sh`, which re-runs them from `patches/`. When changing a pinned revision,
+refresh through that script and re-run the test suite.
+
+### eebus-go: mDNS provider hook
 
 `vendor/github.com/enbility/eebus-go/service/service.go` gains one method:
 
@@ -22,12 +28,24 @@ func (s *Service) SetMdnsProvider(provider shipapi.MdnsProviderInterface) error
 
 `Service.Setup()` builds its mDNS manager internally and stores it behind an interface that does
 not expose `SetMdnsProvider`, so static-mode provider injection is unreachable from outside the
-package. The patch is a passthrough to the concrete manager's own method.
+package. The patch is a passthrough to the concrete manager's own method
+(`patches/eebus-go-service-mdns-hook.patch`).
 
-This is the **only** modification in the whole vendor tree. `go mod vendor` reverts it silently,
-so use `scripts/vendor.sh`, which re-runs it from
-`patches/eebus-go-service-mdns-hook.patch`. When changing a pinned revision, refresh through
-that script and re-run the test suite.
+### ship-go: TLS 1.2 on P-256 only
+
+SHIP 9 runs over TLS 1.2 only, and SHIP 9.1 allows secp256r1 and the two brainpool curves and no
+other. Upstream ship-go sets the SHIP cipher suites and a minimum of TLS 1.2 on its server, but
+no maximum and no curves, so crypto/tls offers TLS 1.3 (where `CipherSuites` does not apply) and
+X25519 to every peer, and a peer that supports them gets a connection SHIP does not define.
+`patches/ship-go-tls12-only.patch` adds `cert.TLSVersion` and `cert.CurvePreferences` and sets
+`MinVersion`, `MaxVersion` and `CurvePreferences` from them on both the dialer and the server.
+crypto/tls has no brainpool curves, so the testbench cannot connect to a peer that offers only
+those.
+
+`TestVendoredShipTLSIsTLS12OnP256` fails if the patch is missing or if ship-go builds a
+`tls.Config` the patch does not cover. CI also probes both SHIP servers of the simulator run with
+`openssl s_client`: a TLS 1.3 offer and a TLS 1.2 offer of X25519 alone are refused, and a TLS 1.2
+offer of P-256 with the mandatory suite gets as far as the client certificate.
 
 ## The raw-frame tap
 

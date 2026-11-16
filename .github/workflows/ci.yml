@@ -22,7 +22,7 @@ jobs:
           # vendor/ is committed, so there is nothing to download and nothing to cache.
           cache: false
 
-      # -mod=vendor everywhere: vendor/ carries a local patch to eebus-go's service.go that a
+      # -mod=vendor everywhere: vendor/ carries local patches to eebus-go and ship-go that a
       # module-mode build would silently ignore. See scripts/vendor.sh.
       - name: Verify vendor/ is consistent with go.mod
         run: go mod verify && go build -mod=vendor ./...
@@ -180,6 +180,36 @@ jobs:
             sleep 1
           done
           echo "the simulator did not connect"; tail -50 sim/serve.log; exit 1
+
+      # SHIP 9 and 9.1: TLS 1.2 on P-256 only (patches/ship-go-tls12-only.patch). Probes the
+      # testbench's SHIP server (4712) and the simulated station's (4713) before any client
+      # certificate is involved: a TLS 1.3 offer must end in alert 70 (protocol_version), a
+      # TLS 1.2 offer of X25519 alone in alert 40 (handshake_failure, no curve in common), and a
+      # TLS 1.2 offer of P-256 with the mandatory suite must get as far as the client
+      # certificate, which the probe does not send (alert 42, bad_certificate).
+      - name: SHIP TLS is 1.2 on P-256 only
+        run: |
+          failed=0
+          probe() {
+            local port=$1 alert=$2
+            shift 2
+            local out
+            out=$(timeout 10 openssl s_client -connect "127.0.0.1:$port" "$@" </dev/null 2>&1 || true)
+            if grep -q "SSL alert number $alert\b" <<<"$out"; then
+              echo "port $port, $*: alert $alert as expected"
+            else
+              echo "::error::port $port, $*: expected alert $alert"
+              echo "$out"
+              failed=1
+            fi
+          }
+          openssl version
+          for port in 4712 4713; do
+            probe "$port" 70 -tls1_3
+            probe "$port" 40 -tls1_2 -groups X25519
+            probe "$port" 42 -tls1_2 -groups P-256 -cipher ECDHE-ECDSA-AES128-SHA256
+          done
+          exit $failed
 
       - name: Read-only selection (must pass)
         run: |

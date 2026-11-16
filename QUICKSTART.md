@@ -28,9 +28,9 @@ cd eebuster
 go build -mod=vendor -o eebus-testbench ./cmd/eebus-testbench
 ```
 
-Always build with `-mod=vendor`. The committed `vendor/` tree carries a required patch to
-`eebus-go` that a module-mode build silently discards; use `scripts/vendor.sh` rather than
-`go mod vendor` when refreshing dependencies.
+Always build with `-mod=vendor`. The committed `vendor/` tree carries required patches to
+`eebus-go` and `ship-go` that a module-mode build silently discards; use `scripts/vendor.sh`
+rather than `go mod vendor` when refreshing dependencies.
 
 ## 2. First run
 

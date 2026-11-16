@@ -65,6 +65,10 @@ func (h *Hub) createWebSocketDialer(state *dialState, remoteService *api.Service
 			InsecureSkipVerify: true, // #nosec G402
 			// SHIP 9.1: the ciphers are reported insecure but are defined to be used by SHIP
 			CipherSuites: cert.CipherSuites, // #nosec G402
+			// SHIP 9 / 9.1: TLS 1.2 only, on the curves SHIP allows
+			MinVersion:       cert.TLSVersion,
+			MaxVersion:       cert.TLSVersion,
+			CurvePreferences: cert.CurvePreferences,
 
 			// SHIP 12.2 / EEBus SHIP TestSpec SHIP-TS-SEC-01+02 (TC_SHIP_SEC_001 §4.4.1,
 			// TC_SHIP_SEC_002 §4.4.2): a spoofed certificate - SKI field != SHA-1(public key),

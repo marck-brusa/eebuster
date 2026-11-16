@@ -37,9 +37,10 @@ This is a development and integration tool, not an EEBUS certification or confor
 
 ## Non-negotiables
 
-- **Build with `-mod=vendor`.** `vendor/` carries a local patch to `eebus-go`'s
-  `service/service.go` (`SetMdnsProvider`) that upstream lacks. A plain `go mod vendor` reverts
-  it silently — use `scripts/vendor.sh`, which reapplies it.
+- **Build with `-mod=vendor`.** `vendor/` carries two local patches that upstream lacks:
+  `eebus-go`'s `service/service.go` (`SetMdnsProvider`) and ship-go's TLS settings (TLS 1.2 on
+  P-256 only, SHIP 9). A plain `go mod vendor` reverts them silently — use `scripts/vendor.sh`,
+  which reapplies them.
 - **Do not reimplement SHIP or SPINE.** Adapt the vendored upstream implementations.
 - Pin upstream revisions to immutable commit SHAs in `go.mod`.
 - Keep identity keys persistent. Identity initialisation must never overwrite existing keys:

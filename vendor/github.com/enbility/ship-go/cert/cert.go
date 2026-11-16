@@ -24,6 +24,16 @@ var CipherSuites = []uint16{
 	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, // SHIP 9.1: optional cipher suite
 }
 
+// SHIP 9: SHIP runs over TLS 1.2 (RFC 5246) only; TLS 1.3 is not part of it. crypto/tls offers
+// TLS 1.3 unless MaxVersion caps it, and it ignores CipherSuites for TLS 1.3, so both sides set
+// MinVersion and MaxVersion to this.
+const TLSVersion = tls.VersionTLS12
+
+// SHIP 9.1: secp256r1 is the one mandatory curve. The two brainpool curves SHIP also allows are
+// not available in crypto/tls, and SHIP allows no other curve. Without this list crypto/tls
+// offers X25519 ahead of P-256 and agrees on it with any peer that supports it.
+var CurvePreferences = []tls.CurveID{tls.CurveP256}
+
 // Create a ship compatible self signed certificate
 // organizationalUnit is the OU of the certificate
 // organization is the O of the certificate

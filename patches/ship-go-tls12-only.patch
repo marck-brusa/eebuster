@@ -1,0 +1,53 @@
+diff --git a/cert/cert.go b/cert/cert.go
+index c99f384..02b1259 100644
+--- a/cert/cert.go
++++ b/cert/cert.go
+@@ -24,6 +24,16 @@ var CipherSuites = []uint16{
+ 	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, // SHIP 9.1: optional cipher suite
+ }
+ 
++// SHIP 9: SHIP runs over TLS 1.2 (RFC 5246) only; TLS 1.3 is not part of it. crypto/tls offers
++// TLS 1.3 unless MaxVersion caps it, and it ignores CipherSuites for TLS 1.3, so both sides set
++// MinVersion and MaxVersion to this.
++const TLSVersion = tls.VersionTLS12
++
++// SHIP 9.1: secp256r1 is the one mandatory curve. The two brainpool curves SHIP also allows are
++// not available in crypto/tls, and SHIP allows no other curve. Without this list crypto/tls
++// offers X25519 ahead of P-256 and agrees on it with any peer that supports it.
++var CurvePreferences = []tls.CurveID{tls.CurveP256}
++
+ // Create a ship compatible self signed certificate
+ // organizationalUnit is the OU of the certificate
+ // organization is the O of the certificate
+diff --git a/hub/hub_connections_client.go b/hub/hub_connections_client.go
+index 8d161a2..75e17c5 100644
+--- a/hub/hub_connections_client.go
++++ b/hub/hub_connections_client.go
+@@ -65,6 +65,10 @@ func (h *Hub) createWebSocketDialer(state *dialState, remoteService *api.Service
+ 			InsecureSkipVerify: true, // #nosec G402
+ 			// SHIP 9.1: the ciphers are reported insecure but are defined to be used by SHIP
+ 			CipherSuites: cert.CipherSuites, // #nosec G402
++			// SHIP 9 / 9.1: TLS 1.2 only, on the curves SHIP allows
++			MinVersion:       cert.TLSVersion,
++			MaxVersion:       cert.TLSVersion,
++			CurvePreferences: cert.CurvePreferences,
+ 
+ 			// SHIP 12.2 / EEBus SHIP TestSpec SHIP-TS-SEC-01+02 (TC_SHIP_SEC_001 §4.4.1,
+ 			// TC_SHIP_SEC_002 §4.4.2): a spoofed certificate - SKI field != SHA-1(public key),
+diff --git a/hub/hub_connections_server.go b/hub/hub_connections_server.go
+index ae3a9be..767b36e 100644
+--- a/hub/hub_connections_server.go
++++ b/hub/hub_connections_server.go
+@@ -103,8 +103,10 @@ func (h *Hub) startWebsocketServer() error {
+ 			ClientAuth:             tls.RequireAnyClientCert, // SHIP 9: Client authentication is required
+ 			CipherSuites:           cert.CipherSuites,        // #nosec G402 // SHIP 9.1: the ciphers are reported insecure but are defined to be used by SHIP
+ 			VerifyPeerCertificate:  h.verifyPeerCertificate,
+-			MinVersion:             tls.VersionTLS12, // SHIP 9: Mandatory TLS version
+-			SessionTicketsDisabled: true,             // SHIP 9.6: Disable session resumption to prevent bypassing VerifyPeerCertificate
++			MinVersion:             cert.TLSVersion,       // SHIP 9: TLS 1.2 only
++			MaxVersion:             cert.TLSVersion,       // SHIP 9: TLS 1.3 is not part of SHIP
++			CurvePreferences:       cert.CurvePreferences, // SHIP 9.1: only the curves SHIP allows
++			SessionTicketsDisabled: true,                  // SHIP 9.6: Disable session resumption to prevent bypassing VerifyPeerCertificate
+ 		},
+ 	}
+ 

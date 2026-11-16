@@ -1,5 +1,13 @@
 # Release notes
 
+## 1.0.0-rc22
+
+- **SHIP connections use TLS 1.2 on P-256 only (SHIP 9, 9.1).** The testbench offered TLS 1.3
+  and the X25519 curve on its incoming and outgoing connections, so a device that supports them
+  was connected over TLS 1.3, or over TLS 1.2 on X25519, neither of which SHIP defines. Both
+  sides now offer and accept only TLS 1.2, the two SHIP cipher suites and P-256. A device that
+  accepts only TLS 1.3 now fails the handshake instead of connecting.
+
 ## 1.0.0-rc21
 
 - **A device that re-issues its certificate is reconnected when we dial it, too.** A device that
